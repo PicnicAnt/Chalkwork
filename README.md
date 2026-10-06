@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CalcShare
 
-## Getting Started
+Create calculations from named inputs and formulas, then share them with a link. Anyone with the link can change the inputs and see the results update instantly.
 
-First, run the development server:
+## Running locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Stack:** Next.js (App Router) with TypeScript and Tailwind.
+- **Storage:** SQLite via `better-sqlite3`, in `data/calcshare.db` (created on first run, not committed).
+- **Formulas:** evaluated in the browser with [mathjs](https://mathjs.org). Each input or result label becomes a variable name (`Loan amount` → `loan_amount`), and a result can use inputs and any result above it. Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled.
+- **Sharing:** saving a calculation gives it an unguessable link at `/c/<id>`. There are no accounts yet; the home page lists calculations created in the current browser (kept in localStorage).
 
-## Learn More
+## Layout
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/page.tsx`: home page
+- `src/app/new/page.tsx`: create a calculation
+- `src/app/c/[id]/page.tsx`: shared calculation page
+- `src/app/actions.ts`: server action that validates and saves
+- `src/lib/calculation.ts`: types and validation shared by client and server
+- `src/lib/evaluate.ts`: formula evaluation
+- `src/lib/db.ts`: SQLite access
