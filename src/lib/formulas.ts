@@ -63,6 +63,27 @@ function isVariableName(name: string) {
   return !CONSTANTS.has(name) && typeof (math as unknown as Record<string, unknown>)[name] !== "function";
 }
 
+export type TokenKind = "variable" | "reserved" | "number" | "operator" | "punct" | "text";
+
+// Splits formula text into pieces for syntax highlighting. It doesn't validate anything; it only
+// tells names that are variables apart from reserved ones (constants like pi, functions like sqrt).
+export function tokenize(text: string): { kind: TokenKind; text: string }[] {
+  const pattern =
+    /(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z0-9_]*)|([-+*/^%=<>!&|~?:]+|\.[*/^])|([()[\]{},;])|(\s+|.)/gy;
+  const tokens: { kind: TokenKind; text: string }[] = [];
+  for (const m of text.matchAll(pattern)) {
+    const [piece, number, name, operator, punct] = m;
+    if (number) tokens.push({ kind: "number", text: piece });
+    else if (name) {
+      const isCall = /^\s*\(/.test(text.slice((m.index ?? 0) + piece.length));
+      tokens.push({ kind: isCall || !isVariableName(name) ? "reserved" : "variable", text: piece });
+    } else if (operator) tokens.push({ kind: "operator", text: piece });
+    else if (punct) tokens.push({ kind: "punct", text: piece });
+    else tokens.push({ kind: "text", text: piece });
+  }
+  return tokens;
+}
+
 function symbolsUsed(node: MathNode): string[] {
   const names: string[] = [];
   node.traverse((n, path, parent) => {

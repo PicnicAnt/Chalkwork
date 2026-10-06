@@ -7,6 +7,7 @@ import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation"
 import { analyzeFormulas } from "@/lib/formulas";
 import { rememberCalculation } from "@/lib/my-calculations";
 import { CalculatorPanel } from "./CalculatorView";
+import { FormulaInput } from "./FormulaInput";
 
 // An ARPG damage sheet in the style of Path of Exile: weapon damage scaled by increased and more
 // modifiers, attack speed, crit, and chance to hit. Written dps-first so it heads the list, and
@@ -127,16 +128,10 @@ export function CalculationEditor({
             ÷, ^, parentheses, and functions like sqrt, round, min, max.
           </p>
         </div>
-        <textarea
-          className="sketch-box field-sizing-content min-h-40 w-full resize-y bg-transparent px-4 py-3 text-xl leading-9 text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-          placeholder={"area = width * height\nprice = area * price_per_m2"}
-          rows={Math.max(4, formulas.length + 1)}
+        <FormulaInput
           value={formulaText}
-          onChange={(e) => setFormulaText(e.target.value)}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          aria-label="Formulas"
+          onChange={setFormulaText}
+          placeholder={"area = width * height\nprice = area * price_per_m2"}
         />
       </section>
 

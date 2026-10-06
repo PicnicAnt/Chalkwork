@@ -14,6 +14,7 @@
   --ink-faint: rgb(30 37 51 / 0.22);
   --accent: #1f5fbf;
   --accent-2: #1e8a4c;
+  --op: #b4540a;
   --danger: #c8312b;
   --frame: #c3c8ce;
   --frame-dark: #8f969e;
@@ -31,6 +32,7 @@
   --ink-faint: rgb(238 240 230 / 0.25);
   --accent: #f5e58c;
   --accent-2: #9fd6f2;
+  --op: #f2b985;
   --danger: #f6a5ae;
   --frame: #7a532e;
   --frame-dark: #4e3319;
@@ -47,6 +49,7 @@
   --color-ink-faint: var(--ink-faint);
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
+  --color-op: var(--op);
   --color-danger: var(--danger);
   --font-sans: var(--font-hand);
   --font-mono: var(--font-hand);
@@ -79,6 +82,25 @@ h3,
 .board input,
 .board textarea {
   text-shadow: var(--glow);
+}
+
+/* Formula syntax colors: variables keep the ink color. */
+.tok-reserved {
+  color: var(--accent);
+}
+.tok-number {
+  color: var(--accent-2);
+}
+.tok-operator {
+  color: var(--op);
+}
+.tok-punct {
+  color: var(--ink-muted);
+}
+/* The textarea above the colored text only draws a caret and a selection. */
+.formula-textarea {
+  caret-color: var(--ink);
+  text-shadow: none !important;
 }
 
 @layer components {
