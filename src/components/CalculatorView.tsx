@@ -71,41 +71,38 @@ export function CalculatorPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">
         {analysis.variables.map((v) => {
           const isLocked = locked.includes(v.name);
           const problem = rejected?.name === v.name ? rejected : null;
           const highlight = changed.includes(v.name);
           const readOnly = decided.has(v.name) && !problem;
           const decidedByFormulaAlone = readOnly && decidedBy(analysis, []).has(v.name);
+          const id = `var-${v.name}`;
           return (
             <div key={v.name} className="flex min-w-0 flex-col">
-              <span className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-lg">{v.label}</span>
-                <span className="text-sm text-ink-faint">{v.name}</span>
-              </span>
+              {/* Written like a line on the board: name = value */}
               <span className="flex items-center gap-2">
+                <label htmlFor={id} className="max-w-[55%] shrink-0 break-words text-xl">
+                  {v.name}
+                </label>
+                <span className="text-xl text-ink-muted">=</span>
                 <input
-                  className={`field rounded-sm text-2xl ${problem ? "!border-danger" : highlight ? "bg-mark" : ""} ${
+                  id={id}
+                  className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : highlight ? "bg-mark" : ""} ${
                     readOnly ? "cursor-default !border-transparent" : ""
                   }`}
                   inputMode="decimal"
                   placeholder="?"
-                  aria-label={v.label}
                   readOnly={readOnly}
                   tabIndex={readOnly ? -1 : undefined}
                   value={problem ? problem.text : display[v.name]}
                   onChange={(e) => edit(v.name, e.target.value)}
                 />
                 {readOnly ? (
-                  <span
-                    className="w-[30px] shrink-0 text-center text-xl text-ink-faint"
-                    title={decidedByFormulaAlone ? "Fixed by its formula" : "Decided by the locked values"}
-                  >
-                    =
-                  </span>
+                  <span className="w-[30px] shrink-0" aria-hidden />
                 ) : (
-                  <LockButton locked={isLocked} label={v.label} onClick={() => toggleLock(v.name)} />
+                  <LockButton locked={isLocked} label={v.name} onClick={() => toggleLock(v.name)} />
                 )}
               </span>
               {problem && <span className="text-sm text-danger">{problem.reason}</span>}
