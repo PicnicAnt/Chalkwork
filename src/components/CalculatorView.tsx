@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { brokenFormulas, formatNumber, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
+import { brokenFormulas, decidedBy, formatNumber, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
   const plan = planSolve(analysis, locked);
@@ -32,6 +32,7 @@ export function CalculatorPanel({
   // A value that couldn't be applied stays visible in its field with the reason.
   const [rejected, setRejected] = useState<{ name: string; text: string; reason: string } | null>(null);
   const { display, broken } = useMemo(() => compute(analysis, values, locked), [analysis, values, locked]);
+  const decided = useMemo(() => decidedBy(analysis, locked), [analysis, locked]);
 
   function apply(nextLocked: string[], nextValues: Record<string, string>, edited?: { name: string; text: string }) {
     const next = compute(analysis, nextValues, nextLocked);
@@ -75,6 +76,8 @@ export function CalculatorPanel({
           const isLocked = locked.includes(v.name);
           const problem = rejected?.name === v.name ? rejected : null;
           const highlight = changed.includes(v.name);
+          const readOnly = decided.has(v.name) && !problem;
+          const decidedByFormulaAlone = readOnly && decidedBy(analysis, []).has(v.name);
           return (
             <div key={v.name} className="flex min-w-0 flex-col">
               <span className="flex items-baseline justify-between gap-2">
@@ -83,17 +86,35 @@ export function CalculatorPanel({
               </span>
               <span className="flex items-center gap-2">
                 <input
-                  className={`field rounded-sm text-2xl ${problem ? "!border-danger" : highlight ? "bg-mark" : ""}`}
+                  className={`field rounded-sm text-2xl ${problem ? "!border-danger" : highlight ? "bg-mark" : ""} ${
+                    readOnly ? "cursor-default !border-transparent" : ""
+                  }`}
                   inputMode="decimal"
                   placeholder="?"
                   aria-label={v.label}
+                  readOnly={readOnly}
+                  tabIndex={readOnly ? -1 : undefined}
                   value={problem ? problem.text : display[v.name]}
                   onChange={(e) => edit(v.name, e.target.value)}
                 />
-                <LockButton locked={isLocked} label={v.label} onClick={() => toggleLock(v.name)} />
+                {readOnly ? (
+                  <span
+                    className="w-[30px] shrink-0 text-center text-xl text-ink-faint"
+                    title={decidedByFormulaAlone ? "Fixed by its formula" : "Decided by the locked values"}
+                  >
+                    =
+                  </span>
+                ) : (
+                  <LockButton locked={isLocked} label={v.label} onClick={() => toggleLock(v.name)} />
+                )}
               </span>
               {problem && <span className="text-sm text-danger">{problem.reason}</span>}
               {v.formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{v.formula}</span>}
+              {readOnly && (
+                <span className="text-sm text-ink-faint">
+                  {decidedByFormulaAlone ? "Fixed by its formula" : "Decided by the locked values"}
+                </span>
+              )}
             </div>
           );
         })}

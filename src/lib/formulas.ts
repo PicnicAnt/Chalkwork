@@ -199,6 +199,13 @@ function propagate(equations: Formula[], held: Set<string>): Step[] {
   }
 }
 
+// Variables whose value follows entirely from the locked ones (or from formulas alone,
+// like `tax = 0.25`), so there's nothing left for the user to choose.
+export function decidedBy(analysis: Analysis, locked: string[]): Set<string> {
+  const equations = analysis.formulas.filter((f) => !f.error);
+  return new Set(propagate(equations, new Set(locked)).flatMap(stepVariables));
+}
+
 // `locked` is in the order the locks were made; if they over-determine the formulas, the
 // later locks are the ones left out of `held`. Unlocked variables fall back to the order they
 // appear, preferring ones no formula defines, so a fresh calculation behaves like
