@@ -65,25 +65,67 @@ function isVariableName(name: string) {
 
 export type TokenKind = "variable" | "reserved" | "number" | "operator" | "punct" | "text";
 
+// A number written with thousands separators, like 299,792,458. Inside brackets a comma
+// separates arguments (max(1,234) has two), so these only count at the top level of a formula.
+const GROUPED_NUMBER = /\d{1,3}(?:,\d{3})+(?!\d)(?:\.\d+)?/y;
+
+function groupedNumberAt(text: string, index: number): string | null {
+  if (index > 0 && /[\w.]/.test(text[index - 1])) return null; // the middle of a longer word or number
+  GROUPED_NUMBER.lastIndex = index;
+  return GROUPED_NUMBER.exec(text)?.[0] ?? null;
+}
+
+// Removes thousands separators from top-level numbers so the formula parser can read them.
+function removeThousandsSeparators(text: string): string {
+  let depth = 0;
+  let result = "";
+  for (let i = 0; i < text.length; ) {
+    const grouped = depth === 0 && /\d/.test(text[i]) ? groupedNumberAt(text, i) : null;
+    if (grouped) {
+      result += grouped.replaceAll(",", "");
+      i += grouped.length;
+      continue;
+    }
+    if ("([{".includes(text[i])) depth++;
+    else if (")]}".includes(text[i])) depth = Math.max(0, depth - 1);
+    result += text[i++];
+  }
+  return result;
+}
+
+const TOKEN_PATTERN =
+  /(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z0-9_]*)|([-+*/^%=<>!&|~?:]+|\.[*/^])|([()[\]{},;])|(\s+|[^])/y;
+
 // Splits formula text into pieces for syntax highlighting. It doesn't validate anything; it only
 // tells names that are variables apart from reserved ones (constants like pi, functions like sqrt).
 export function tokenize(text: string): { kind: TokenKind; text: string }[] {
-  const pattern =
-    /(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z0-9_]*)|([-+*/^%=<>!&|~?:]+|\.[*/^])|([()[\]{},;])|(\s+|.)/gy;
   const tokens: { kind: TokenKind; text: string }[] = [];
-  for (const m of text.matchAll(pattern)) {
+  let depth = 0;
+  for (let i = 0; i < text.length; ) {
+    const grouped = depth === 0 && /\d/.test(text[i]) ? groupedNumberAt(text, i) : null;
+    if (grouped) {
+      tokens.push({ kind: "number", text: grouped });
+      i += grouped.length;
+      continue;
+    }
+    TOKEN_PATTERN.lastIndex = i;
+    const m = TOKEN_PATTERN.exec(text);
+    if (!m) break;
     const [piece, number, name, operator, punct] = m;
     if (number) tokens.push({ kind: "number", text: piece });
     else if (name) {
-      const isCall = /^\s*\(/.test(text.slice((m.index ?? 0) + piece.length));
+      const isCall = /^\s*\(/.test(text.slice(i + piece.length));
       tokens.push({ kind: isCall || !isVariableName(name) ? "reserved" : "variable", text: piece });
     } else if (operator) tokens.push({ kind: "operator", text: piece });
-    else if (punct) tokens.push({ kind: "punct", text: piece });
-    else tokens.push({ kind: "text", text: piece });
+    else if (punct) {
+      tokens.push({ kind: "punct", text: piece });
+      if ("([{".includes(piece)) depth++;
+      else if (")]}".includes(piece)) depth = Math.max(0, depth - 1);
+    } else tokens.push({ kind: "text", text: piece });
+    i += piece.length;
   }
   return tokens;
 }
-
 function symbolsUsed(node: MathNode): string[] {
   const names: string[] = [];
   node.traverse((n, path, parent) => {
@@ -100,7 +142,7 @@ export function analyzeFormulas(lines: string[]): Analysis {
     const base = { line: i + 1, text, name: `result_${i + 1}`, vars: [] as string[] };
     let node: MathNode;
     try {
-      node = parse(text);
+      node = parse(removeThousandsSeparators(text));
     } catch (e) {
       return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
     }
