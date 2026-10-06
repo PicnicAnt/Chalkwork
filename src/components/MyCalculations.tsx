@@ -19,17 +19,14 @@ export function MyCalculations() {
 
   return (
     <section className="mt-12">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-black/50 dark:text-white/50">
-        Created in this browser
-      </h2>
-      <ul className="divide-y divide-black/10 rounded-lg border border-black/10 dark:divide-white/10 dark:border-white/10">
+      <h2 className="mb-3 text-2xl font-bold">Your calculations</h2>
+      <ul className="flex flex-col gap-1">
         {calculations.map((calc) => (
           <li key={calc.id}>
-            <Link href={`/c/${calc.id}`} className="flex justify-between gap-4 px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5">
-              <span className="font-medium">{calc.title}</span>
-              <span className="text-sm text-black/50 dark:text-white/50">
-                {new Date(calc.createdAt).toLocaleDateString()}
-              </span>
+            <Link href={`/c/${calc.id}`} className="group flex items-baseline gap-3 py-1 text-xl">
+              <span className="text-accent">→</span>
+              <span className="group-hover:underline group-hover:decoration-wavy">{calc.title}</span>
+              <span className="ml-auto text-base text-ink-faint">{new Date(calc.createdAt).toLocaleDateString()}</span>
             </Link>
           </li>
         ))}

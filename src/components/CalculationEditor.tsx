@@ -21,8 +21,6 @@ const EXAMPLE = {
   values: { annual_rate_percent: "4.5", years: "30", loan_amount: "250000" },
 };
 
-const fieldClass =
-  "w-full rounded-md border border-black/15 bg-white px-3 py-2 text-base outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-white/15 dark:bg-white/5";
 
 export function CalculationEditor() {
   const router = useRouter();
@@ -57,22 +55,23 @@ export function CalculationEditor() {
   }
 
   return (
+
     <form
-      className="flex flex-col gap-8"
+      className="flex flex-col gap-10"
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
     >
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Details</h2>
-          <button type="button" onClick={loadExample} className="text-sm text-blue-600 hover:underline dark:text-blue-400">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h1 className="text-3xl font-bold sm:text-4xl">New calculation</h1>
+          <button type="button" onClick={loadExample} className="link text-base">
             Fill in an example
           </button>
         </div>
         <input
-          className={fieldClass}
+          className="field sketch text-2xl"
           placeholder="Title, e.g. Loan payment"
           value={title}
           maxLength={LIMITS.title}
@@ -80,7 +79,7 @@ export function CalculationEditor() {
           aria-label="Title"
         />
         <textarea
-          className={fieldClass}
+          className="field resize-none"
           placeholder="Description (optional)"
           rows={2}
           value={description}
@@ -92,15 +91,15 @@ export function CalculationEditor() {
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Formulas</h2>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            One per line, like <code className="font-mono">area = width * height</code>. Every name becomes a
+          <h2 className="text-2xl font-bold">Formulas</h2>
+          <p className="text-base text-ink-muted">
+            One per line, like <span className="text-accent-2">area = width * height</span>. Every name becomes a
             variable, and any variable can be changed: the others adjust so all formulas still hold. Supports + − ×
             ÷, ^, parentheses, and functions like sqrt, round, min, max.
           </p>
         </div>
         <textarea
-          className={`${fieldClass} font-mono text-sm leading-6`}
+          className="sketch-box field-sizing-content min-h-40 w-full resize-y bg-transparent px-4 py-3 text-xl leading-9 text-ink outline-none placeholder:text-ink-faint focus:border-accent"
           placeholder={"area = width * height\nprice = area * price_per_m2"}
           rows={Math.max(4, formulas.length + 1)}
           value={formulaText}
@@ -112,19 +111,19 @@ export function CalculationEditor() {
         />
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Try it</h2>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Change any variable. The ones you changed most recently stay put, and the rest are recalculated.
-            These values are saved as what people see first.
+          <h2 className="text-2xl font-bold">Try it</h2>
+          <p className="text-base text-ink-muted">
+            Change any variable. The ones you changed most recently stay put, and the rest are recalculated. These
+            values are saved as what people see first.
           </p>
         </div>
         <CalculatorPanel analysis={analysis} values={values} onChange={setValues} />
       </section>
 
       {errors.length > 0 && (
-        <ul className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+        <ul className="sketch-box border-danger px-4 py-3 text-danger">
           {errors.map((e) => (
             <li key={e}>{e}</li>
           ))}
@@ -132,11 +131,7 @@ export function CalculationEditor() {
       )}
 
       <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary">
           {pending ? "Saving…" : "Save and get share link"}
         </button>
       </div>

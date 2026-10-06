@@ -16,12 +16,8 @@ export function CopyLinkButton() {
   }
 
   return (
-    <button
-      type="button"
-      onClick={copy}
-      className="shrink-0 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-    >
-      {copied ? "Link copied" : "Copy share link"}
+    <button type="button" onClick={copy} className="btn btn-primary shrink-0">
+      {copied ? "Link copied ✓" : "Copy share link"}
     </button>
   );
 }

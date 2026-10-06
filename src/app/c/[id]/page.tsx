@@ -25,9 +25,9 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
     <>
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{calculation.title}</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl">{calculation.title}</h1>
           {calculation.description && (
-            <p className="mt-1 whitespace-pre-line text-black/60 dark:text-white/60">{calculation.description}</p>
+            <p className="mt-2 whitespace-pre-line text-ink-muted">{calculation.description}</p>
           )}
         </div>
         <CopyLinkButton />

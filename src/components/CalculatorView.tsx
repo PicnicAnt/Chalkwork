@@ -46,52 +46,44 @@ export function CalculatorPanel({
   const lastEdited = recent[0];
 
   if (analysis.variables.length === 0) {
-    return <p className="text-sm text-black/50 dark:text-white/50">Variables from your formulas show up here.</p>;
+    return <p className="text-ink-muted">Variables from your formulas show up here.</p>;
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
         {analysis.variables.map((v) => {
           const fixedByFormula = v.name === lastEdited && !plan.held.includes(v.name);
           const failed = result.failed && v.name === lastEdited;
           const highlight = changed.includes(v.name);
           return (
-            <label key={v.name} className="flex flex-col gap-1 text-sm">
+            <label key={v.name} className="flex min-w-0 flex-col">
               <span className="flex items-baseline justify-between gap-2">
-                <span className="font-medium">{v.label}</span>
-                <code className="font-mono text-xs text-black/40 dark:text-white/40">{v.name}</code>
+                <span className="truncate text-lg">{v.label}</span>
+                <span className="text-sm text-ink-faint">{v.name}</span>
               </span>
               <input
-                className={`w-full rounded-md border bg-white px-3 py-2 font-mono text-base outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:bg-white/5 ${
-                  failed || fixedByFormula
-                    ? "border-red-400"
-                    : highlight
-                      ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40"
-                      : "border-black/15 dark:border-white/15"
+                className={`field rounded-sm text-2xl ${
+                  failed || fixedByFormula ? "!border-danger" : highlight ? "bg-mark" : ""
                 }`}
                 inputMode="decimal"
-                placeholder="—"
+                placeholder="?"
                 value={display[v.name]}
                 onChange={(e) => edit(v.name, e.target.value)}
               />
-              {failed && <span className="text-xs text-red-600 dark:text-red-400">No values fit this</span>}
-              {fixedByFormula && (
-                <span className="text-xs text-red-600 dark:text-red-400">Fixed by its formula, can&apos;t be changed</span>
-              )}
+              {failed && <span className="text-sm text-danger">No values fit this</span>}
+              {fixedByFormula && <span className="text-sm text-danger">Fixed by its formula, can&apos;t be changed</span>}
               {v.formula && !failed && !fixedByFormula && (
-                <code className="truncate font-mono text-xs text-black/40 dark:text-white/40">{v.formula}</code>
+                <span className="truncate pt-0.5 text-sm text-accent-2">{v.formula}</span>
               )}
             </label>
           );
         })}
       </div>
       {broken.length > 0 && (
-        <ul className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <ul className="sketch-box px-4 py-3 text-danger">
           {broken.map((f) => (
-            <li key={f.line}>
-              <code className="font-mono">{f.text}</code> doesn&apos;t hold with these values.
-            </li>
+            <li key={f.line}>{f.text} doesn&apos;t hold with these values.</li>
           ))}
         </ul>
       )}

@@ -4,17 +4,21 @@ import { MyCalculations } from "@/components/MyCalculations";
 export default function Home() {
   return (
     <>
-      <section className="py-10">
-        <h1 className="text-4xl font-bold tracking-tight">Build a calculation. Share it with a link.</h1>
-        <p className="mt-4 max-w-xl text-lg text-black/60 dark:text-white/60">
-          Define inputs and formulas once. Anyone with the link can plug in their own numbers and see the results
-          instantly.
+      <section className="py-6 sm:py-10">
+        <h1 className="text-4xl font-bold leading-tight sm:text-5xl">
+          Write the formulas.
+          <br />
+          Share the board.
+        </h1>
+        <p className="mt-5 max-w-xl text-xl text-ink-muted">
+          Put a few formulas up, and anyone with the link can change any number and watch the rest work themselves
+          out.
         </p>
-        <Link
-          href="/new"
-          className="mt-8 inline-block rounded-md bg-blue-600 px-5 py-2.5 font-medium text-white hover:bg-blue-700"
-        >
-          Create a calculation
+        <p className="mt-6 text-xl text-accent-2">
+          payment = loan * rate / (1 - (1 + rate) ^ -months)
+        </p>
+        <Link href="/new" className="btn btn-primary mt-8">
+          Start a calculation
         </Link>
       </section>
       <MyCalculations />
