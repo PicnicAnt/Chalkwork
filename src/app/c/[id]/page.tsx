@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
@@ -30,7 +31,12 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
             <p className="mt-2 whitespace-pre-line text-ink-muted">{calculation.description}</p>
           )}
         </div>
-        <CopyLinkButton />
+        <div className="flex shrink-0 items-center gap-4">
+          <Link href={`/c/${calculation.id}/edit`} className="link text-lg">
+            Edit
+          </Link>
+          <CopyLinkButton />
+        </div>
       </div>
       <SharedCalculator calculation={calculation} />
     </>

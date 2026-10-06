@@ -1,6 +1,6 @@
 import "server-only";
 import Database from "better-sqlite3";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import type { Calculation, CalculationDraft } from "./calculation";
@@ -11,8 +11,8 @@ mkdirSync(dataDir, { recursive: true });
 const db = new Database(path.join(dataDir, "calcshare.db"));
 db.pragma("journal_mode = WAL");
 
-const SCHEMA_VERSION = 2;
-if ((db.pragma("user_version", { simple: true }) as number) < SCHEMA_VERSION) {
+const version = db.pragma("user_version", { simple: true }) as number;
+if (version < 2) {
   // Version 1 stored separate inputs/outputs. It only ever held local test data, so start fresh.
   db.exec(`
     DROP TABLE IF EXISTS calculations;
@@ -25,7 +25,15 @@ if ((db.pragma("user_version", { simple: true }) as number) < SCHEMA_VERSION) {
       created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     );
   `);
-  db.pragma(`user_version = ${SCHEMA_VERSION}`);
+}
+if (version < 3) {
+  // Editing: the creator gets a secret edit key; only its hash is stored.
+  // Calculations made before this have no key and can only be copied.
+  db.exec(`
+    ALTER TABLE calculations ADD COLUMN edit_key_hash TEXT;
+    ALTER TABLE calculations ADD COLUMN updated_at TEXT;
+  `);
+  db.pragma("user_version = 3");
 }
 
 type Row = {
@@ -35,14 +43,40 @@ type Row = {
   formulas: string;
   input_values: string;
   created_at: string;
+  edit_key_hash: string | null;
 };
 
-export function insertCalculation(draft: CalculationDraft): string {
+const hashKey = (key: string) => createHash("sha256").update(key).digest();
+
+export function insertCalculation(draft: CalculationDraft): { id: string; editKey: string } {
   const id = randomBytes(9).toString("base64url");
+  const editKey = randomBytes(18).toString("base64url");
   db.prepare(
-    "INSERT INTO calculations (id, title, description, formulas, input_values) VALUES (?, ?, ?, ?, ?)",
-  ).run(id, draft.title, draft.description, JSON.stringify(draft.formulas), JSON.stringify(draft.values));
-  return id;
+    "INSERT INTO calculations (id, title, description, formulas, input_values, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(
+    id,
+    draft.title,
+    draft.description,
+    JSON.stringify(draft.formulas),
+    JSON.stringify(draft.values),
+    hashKey(editKey).toString("hex"),
+  );
+  return { id, editKey };
+}
+
+export function canEdit(id: string, editKey: string): boolean {
+  const row = db.prepare("SELECT edit_key_hash FROM calculations WHERE id = ?").get(id) as
+    | Pick<Row, "edit_key_hash">
+    | undefined;
+  if (!row?.edit_key_hash) return false;
+  return timingSafeEqual(Buffer.from(row.edit_key_hash, "hex"), hashKey(editKey));
+}
+
+export function updateCalculation(id: string, draft: CalculationDraft) {
+  db.prepare(
+    `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+  ).run(draft.title, draft.description, JSON.stringify(draft.formulas), JSON.stringify(draft.values), id);
 }
 
 export function getCalculation(id: string): Calculation | null {

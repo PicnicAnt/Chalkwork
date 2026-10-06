@@ -93,7 +93,7 @@ export function CalculatorPanel({
           return (
             <div key={v.name} className="flex min-w-0 flex-col">
               {/* Written like a line on the board: name = value */}
-              <span className="flex items-center gap-2">
+              <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
                 <label htmlFor={id} className="max-w-[55%] shrink-0 break-words text-xl">
                   {v.name}
                 </label>

@@ -18,13 +18,15 @@ Open http://localhost:3000.
 - **Formulas:** one per line, `name = expression`, parsed with [mathjs](https://mathjs.org). Each formula is treated as an equation, and every name in them is a variable; there's no split between inputs and results. Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled.
 - **Solving:** with N variables and E equations, N − E values are held and the rest are calculated. Values the user types are locked (a lock icon toggles this) and are always held; remaining freedom is filled by unlocked variables keeping their value (preferring ones no formula defines), and everything else is recalculated. Variables that the locks (or formulas alone, like `fee = 500`) fully decide are read-only, shown with a double underline like a final answer. Equations are solved one unknown at a time, backwards numerically when needed (secant method, then bracketed bisection); groups of equations that only fit together are solved by guessing one variable and refining it until the group holds. See `src/lib/formulas.ts`.
 - The values in the editor are saved as the starting values.
-- **Sharing:** saving a calculation gives it an unguessable link at `/c/<id>`. There are no accounts yet; the home page lists calculations created in the current browser (kept in localStorage).
+- **Sharing:** saving a calculation gives it an unguessable link at `/c/<id>`.
+- **Editing:** creating a calculation hands the browser a secret edit key (only its SHA-256 hash is stored, in `edit_key_hash`). `/c/<id>/edit` saves changes in place when the browser has the key, and otherwise saves a new copy. There are no accounts yet; the home page lists calculations created in the current browser (kept in localStorage).
 
 ## Layout
 
 - `src/app/page.tsx`: home page
 - `src/app/new/page.tsx`: create a calculation
 - `src/app/c/[id]/page.tsx`: shared calculation page
+- `src/app/c/[id]/edit/page.tsx`: edit (or copy) a calculation
 - `src/app/actions.ts`: server action that validates and saves
 - `src/lib/calculation.ts`: types and validation shared by client and server
 - `src/lib/formulas.ts`: formula parsing, input detection, and evaluation

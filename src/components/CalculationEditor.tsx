@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { createCalculation } from "@/app/actions";
-import { LIMITS, splitFormulas } from "@/lib/calculation";
+import { createCalculation, updateCalculation } from "@/app/actions";
+import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
 import { analyzeFormulas } from "@/lib/formulas";
 import { rememberCalculation } from "@/lib/my-calculations";
 import { CalculatorPanel } from "./CalculatorView";
@@ -37,13 +37,22 @@ const EXAMPLE = {
   },
 };
 
-
-export function CalculationEditor() {
+// Without `initial` this creates a new calculation. With `editing`, it saves changes to an
+// existing one; with `initial` but no `editing`, it saves a new copy.
+export function CalculationEditor({
+  initial,
+  editing,
+  heading = "New calculation",
+}: {
+  initial?: CalculationDraft;
+  editing?: { id: string; editKey: string };
+  heading?: string;
+}) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [formulaText, setFormulaText] = useState("");
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [formulaText, setFormulaText] = useState(initial?.formulas.join("\n") ?? "");
+  const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
@@ -60,18 +69,20 @@ export function CalculationEditor() {
 
   function save() {
     startTransition(async () => {
-      const result = await createCalculation({ title, description, formulas, values });
+      const draft = { title, description, formulas, values };
+      const result = editing
+        ? await updateCalculation(editing.id, editing.editKey, draft)
+        : await createCalculation(draft);
       if (!result.ok) {
         setErrors(result.errors);
         return;
       }
-      rememberCalculation({ id: result.id, title: result.title, createdAt: result.createdAt });
+      rememberCalculation({ id: result.id, title: result.title, createdAt: result.createdAt, editKey: result.editKey });
       router.push(`/c/${result.id}`);
     });
   }
 
   return (
-
     <form
       className="flex flex-col gap-10"
       onSubmit={(e) => {
@@ -81,10 +92,12 @@ export function CalculationEditor() {
     >
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="text-3xl font-bold sm:text-4xl">New calculation</h1>
-          <button type="button" onClick={loadExample} className="link text-base">
-            Fill in an example
-          </button>
+          <h1 className="text-3xl font-bold sm:text-4xl">{heading}</h1>
+          {!initial && (
+            <button type="button" onClick={loadExample} className="link text-base">
+              Fill in an example
+            </button>
+          )}
         </div>
         <input
           className="field sketch text-2xl"
@@ -148,7 +161,7 @@ export function CalculationEditor() {
 
       <div>
         <button type="submit" disabled={pending} className="btn btn-primary">
-          {pending ? "Saving…" : "Save and get share link"}
+          {pending ? "Saving…" : editing ? "Save changes" : "Save and get share link"}
         </button>
       </div>
     </form>
