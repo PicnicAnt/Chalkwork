@@ -15,7 +15,7 @@ export default function Home() {
           out.
         </p>
         <p className="mt-6 text-xl text-accent-2">
-          payment = loan * rate / (1 - (1 + rate) ^ -months)
+          dps = avg_hit * aps * crit_factor * hit_chance / 100
         </p>
         <Link href="/new" className="btn btn-primary mt-8">
           Start a calculation

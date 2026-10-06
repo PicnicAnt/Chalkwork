@@ -8,17 +8,33 @@ import { analyzeFormulas } from "@/lib/formulas";
 import { rememberCalculation } from "@/lib/my-calculations";
 import { CalculatorPanel } from "./CalculatorView";
 
+// An ARPG damage sheet in the style of Path of Exile: weapon damage scaled by increased and more
+// modifiers, attack speed, crit, and chance to hit. Written dps-first so it heads the list, and
+// with inc_dmg appearing last, so typing a target dps solves for how much increased damage it takes.
 const EXAMPLE = {
-  title: "Loan payment",
-  description: "Monthly payment for a fixed-rate loan.",
+  title: "Attack DPS",
+  description: "Path of Exile style damage per second for a melee attack: weapon damage, increased and more modifiers, attack speed, crit and accuracy.",
   formulas: [
-    "monthly_rate = annual_rate_percent / 100 / 12",
-    "payments = years * 12",
-    "monthly_payment = loan_amount * monthly_rate / (1 - (1 + monthly_rate) ^ -payments)",
-    "total_paid = monthly_payment * payments",
-    "total_interest = total_paid - loan_amount",
+    "dps = avg_hit * aps * crit_factor * hit_chance / 100",
+    "hit_chance = min(max(125 * accuracy / (accuracy + (enemy_evasion / 5) ^ 0.9), 5), 100)",
+    "crit_factor = 1 + crit_chance / 100 * (crit_multi / 100 - 1)",
+    "crit_chance = min(base_crit * (1 + inc_crit / 100), 100)",
+    "aps = base_aps * (1 + inc_aps / 100)",
+    "avg_hit = (min_dmg + max_dmg) / 2 * (1 + more_dmg / 100) * (1 + inc_dmg / 100)",
   ].join("\n"),
-  values: { annual_rate_percent: "4.5", years: "30", loan_amount: "250000" },
+  values: {
+    accuracy: "2400",
+    enemy_evasion: "12000",
+    crit_multi: "380",
+    base_crit: "6.5",
+    inc_crit: "300",
+    base_aps: "1.55",
+    inc_aps: "32",
+    min_dmg: "38",
+    max_dmg: "115",
+    more_dmg: "49",
+    inc_dmg: "250",
+  },
 };
 
 
