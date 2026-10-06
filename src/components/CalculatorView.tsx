@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { brokenFormulas, decidedBy, formatNumber, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
@@ -28,7 +28,7 @@ export function CalculatorPanel({
 }) {
   // Locked variables, in the order they were locked.
   const [locked, setLocked] = useState<string[]>([]);
-  const [changed, setChanged] = useState<string[]>([]);
+  const inputs = useRef(new Map<string, HTMLInputElement>());
   // A value that couldn't be applied stays visible in its field with the reason.
   const [rejected, setRejected] = useState<{ name: string; text: string; reason: string } | null>(null);
   const { display, broken } = useMemo(() => compute(analysis, values, locked), [analysis, values, locked]);
@@ -50,10 +50,23 @@ export function CalculatorPanel({
       return;
     }
     setRejected(null);
-    setChanged(analysis.variables.map((v) => v.name).filter((n) => n !== edited?.name && next.display[n] !== display[n]));
+    flash(analysis.variables.map((v) => v.name).filter((n) => n !== edited?.name && next.display[n] !== display[n]));
     setLocked(nextLocked);
     // Store calculated values too, so the next change starts from what's on screen.
     onChange(next.display);
+  }
+
+  // Recalculated values briefly flash in the accent color so the change is noticed.
+  function flash(names: string[]) {
+    const styles = getComputedStyle(document.documentElement);
+    const from = styles.getPropertyValue("--accent").trim();
+    const to = styles.getPropertyValue("--ink").trim();
+    for (const name of names) {
+      inputs.current.get(name)?.animate([{ color: from }, { color: from, offset: 0.35 }, { color: to }], {
+        duration: 2000,
+        easing: "ease-in",
+      });
+    }
   }
 
   function edit(name: string, text: string) {
@@ -75,7 +88,6 @@ export function CalculatorPanel({
         {analysis.variables.map((v) => {
           const isLocked = locked.includes(v.name);
           const problem = rejected?.name === v.name ? rejected : null;
-          const highlight = changed.includes(v.name);
           const readOnly = decided.has(v.name) && !problem;
           const decidedByFormulaAlone = readOnly && decidedBy(analysis, []).has(v.name);
           const id = `var-${v.name}`;
@@ -89,7 +101,11 @@ export function CalculatorPanel({
                 <span className="text-xl text-ink-muted">=</span>
                 <input
                   id={id}
-                  className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : highlight ? "bg-mark" : ""} ${
+                  ref={(el) => {
+                    if (el) inputs.current.set(v.name, el);
+                    else inputs.current.delete(v.name);
+                  }}
+                  className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
                     readOnly ? "cursor-default !border-transparent" : ""
                   }`}
                   inputMode="decimal"

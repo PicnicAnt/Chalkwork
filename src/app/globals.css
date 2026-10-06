@@ -15,7 +15,6 @@
   --accent: #1f5fbf;
   --accent-2: #1e8a4c;
   --danger: #c8312b;
-  --mark: rgb(255 214 64 / 0.45);
   --frame: #c3c8ce;
   --frame-dark: #8f969e;
   --glow: 0 0 0.4px currentColor;
@@ -32,7 +31,6 @@
   --accent: #f5e58c;
   --accent-2: #9fd6f2;
   --danger: #f6a5ae;
-  --mark: rgb(245 229 140 / 0.16);
   --frame: #7a532e;
   --frame-dark: #4e3319;
   --glow: 0 0 1px rgb(255 255 255 / 0.55), 0 0 7px rgb(255 255 255 / 0.1);
@@ -48,7 +46,6 @@
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
   --color-danger: var(--danger);
-  --color-mark: var(--mark);
   --font-sans: var(--font-hand);
   --font-mono: var(--font-hand);
 }
