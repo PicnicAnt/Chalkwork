@@ -89,7 +89,6 @@ export function CalculatorPanel({
           const isLocked = locked.includes(v.name);
           const problem = rejected?.name === v.name ? rejected : null;
           const readOnly = decided.has(v.name) && !problem;
-          const decidedByFormulaAlone = readOnly && decidedBy(analysis, []).has(v.name);
           const id = `var-${v.name}`;
           return (
             <div key={v.name} className="flex min-w-0 flex-col">
@@ -106,7 +105,7 @@ export function CalculatorPanel({
                     else inputs.current.delete(v.name);
                   }}
                   className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
-                    readOnly ? "cursor-default !border-transparent" : ""
+                    readOnly ? "field-decided" : ""
                   }`}
                   inputMode="decimal"
                   placeholder="?"
@@ -123,11 +122,6 @@ export function CalculatorPanel({
               </span>
               {problem && <span className="text-sm text-danger">{problem.reason}</span>}
               {v.formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{v.formula}</span>}
-              {readOnly && (
-                <span className="text-sm text-ink-faint">
-                  {decidedByFormulaAlone ? "Fixed by its formula" : "Decided by the locked values"}
-                </span>
-              )}
             </div>
           );
         })}

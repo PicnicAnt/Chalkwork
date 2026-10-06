@@ -137,6 +137,12 @@ h3,
   .field:focus {
     border-bottom-color: var(--accent);
   }
+  /* Read-only: fully decided by the locked values or formulas, underlined twice like a final answer. */
+  .field-decided,
+  .field-decided:focus {
+    cursor: default;
+    border-bottom: 5px double var(--ink-muted);
+  }
 
   .btn {
     display: inline-block;
