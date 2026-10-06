@@ -3,8 +3,7 @@
 
 export type SavedCalculation = { id: string; title: string; createdAt: string; editKey?: string };
 
-// Keeps the app's original name so calculations already saved in browsers (and their edit keys) are still found.
-const KEY = "calcshare:mine";
+const KEY = "chalkwork:mine";
 
 export function loadMyCalculations(): SavedCalculation[] {
   try {

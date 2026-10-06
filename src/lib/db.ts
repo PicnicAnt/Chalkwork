@@ -8,7 +8,7 @@ import type { Calculation, CalculationDraft } from "./calculation";
 const dataDir = path.join(process.cwd(), "data");
 mkdirSync(dataDir, { recursive: true });
 
-const db = new Database(path.join(dataDir, "calcshare.db"));
+const db = new Database(path.join(dataDir, "chalkwork.db"));
 db.pragma("journal_mode = WAL");
 
 const version = db.pragma("user_version", { simple: true }) as number;

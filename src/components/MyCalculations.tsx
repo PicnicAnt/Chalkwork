@@ -8,7 +8,7 @@ import { loadMyCalculations } from "@/lib/my-calculations";
 const subscribe = () => () => {};
 let cached: { raw: string | null; list: ReturnType<typeof loadMyCalculations> } | null = null;
 function getSnapshot() {
-  const raw = localStorage.getItem("calcshare:mine");
+  const raw = localStorage.getItem("chalkwork:mine");
   if (!cached || cached.raw !== raw) cached = { raw, list: loadMyCalculations() };
   return cached.list;
 }
