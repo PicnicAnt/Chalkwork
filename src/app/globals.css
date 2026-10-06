@@ -102,6 +102,22 @@ h3,
   text-decoration-thickness: 1.5px;
   text-underline-offset: 6px;
 }
+/* Typeahead list: a small board panel with the active row marked like a chalk underline. */
+.suggest {
+  background: var(--board);
+  border: 2px solid var(--ink-faint);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  min-width: 12rem;
+}
+.suggest-item {
+  border-left: 3px solid transparent;
+  text-shadow: none;
+}
+.suggest-active {
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  border-left-color: var(--accent);
+}
 /* The textarea above the colored text only draws a caret and a selection. */
 .formula-textarea {
   caret-color: var(--ink);
