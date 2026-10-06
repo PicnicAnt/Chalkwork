@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { createCalculation, updateCalculation } from "@/app/actions";
 import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
-import { analyzeFormulas } from "@/lib/formulas";
+import { analyzeFormulas, formulaProblems } from "@/lib/formulas";
 import { rememberCalculation } from "@/lib/my-calculations";
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
@@ -59,6 +59,13 @@ export function CalculationEditor({
 
   const formulas = useMemo(() => splitFormulas(formulaText), [formulaText]);
   const analysis = useMemo(() => analyzeFormulas(formulas), [formulas]);
+  const problems = useMemo(() => formulaProblems(analysis), [analysis]);
+  // Problems are numbered among the non-empty formulas; the box also has blank lines.
+  const badLines = useMemo(() => {
+    const textLines = formulaText.split("\n");
+    const filled = textLines.flatMap((text, i) => (text.trim() ? [i] : []));
+    return new Set(problems.map((p) => filled[p.line - 1]));
+  }, [formulaText, problems]);
 
   function loadExample() {
     setTitle(EXAMPLE.title);
@@ -132,7 +139,17 @@ export function CalculationEditor({
           value={formulaText}
           onChange={setFormulaText}
           placeholder={"area = width * height\nprice = area * price_per_m2"}
+          badLines={badLines}
         />
+        {problems.length > 0 && (
+          <ul className="flex flex-col gap-1 text-base text-danger">
+            {problems.map((p) => (
+              <li key={`${p.line}-${p.message}`}>
+                <span className="text-xl">{formulas[p.line - 1]}</span> — {p.message}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="flex flex-col gap-4">
@@ -155,7 +172,7 @@ export function CalculationEditor({
       )}
 
       <div>
-        <button type="submit" disabled={pending} className="btn btn-primary">
+        <button type="submit" disabled={pending || problems.length > 0} className="btn btn-primary">
           {pending ? "Saving…" : editing ? "Save changes" : "Save and get share link"}
         </button>
       </div>

@@ -1,5 +1,5 @@
 // Shared types and validation for calculations. Safe to import from client and server.
-import { analyzeFormulas } from "./formulas";
+import { analyzeFormulas, formulaProblems } from "./formulas";
 
 export type CalculationDraft = {
   title: string;
@@ -51,8 +51,8 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
   if (errors.length) return { errors };
 
   const analysis = analyzeFormulas(formulas);
-  for (const f of analysis.formulas) {
-    if (f.error) errors.push(`Line ${f.line}: ${f.error}`);
+  for (const problem of formulaProblems(analysis)) {
+    errors.push(`Line ${problem.line}: ${problem.message}`);
   }
 
   const rawValues = typeof r.values === "object" && r.values !== null ? (r.values as Record<string, unknown>) : {};

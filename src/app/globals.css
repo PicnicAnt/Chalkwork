@@ -97,6 +97,11 @@ h3,
 .tok-punct {
   color: var(--ink-muted);
 }
+.tok-error {
+  text-decoration: underline wavy var(--danger);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 6px;
+}
 /* The textarea above the colored text only draws a caret and a selection. */
 .formula-textarea {
   caret-color: var(--ink);

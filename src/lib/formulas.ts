@@ -241,8 +241,9 @@ export function planSolve(analysis: Analysis, locked: string[]): Plan {
     ...names.filter((n) => !locked.includes(n) && defined.has(n)),
   ];
 
+  // Equations that are just a constant (like `fee = 500`) are settled before anything is held.
   const held: string[] = [];
-  let steps: Step[] = [];
+  let steps: Step[] = propagateDirect(equations, new Set(), new Set()).steps;
   for (const name of order) {
     if (held.includes(name) || steps.some((s) => stepVariables(s).includes(name))) continue;
     held.push(name);
@@ -255,6 +256,7 @@ export function planSolve(analysis: Analysis, locked: string[]): Plan {
 export type SolveResult = {
   values: Record<string, number | undefined>;
   failed?: string; // the variable that couldn't be made to fit
+  failedFormula?: Formula; // and the equation that couldn't be satisfied
 };
 
 function toNumber(v: unknown): number | undefined {
@@ -279,8 +281,14 @@ function residualOf(formula: Formula, values: Record<string, number | undefined>
   }
 }
 
-// Runs steps in order, filling in `values`. Returns the variable that couldn't be solved, if any.
-function runSteps(steps: Step[], values: Record<string, number | undefined>, previous: Record<string, number | undefined>): string | undefined {
+// Runs steps in order, filling in `values`. Returns the variable and equation that couldn't be solved, if any.
+function runSteps(
+  steps: Step[],
+  values: Record<string, number | undefined>,
+  previous: Record<string, number | undefined>,
+): { variable: string; formula: Formula } | undefined {
+  // One equation nothing can satisfy shouldn't stop the others from being solved.
+  let failure: { variable: string; formula: Formula } | undefined;
   for (const step of steps) {
     if (step.kind === "tear") {
       const vars = stepFormulas(step).flatMap((f) => f.vars);
@@ -296,7 +304,11 @@ function runSteps(steps: Step[], values: Record<string, number | undefined>, pre
       };
       const scale = Math.abs(values[step.check.name] ?? 1);
       const x = findRoot(g, previous[step.tear], scale);
-      if (x === null) return step.tear;
+      if (x === null) {
+        failure ??= { variable: step.tear, formula: step.check };
+        stepVariables(step).forEach((v) => (values[v] = undefined));
+        continue;
+      }
       g(x); // leave the values from the solution in place
       continue;
     }
@@ -319,10 +331,14 @@ function runSteps(steps: Step[], values: Record<string, number | undefined>, pre
     // Backwards: find the value that makes the left side equal the right side.
     const g = (x: number) => residualOf(formula, { ...values, [unknown]: x });
     const x = findRoot(g, previous[unknown], Math.abs(values[formula.name] ?? 1));
-    if (x === null) return unknown;
+    if (x === null) {
+      failure ??= { variable: unknown, formula };
+      values[unknown] = undefined;
+      continue;
+    }
     values[unknown] = x;
   }
-  return undefined;
+  return failure;
 }
 
 export function solve(
@@ -333,8 +349,8 @@ export function solve(
 ): SolveResult {
   const values: Record<string, number | undefined> = {};
   for (const name of plan.held) values[name] = given[name];
-  const failed = runSteps(plan.steps, values, previous);
-  return { values, failed };
+  const failure = runSteps(plan.steps, values, previous);
+  return { values, failed: failure?.variable, failedFormula: failure?.formula };
 }
 
 // Finds x with g(x) = 0, preferring the solution nearest `guess`.
@@ -418,4 +434,34 @@ export function parseValue(text: string | undefined): number | undefined {
 export function formatNumber(value: number | undefined): string {
   if (value === undefined) return "";
   return String(Number(value.toPrecision(10)));
+}
+
+// ---------------------------------------------------------------------------
+// Checking
+
+export type FormulaProblem = { line: number; message: string };
+
+// Finds equations that can't make sense: ones that don't parse, ones nothing can satisfy
+// (like `e1 = e1 - 2`), and ones that contradict the others (like `a = 1` with `a = 2`).
+// An equation is only flagged when no set of sample values makes the formulas hold.
+export function formulaProblems(analysis: Analysis): FormulaProblem[] {
+  const problems: FormulaProblem[] = analysis.formulas
+    .filter((f) => f.error)
+    .map((f) => ({ line: f.line, message: f.error! }));
+  if (analysis.formulas.every((f) => f.error)) return problems;
+
+  const plan = planSolve(analysis, []);
+  let culprits: Formula[] = [];
+  let message = "";
+  for (let k = 0; k < 3; k++) {
+    const given = Object.fromEntries(plan.held.map((name, i) => [name, 1 + ((i * 7 + k * 5) % 11) / 3]));
+    const result = solve(analysis, plan, given, given);
+    const unsolved = result.failedFormula ? [result.failedFormula] : [];
+    const contradicted = unsolved.length ? [] : brokenFormulas(analysis, plan, result.values);
+    if (unsolved.length === 0 && contradicted.length === 0) return problems;
+    culprits = [...unsolved, ...contradicted];
+    message = unsolved.length ? "No value satisfies this equation" : "This equation can't hold together with the others";
+  }
+  for (const f of culprits) problems.push({ line: f.line, message });
+  return problems.sort((a, b) => a.line - b.line);
 }
