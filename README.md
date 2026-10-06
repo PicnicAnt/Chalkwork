@@ -1,4 +1,4 @@
-# CalcShare
+# Chalkwork
 
 Write a few formulas, then share them with a link. Inputs are worked out from the formulas, and anyone with the link can change them and see every result update instantly.
 
@@ -14,7 +14,7 @@ Open http://localhost:3000.
 ## How it works
 
 - **Stack:** Next.js (App Router) with TypeScript and Tailwind.
-- **Storage:** SQLite via `better-sqlite3`, in `data/calcshare.db` (created on first run, not committed).
+- **Storage:** SQLite via `better-sqlite3`, in `data/calcshare.db` (created on first run, not committed; the file keeps the app's original name).
 - **Formulas:** one per line, `name = expression`, parsed with [mathjs](https://mathjs.org). Each formula is treated as an equation, and every name in them is a variable; there's no split between inputs and results. Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled.
 - **Solving:** with N variables and E equations, N − E values are held and the rest are calculated. Values the user types are locked (a lock icon toggles this) and are always held; remaining freedom is filled by unlocked variables keeping their value (preferring ones no formula defines), and everything else is recalculated. Variables that the locks (or formulas alone, like `fee = 500`) fully decide are read-only, shown with a double underline like a final answer. Equations are solved one unknown at a time, backwards numerically when needed (secant method, then bracketed bisection); groups of equations that only fit together are solved by guessing one variable and refining it until the group holds. See `src/lib/formulas.ts`.
 - The values in the editor are saved as the starting values.

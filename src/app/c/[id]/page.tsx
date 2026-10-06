@@ -16,7 +16,7 @@ async function load(id: string) {
 
 export async function generateMetadata({ params }: PageProps<"/c/[id]">): Promise<Metadata> {
   const calculation = await load((await params).id);
-  return { title: `${calculation.title} · CalcShare`, description: calculation.description || undefined };
+  return { title: `${calculation.title} · Chalkwork`, description: calculation.description || undefined };
 }
 
 export default async function CalculationPage({ params }: PageProps<"/c/[id]">) {

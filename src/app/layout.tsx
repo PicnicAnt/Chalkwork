@@ -17,7 +17,7 @@ const sketch = Cabin_Sketch({
 });
 
 export const metadata: Metadata = {
-  title: "CalcShare",
+  title: "Chalkwork",
   description: "Create calculations and share them with a link.",
 };
 
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="board flex flex-1 flex-col">
             <header className="relative flex items-center justify-between gap-3 px-4 pt-4 sm:px-8 sm:pt-6">
               <Link href="/" className="sketch text-2xl font-bold sm:text-3xl">
-                CalcShare
+                Chalkwork
               </Link>
               <nav className="flex items-center gap-3">
                 <Link href="/new" className="link text-lg">
