@@ -115,8 +115,8 @@ export function CalculationEditor() {
         <div>
           <h2 className="text-2xl font-bold">Try it</h2>
           <p className="text-base text-ink-muted">
-            Change any variable. The ones you changed most recently stay put, and the rest are recalculated. These
-            values are saved as what people see first.
+            Change any variable. Values you type get locked and the formulas never change them; everything
+            unlocked is recalculated. Tap a lock to release it. These values are saved as what people see first.
           </p>
         </div>
         <CalculatorPanel analysis={analysis} values={values} onChange={setValues} />

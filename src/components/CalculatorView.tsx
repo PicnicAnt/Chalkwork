@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { brokenFormulas, formatNumber, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
 
-function compute(analysis: Analysis, values: Record<string, string>, recent: string[]) {
-  const plan = planSolve(analysis, recent);
+function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
+  const plan = planSolve(analysis, locked);
   const numbers = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, parseValue(v)]));
   const result = solve(analysis, plan, numbers, numbers);
-  // Values the user is holding keep their exact text; everything else shows the calculated number.
+  // Values being kept show their exact text; everything else shows the calculated number.
   const display: Record<string, string> = {};
   for (const v of analysis.variables) {
     display[v.name] = plan.held.includes(v.name) ? (values[v.name] ?? "") : formatNumber(result.values[v.name]);
@@ -15,8 +15,8 @@ function compute(analysis: Analysis, values: Record<string, string>, recent: str
   return { plan, result, display, broken: brokenFormulas(analysis, plan, result.values) };
 }
 
-// One list of variables, all editable. Editing one keeps it and the other most recently
-// edited values fixed, and recalculates every other variable so all formulas still hold.
+// One list of variables, all editable. A value the user types is locked and never changed by
+// the formulas; every unlocked variable is recalculated so all formulas still hold.
 export function CalculatorPanel({
   analysis,
   values,
@@ -26,24 +26,43 @@ export function CalculatorPanel({
   values: Record<string, string>;
   onChange: (values: Record<string, string>) => void;
 }) {
-  const [recent, setRecent] = useState<string[]>([]);
+  // Locked variables, in the order they were locked.
+  const [locked, setLocked] = useState<string[]>([]);
   const [changed, setChanged] = useState<string[]>([]);
-  const { plan, result, display, broken } = useMemo(
-    () => compute(analysis, values, recent),
-    [analysis, values, recent],
-  );
+  // A value that couldn't be applied stays visible in its field with the reason.
+  const [rejected, setRejected] = useState<{ name: string; text: string; reason: string } | null>(null);
+  const { display, broken } = useMemo(() => compute(analysis, values, locked), [analysis, values, locked]);
 
-  function edit(name: string, text: string) {
-    const nextRecent = [name, ...recent.filter((r) => r !== name)];
-    const nextValues = { ...display, [name]: text };
-    const next = compute(analysis, nextValues, nextRecent);
-    setChanged(analysis.variables.map((v) => v.name).filter((n) => n !== name && next.display[n] !== display[n]));
-    setRecent(nextRecent);
-    // Store calculated values too, so the next edit starts from what's on screen.
-    onChange({ ...next.display, [name]: text });
+  function apply(nextLocked: string[], nextValues: Record<string, string>, edited?: { name: string; text: string }) {
+    const next = compute(analysis, nextValues, nextLocked);
+    if (edited && !next.plan.held.includes(edited.name)) {
+      const constant = analysis.formulas.some((f) => !f.error && f.name === edited.name && f.vars.length === 1);
+      const others = nextLocked.filter((n) => n !== edited.name);
+      const reason = constant
+        ? "Fixed by its formula, can't be changed"
+        : `Already decided by locked ${others.join(", ")}. Unlock one to change this.`;
+      setRejected({ ...edited, reason });
+      return;
+    }
+    if (edited && next.result.failed) {
+      setRejected({ ...edited, reason: "No values fit this with the current locks" });
+      return;
+    }
+    setRejected(null);
+    setChanged(analysis.variables.map((v) => v.name).filter((n) => n !== edited?.name && next.display[n] !== display[n]));
+    setLocked(nextLocked);
+    // Store calculated values too, so the next change starts from what's on screen.
+    onChange(next.display);
   }
 
-  const lastEdited = recent[0];
+  function edit(name: string, text: string) {
+    apply([...locked.filter((n) => n !== name), name], { ...display, [name]: text }, { name, text });
+  }
+
+  function toggleLock(name: string) {
+    if (locked.includes(name)) apply(locked.filter((n) => n !== name), display);
+    else edit(name, display[name]);
+  }
 
   if (analysis.variables.length === 0) {
     return <p className="text-ink-muted">Variables from your formulas show up here.</p>;
@@ -53,30 +72,29 @@ export function CalculatorPanel({
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
         {analysis.variables.map((v) => {
-          const fixedByFormula = v.name === lastEdited && !plan.held.includes(v.name);
-          const failed = result.failed && v.name === lastEdited;
+          const isLocked = locked.includes(v.name);
+          const problem = rejected?.name === v.name ? rejected : null;
           const highlight = changed.includes(v.name);
           return (
-            <label key={v.name} className="flex min-w-0 flex-col">
+            <div key={v.name} className="flex min-w-0 flex-col">
               <span className="flex items-baseline justify-between gap-2">
                 <span className="truncate text-lg">{v.label}</span>
                 <span className="text-sm text-ink-faint">{v.name}</span>
               </span>
-              <input
-                className={`field rounded-sm text-2xl ${
-                  failed || fixedByFormula ? "!border-danger" : highlight ? "bg-mark" : ""
-                }`}
-                inputMode="decimal"
-                placeholder="?"
-                value={display[v.name]}
-                onChange={(e) => edit(v.name, e.target.value)}
-              />
-              {failed && <span className="text-sm text-danger">No values fit this</span>}
-              {fixedByFormula && <span className="text-sm text-danger">Fixed by its formula, can&apos;t be changed</span>}
-              {v.formula && !failed && !fixedByFormula && (
-                <span className="truncate pt-0.5 text-sm text-accent-2">{v.formula}</span>
-              )}
-            </label>
+              <span className="flex items-center gap-2">
+                <input
+                  className={`field rounded-sm text-2xl ${problem ? "!border-danger" : highlight ? "bg-mark" : ""}`}
+                  inputMode="decimal"
+                  placeholder="?"
+                  aria-label={v.label}
+                  value={problem ? problem.text : display[v.name]}
+                  onChange={(e) => edit(v.name, e.target.value)}
+                />
+                <LockButton locked={isLocked} label={v.label} onClick={() => toggleLock(v.name)} />
+              </span>
+              {problem && <span className="text-sm text-danger">{problem.reason}</span>}
+              {v.formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{v.formula}</span>}
+            </div>
           );
         })}
       </div>
@@ -88,5 +106,23 @@ export function CalculatorPanel({
         </ul>
       )}
     </div>
+  );
+}
+
+function LockButton({ locked, label, onClick }: { locked: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={locked}
+      aria-label={locked ? `Unlock ${label}` : `Lock ${label}`}
+      title={locked ? "Locked: formulas won't change this. Tap to unlock." : "Tap to lock this value"}
+      className={`shrink-0 p-1 transition-colors ${locked ? "text-accent" : "text-ink-faint hover:text-ink-muted"}`}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+        {locked ? <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /> : <path d="M8 10.5V7a4 4 0 0 1 7.6-1.7" />}
+      </svg>
+    </button>
   );
 }

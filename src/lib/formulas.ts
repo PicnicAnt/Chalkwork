@@ -125,8 +125,8 @@ export function analyzeFormulas(lines: string[]): Analysis {
 // Solving
 //
 // With N variables and E equations, N - E values must be given and the rest follow.
-// Which ones are given is decided by recency: the variables the user edited most
-// recently are kept as they are, and everything else is recalculated to fit.
+// Values the user typed are locked and always given. Any freedom left over is filled by
+// other variables keeping their current value, and everything else is recalculated to fit.
 
 // A direct step: an equation with one unknown left, solved for it.
 // A tear step: a group of equations that only fit together (e.g. a payment that depends on the
@@ -199,17 +199,18 @@ function propagate(equations: Formula[], held: Set<string>): Step[] {
   }
 }
 
-// `recent` is most recent first. Variables nobody edited fall back to the order they
+// `locked` is in the order the locks were made; if they over-determine the formulas, the
+// later locks are the ones left out of `held`. Unlocked variables fall back to the order they
 // appear, preferring ones no formula defines, so a fresh calculation behaves like
 // "fill in the inputs, get the results".
-export function planSolve(analysis: Analysis, recent: string[]): Plan {
+export function planSolve(analysis: Analysis, locked: string[]): Plan {
   const equations = analysis.formulas.filter((f) => !f.error);
   const names = analysis.variables.map((v) => v.name);
   const defined = new Set(equations.map((f) => f.name));
   const order = [
-    ...recent.filter((n) => names.includes(n)),
-    ...names.filter((n) => !recent.includes(n) && !defined.has(n)),
-    ...names.filter((n) => !recent.includes(n) && defined.has(n)),
+    ...locked.filter((n) => names.includes(n)),
+    ...names.filter((n) => !locked.includes(n) && !defined.has(n)),
+    ...names.filter((n) => !locked.includes(n) && defined.has(n)),
   ];
 
   const held: string[] = [];
