@@ -3,51 +3,50 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { createCalculation } from "@/app/actions";
-import { LIMITS, toVariableName, type CalcInput, type CalcOutput } from "@/lib/calculation";
-import { evaluateCalculation } from "@/lib/evaluate";
+import { LIMITS, splitFormulas } from "@/lib/calculation";
+import { analyzeFormulas } from "@/lib/formulas";
 import { rememberCalculation } from "@/lib/my-calculations";
+import { CalculatorPanel } from "./CalculatorView";
 
 const EXAMPLE = {
   title: "Loan payment",
   description: "Monthly payment for a fixed-rate loan.",
-  inputs: [
-    { label: "Loan amount", value: "250000" },
-    { label: "Annual rate percent", value: "4.5" },
-    { label: "Years", value: "30" },
-  ],
-  outputs: [
-    { label: "Monthly rate", formula: "annual_rate_percent / 100 / 12" },
-    { label: "Payments", formula: "years * 12" },
-    { label: "Monthly payment", formula: "loan_amount * monthly_rate / (1 - (1 + monthly_rate) ^ -payments)" },
-    { label: "Total paid", formula: "monthly_payment * payments" },
-  ],
+  formulas: [
+    "monthly_rate = annual_rate_percent / 100 / 12",
+    "payments = years * 12",
+    "monthly_payment = loan_amount * monthly_rate / (1 - (1 + monthly_rate) ^ -payments)",
+    "total_paid = monthly_payment * payments",
+    "total_interest = total_paid - loan_amount",
+  ].join("\n"),
+  values: { annual_rate_percent: "4.5", years: "30", loan_amount: "250000" },
 };
 
 const fieldClass =
-  "w-full rounded-md border border-black/15 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-white/15 dark:bg-white/5";
+  "w-full rounded-md border border-black/15 bg-white px-3 py-2 text-base outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-white/15 dark:bg-white/5";
 
 export function CalculationEditor() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [inputs, setInputs] = useState<CalcInput[]>([{ label: "", value: "" }]);
-  const [outputs, setOutputs] = useState<CalcOutput[]>([{ label: "", formula: "" }]);
+  const [formulaText, setFormulaText] = useState("");
+  const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
-  const results = useMemo(() => evaluateCalculation(inputs, outputs), [inputs, outputs]);
+  const formulas = useMemo(() => splitFormulas(formulaText), [formulaText]);
+  const analysis = useMemo(() => analyzeFormulas(formulas), [formulas]);
 
   function loadExample() {
     setTitle(EXAMPLE.title);
     setDescription(EXAMPLE.description);
-    setInputs(EXAMPLE.inputs);
-    setOutputs(EXAMPLE.outputs);
+    setFormulaText(EXAMPLE.formulas);
+    setValues(EXAMPLE.values);
     setErrors([]);
   }
 
   function save() {
     startTransition(async () => {
-      const result = await createCalculation({ title, description, inputs, outputs });
+      const result = await createCalculation({ title, description, formulas, values });
       if (!result.ok) {
         setErrors(result.errors);
         return;
@@ -93,84 +92,34 @@ export function CalculationEditor() {
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Inputs</h2>
+          <h2 className="text-lg font-semibold">Formulas</h2>
           <p className="text-sm text-black/60 dark:text-white/60">
-            Values people can change. Each label becomes a name you can use in formulas.
+            One per line, like <code className="font-mono">area = width * height</code>. Any name you use but
+            don&apos;t define becomes an input. Formulas can use each other in any order. Supports + − × ÷, ^,
+            parentheses, and functions like sqrt, round, min, max.
           </p>
         </div>
-        {inputs.map((input, i) => (
-          <div key={i} className="flex flex-col gap-1">
-            <div className="flex gap-2">
-              <input
-                className={fieldClass}
-                placeholder="Label, e.g. Loan amount"
-                value={input.label}
-                maxLength={LIMITS.label}
-                onChange={(e) => setInputs(inputs.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
-                aria-label={`Input ${i + 1} label`}
-              />
-              <input
-                className={`${fieldClass} max-w-40`}
-                placeholder="Default value"
-                value={input.value}
-                maxLength={LIMITS.value}
-                onChange={(e) => setInputs(inputs.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
-                aria-label={`Input ${i + 1} default value`}
-              />
-              <RemoveButton onClick={() => setInputs(inputs.filter((_, j) => j !== i))} />
-            </div>
-            <VariableHint label={input.label} />
-          </div>
-        ))}
-        <AddButton
-          disabled={inputs.length >= LIMITS.inputs}
-          onClick={() => setInputs([...inputs, { label: "", value: "" }])}
-        >
-          Add input
-        </AddButton>
+        <textarea
+          className={`${fieldClass} font-mono text-sm leading-6`}
+          placeholder={"area = width * height\nprice = area * price_per_m2"}
+          rows={Math.max(4, formulas.length + 1)}
+          value={formulaText}
+          onChange={(e) => setFormulaText(e.target.value)}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          aria-label="Formulas"
+        />
       </section>
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Results</h2>
+          <h2 className="text-lg font-semibold">Try it</h2>
           <p className="text-sm text-black/60 dark:text-white/60">
-            Formulas can use inputs and any result above them. Supports + − × ÷, ^, parentheses, and functions like
-            sqrt, round, min, max.
+            Values you enter here are saved as the starting values people see.
           </p>
         </div>
-        {outputs.map((output, i) => (
-          <div key={i} className="flex flex-col gap-1">
-            <div className="flex gap-2">
-              <input
-                className={`${fieldClass} max-w-56`}
-                placeholder="Label, e.g. Total"
-                value={output.label}
-                maxLength={LIMITS.label}
-                onChange={(e) => setOutputs(outputs.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
-                aria-label={`Result ${i + 1} label`}
-              />
-              <input
-                className={`${fieldClass} font-mono`}
-                placeholder="Formula, e.g. price * quantity"
-                value={output.formula}
-                maxLength={LIMITS.formula}
-                onChange={(e) => setOutputs(outputs.map((x, j) => (j === i ? { ...x, formula: e.target.value } : x)))}
-                aria-label={`Result ${i + 1} formula`}
-              />
-              <RemoveButton onClick={() => setOutputs(outputs.filter((_, j) => j !== i))} />
-            </div>
-            <div className="flex justify-between gap-4 text-xs">
-              <VariableHint label={output.label} />
-              <ResultPreview result={results[i]} />
-            </div>
-          </div>
-        ))}
-        <AddButton
-          disabled={outputs.length >= LIMITS.outputs}
-          onClick={() => setOutputs([...outputs, { label: "", formula: "" }])}
-        >
-          Add result
-        </AddButton>
+        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} />
       </section>
 
       {errors.length > 0 && (
@@ -191,47 +140,5 @@ export function CalculationEditor() {
         </button>
       </div>
     </form>
-  );
-}
-
-function VariableHint({ label }: { label: string }) {
-  const name = toVariableName(label);
-  if (!name) return <span />;
-  return (
-    <span className="text-xs text-black/50 dark:text-white/50">
-      Use as <code className="rounded bg-black/5 px-1 font-mono dark:bg-white/10">{name}</code>
-    </span>
-  );
-}
-
-function ResultPreview({ result }: { result?: { value?: string; error?: string } }) {
-  if (!result) return null;
-  if (result.error) return <span className="truncate text-red-600 dark:text-red-400">{result.error}</span>;
-  return <span className="font-mono font-medium">= {result.value}</span>;
-}
-
-function AddButton({ children, onClick, disabled }: { children: string; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="self-start rounded-md border border-dashed border-black/25 px-3 py-1.5 text-sm hover:bg-black/5 disabled:opacity-50 dark:border-white/25 dark:hover:bg-white/5"
-    >
-      + {children}
-    </button>
-  );
-}
-
-function RemoveButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Remove row"
-      className="shrink-0 rounded-md px-2 text-black/40 hover:bg-black/5 hover:text-black/80 dark:text-white/40 dark:hover:bg-white/5 dark:hover:text-white/80"
-    >
-      ✕
-    </button>
   );
 }

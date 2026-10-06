@@ -10,28 +10,38 @@ mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(path.join(dataDir, "calcshare.db"));
 db.pragma("journal_mode = WAL");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS calculations (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    inputs TEXT NOT NULL,
-    outputs TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-  )
-`);
 
-type Row = { id: string; title: string; description: string; inputs: string; outputs: string; created_at: string };
+const SCHEMA_VERSION = 2;
+if ((db.pragma("user_version", { simple: true }) as number) < SCHEMA_VERSION) {
+  // Version 1 stored separate inputs/outputs. It only ever held local test data, so start fresh.
+  db.exec(`
+    DROP TABLE IF EXISTS calculations;
+    CREATE TABLE calculations (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      formulas TEXT NOT NULL,
+      input_values TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
+  `);
+  db.pragma(`user_version = ${SCHEMA_VERSION}`);
+}
+
+type Row = {
+  id: string;
+  title: string;
+  description: string;
+  formulas: string;
+  input_values: string;
+  created_at: string;
+};
 
 export function insertCalculation(draft: CalculationDraft): string {
   const id = randomBytes(9).toString("base64url");
-  db.prepare("INSERT INTO calculations (id, title, description, inputs, outputs) VALUES (?, ?, ?, ?, ?)").run(
-    id,
-    draft.title,
-    draft.description,
-    JSON.stringify(draft.inputs),
-    JSON.stringify(draft.outputs),
-  );
+  db.prepare(
+    "INSERT INTO calculations (id, title, description, formulas, input_values) VALUES (?, ?, ?, ?, ?)",
+  ).run(id, draft.title, draft.description, JSON.stringify(draft.formulas), JSON.stringify(draft.values));
   return id;
 }
 
@@ -42,8 +52,8 @@ export function getCalculation(id: string): Calculation | null {
     id: row.id,
     title: row.title,
     description: row.description,
-    inputs: JSON.parse(row.inputs),
-    outputs: JSON.parse(row.outputs),
+    formulas: JSON.parse(row.formulas),
+    values: JSON.parse(row.input_values),
     createdAt: row.created_at,
   };
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { CalculatorView } from "@/components/CalculatorView";
+import { SharedCalculator } from "@/components/SharedCalculator";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { getCalculation } from "@/lib/db";
 
@@ -32,7 +32,7 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
         </div>
         <CopyLinkButton />
       </div>
-      <CalculatorView calculation={calculation} />
+      <SharedCalculator calculation={calculation} />
     </>
   );
 }

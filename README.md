@@ -1,6 +1,6 @@
 # CalcShare
 
-Create calculations from named inputs and formulas, then share them with a link. Anyone with the link can change the inputs and see the results update instantly.
+Write a few formulas, then share them with a link. Inputs are worked out from the formulas, and anyone with the link can change them and see every result update instantly.
 
 ## Running locally
 
@@ -15,7 +15,7 @@ Open http://localhost:3000.
 
 - **Stack:** Next.js (App Router) with TypeScript and Tailwind.
 - **Storage:** SQLite via `better-sqlite3`, in `data/calcshare.db` (created on first run, not committed).
-- **Formulas:** evaluated in the browser with [mathjs](https://mathjs.org). Each input or result label becomes a variable name (`Loan amount` → `loan_amount`), and a result can use inputs and any result above it. Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled.
+- **Formulas:** one per line, `name = expression`, parsed and evaluated with [mathjs](https://mathjs.org). Every name a formula uses but no formula defines becomes an input; formulas can refer to each other in any order and are evaluated in dependency order (loops are reported). Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled. The creator's values in the editor are saved as starting values.
 - **Sharing:** saving a calculation gives it an unguessable link at `/c/<id>`. There are no accounts yet; the home page lists calculations created in the current browser (kept in localStorage).
 
 ## Layout
@@ -25,5 +25,5 @@ Open http://localhost:3000.
 - `src/app/c/[id]/page.tsx`: shared calculation page
 - `src/app/actions.ts`: server action that validates and saves
 - `src/lib/calculation.ts`: types and validation shared by client and server
-- `src/lib/evaluate.ts`: formula evaluation
+- `src/lib/formulas.ts`: formula parsing, input detection, and evaluation
 - `src/lib/db.ts`: SQLite access
