@@ -15,8 +15,9 @@ Open http://localhost:3000.
 
 - **Stack:** Next.js (App Router) with TypeScript and Tailwind.
 - **Storage:** SQLite via `better-sqlite3`, in `data/calcshare.db` (created on first run, not committed).
-- **Formulas:** one per line, `name = expression`, parsed and evaluated with [mathjs](https://mathjs.org). Every name a formula uses but no formula defines becomes an input; formulas can refer to each other in any order and are evaluated in dependency order (loops are reported). Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled. The creator's values in the editor are saved as starting values.
-- **Two-way:** results are editable too. Typing a result solves numerically (secant method, then a bracketed bisection) for one input behind it: by default the least recently edited one, or whichever the user picks under the field.
+- **Formulas:** one per line, `name = expression`, parsed with [mathjs](https://mathjs.org). Each formula is treated as an equation, and every name in them is a variable; there's no split between inputs and results. Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled.
+- **Solving:** with N variables and E equations, N − E values are held and the rest are calculated. The held ones are the most recently edited variables (falling back to variables no formula defines), so editing any variable keeps it and recent edits fixed and recalculates everything else. Equations are solved one unknown at a time, backwards numerically when needed (secant method, then bracketed bisection); groups of equations that only fit together are solved by guessing one variable and refining it until the group holds. See `src/lib/formulas.ts`.
+- The values in the editor are saved as the starting values.
 - **Sharing:** saving a calculation gives it an unguessable link at `/c/<id>`. There are no accounts yet; the home page lists calculations created in the current browser (kept in localStorage).
 
 ## Layout

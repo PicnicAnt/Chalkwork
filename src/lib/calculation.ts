@@ -5,7 +5,7 @@ export type CalculationDraft = {
   title: string;
   description: string;
   formulas: string[];
-  // Starting values for the inputs, keyed by variable name.
+  // Starting values, keyed by variable name.
   values: Record<string, string>;
 };
 
@@ -57,9 +57,9 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
 
   const rawValues = typeof r.values === "object" && r.values !== null ? (r.values as Record<string, unknown>) : {};
   const values: Record<string, string> = {};
-  for (const input of analysis.inputs) {
-    const v = str(rawValues[input.name]).slice(0, LIMITS.value);
-    if (v) values[input.name] = v;
+  for (const variable of analysis.variables) {
+    const v = str(rawValues[variable.name]).slice(0, LIMITS.value);
+    if (v) values[variable.name] = v;
   }
 
   return errors.length ? { errors } : { draft: { title, description, formulas, values }, errors };

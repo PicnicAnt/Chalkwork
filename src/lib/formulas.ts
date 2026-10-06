@@ -11,10 +11,9 @@ import {
 
 const math = create(all);
 const parse = math.parse.bind(math);
-const format = math.format.bind(math);
 
 // Formulas come from other users, so disable the functions that can define or change things.
-// parse/format above are captured first, so only formulas lose access to these.
+// parse above is captured first, so only formulas lose access to these.
 const disabled = ["import", "createUnit", "reviver", "evaluate", "parse", "simplify", "derivative", "resolve", "compile"];
 math.import(
   Object.fromEntries(
@@ -28,32 +27,25 @@ math.import(
   { override: true },
 );
 
-// Symbols that mean something on their own and so never become inputs.
+// Symbols that mean something on their own and so never become variables.
 const CONSTANTS = new Set(["pi", "e", "tau", "phi", "i", "true", "false", "null", "Infinity", "NaN", "PI", "E"]);
 
+// Each formula is an equation, "name = expression", that must hold between its variables.
 export type Formula = {
   line: number; // 1-based position among the formulas
   text: string;
-  name: string;
-  label: string;
-  deps: string[]; // symbols the expression uses (inputs or other formulas)
+  name: string; // the variable on the left side
+  vars: string[]; // every variable in the equation, left side first
+  selfReferencing?: boolean; // the left-side variable also appears on the right
   error?: string;
-  compiled?: EvalFunction;
+  compiled?: EvalFunction; // the right side
 };
+
+export type Variable = { name: string; label: string; formula?: string };
 
 export type Analysis = {
   formulas: Formula[];
-  inputs: { name: string; label: string }[];
-};
-
-export type FormulaResult = {
-  name: string;
-  label: string;
-  text: string;
-  value?: string;
-  raw?: unknown;
-  error?: string;
-  missing?: string[]; // set when the error is only that some values aren't filled in
+  variables: Variable[]; // in order of first appearance
 };
 
 // "monthly_payment" -> "Monthly payment", "loanAmount" -> "Loan amount"
@@ -66,22 +58,25 @@ export function humanize(name: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+function isVariableName(name: string) {
+  // A bare word mathjs already knows as a function (e.g. "sqrt") is not a variable.
+  return !CONSTANTS.has(name) && typeof (math as unknown as Record<string, unknown>)[name] !== "function";
+}
+
 function symbolsUsed(node: MathNode): string[] {
   const names: string[] = [];
   node.traverse((n, path, parent) => {
     if (!isSymbolNode(n)) return;
     // Skip the name of a called function, e.g. "sqrt" in sqrt(x).
     if (parent && isFunctionNode(parent) && path === "fn") return;
-    if (!names.includes(n.name)) names.push(n.name);
+    if (!names.includes(n.name) && isVariableName(n.name)) names.push(n.name);
   });
   return names;
 }
 
-// Each formula is "name = expression" (or just an expression, which gets a generated name).
-// Inputs are every symbol used by a formula that no formula defines.
 export function analyzeFormulas(lines: string[]): Analysis {
   const formulas: Formula[] = lines.map((text, i) => {
-    const base = { line: i + 1, text, name: `result_${i + 1}`, label: `Result ${i + 1}`, deps: [] };
+    const base = { line: i + 1, text, name: `result_${i + 1}`, vars: [] as string[] };
     let node: MathNode;
     try {
       node = parse(text);
@@ -89,11 +84,12 @@ export function analyzeFormulas(lines: string[]): Analysis {
       return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
     }
 
+    // A line without "name =" still gets a variable, so its value can be shown.
     let expression = node;
     if (isAssignmentNode(node)) {
       if (!isSymbolNode(node.object) || node.index) return { ...base, error: "Left side must be a plain name" };
       expression = node.value;
-      Object.assign(base, { name: node.object.name, label: humanize(node.object.name) });
+      base.name = node.object.name;
     }
 
     let nested = false;
@@ -101,178 +97,228 @@ export function analyzeFormulas(lines: string[]): Analysis {
       if (isAssignmentNode(n) || isFunctionAssignmentNode(n)) nested = true;
     });
     if (nested || isFunctionAssignmentNode(node)) return { ...base, error: "Only one name = expression per line" };
-    if (CONSTANTS.has(base.name)) return { ...base, error: `"${base.name}" is a built-in constant` };
+    if (!isVariableName(base.name)) return { ...base, error: `"${base.name}" is a built-in name` };
 
     try {
-      return { ...base, deps: symbolsUsed(expression), compiled: expression.compile() };
+      const used = symbolsUsed(expression);
+      const vars = [base.name, ...used.filter((v) => v !== base.name)];
+      return { ...base, vars, selfReferencing: used.includes(base.name), compiled: expression.compile() };
     } catch (e) {
       return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
     }
   });
 
-  const seen = new Set<string>();
+  const variables: Variable[] = [];
   for (const f of formulas) {
-    if (f.error) continue;
-    if (seen.has(f.name)) f.error = `"${f.name}" is defined more than once`;
-    seen.add(f.name);
-  }
-
-  const defined = new Set(formulas.map((f) => f.name));
-  const inputs: Analysis["inputs"] = [];
-  for (const f of formulas) {
-    for (const dep of f.deps) {
-      if (defined.has(dep) || CONSTANTS.has(dep) || inputs.some((x) => x.name === dep)) continue;
-      // A bare word that mathjs already knows as a function (e.g. "sqrt") is not an input.
-      if (typeof (math as unknown as Record<string, unknown>)[dep] === "function") continue;
-      inputs.push({ name: dep, label: humanize(dep) });
+    for (const name of f.vars) {
+      if (!variables.some((v) => v.name === name)) variables.push({ name, label: humanize(name) });
     }
   }
-
-  return { formulas, inputs };
-}
-
-function formatValue(value: unknown): string {
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) return String(value);
-    // Small numbers keep significant digits (0.00375), larger ones get up to 4 decimals.
-    return Math.abs(value) < 1
-      ? value.toLocaleString("en-US", { maximumSignificantDigits: 6 })
-      : value.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  for (const f of formulas) {
+    const v = variables.find((x) => x.name === f.name);
+    if (v && !f.error && !v.formula) v.formula = f.text;
   }
-  if (typeof value === "boolean") return value ? "true" : "false";
-  return format(value, { precision: 10 });
+  return { formulas, variables };
 }
 
-export function parseInputValue(value: string | undefined): unknown {
-  const trimmed = (value ?? "").trim();
-  if (trimmed === "") return undefined;
-  const num = Number(trimmed.replace(/,/g, ""));
-  return Number.isFinite(num) ? num : trimmed;
+// ---------------------------------------------------------------------------
+// Solving
+//
+// With N variables and E equations, N - E values must be given and the rest follow.
+// Which ones are given is decided by recency: the variables the user edited most
+// recently are kept as they are, and everything else is recalculated to fit.
+
+// A direct step: an equation with one unknown left, solved for it.
+// A tear step: a group of equations that only fit together (e.g. a payment that depends on the
+// loan, while the loan depends on the interest that depends on the payment). One variable in the
+// group is guessed, the rest follow from it, and the guess is refined until a leftover equation holds.
+type Step =
+  | { kind: "direct"; formula: Formula; unknown: string }
+  | { kind: "tear"; tear: string; steps: Step[]; check: Formula };
+export type Plan = { held: string[]; steps: Step[] };
+
+function stepVariables(step: Step): string[] {
+  return step.kind === "direct" ? [step.unknown] : [step.tear, ...step.steps.flatMap(stepVariables)];
 }
 
-// A number written back into an input field: no float noise, no thousands separators.
-export function formatForInput(value: number): string {
-  return String(Number(value.toPrecision(10)));
+function stepFormulas(step: Step): Formula[] {
+  return step.kind === "direct" ? [step.formula] : [step.check, ...step.steps.flatMap(stepFormulas)];
 }
 
-// Evaluates every formula, in dependency order, against the given input values.
-// Results are returned in the order the formulas were written.
-export function evaluateFormulas(analysis: Analysis, values: Record<string, string>): FormulaResult[] {
-  const scope = new Map<string, unknown>();
-  for (const input of analysis.inputs) {
-    const v = parseInputValue(values[input.name]);
-    if (v !== undefined) scope.set(input.name, v);
-  }
-  return computeAll(analysis, scope);
-}
-
-function computeAll(analysis: Analysis, scope: Map<string, unknown>): FormulaResult[] {
-  const byName = new Map(analysis.formulas.filter((f) => !f.error).map((f) => [f.name, f]));
-  const results = new Map<Formula, FormulaResult>();
-
-  function dependsOn(from: string, target: string, seen = new Set<string>()): boolean {
-    for (const dep of byName.get(from)?.deps ?? []) {
-      if (dep === target) return true;
-      if (byName.has(dep) && !seen.has(dep)) {
-        seen.add(dep);
-        if (dependsOn(dep, target, seen)) return true;
+// Repeatedly solves any equation with exactly one unknown left. Returns the steps and
+// any equations left with no unknowns (which then only need to hold).
+function propagateDirect(equations: Formula[], known: Set<string>, used: Set<Formula>) {
+  const steps: Step[] = [];
+  const checks: Formula[] = [];
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const f of equations) {
+      if (used.has(f)) continue;
+      const unknowns = f.vars.filter((v) => !known.has(v));
+      if (unknowns.length === 1) {
+        steps.push({ kind: "direct", formula: f, unknown: unknowns[0] });
+        known.add(unknowns[0]);
+        used.add(f);
+        progress = true;
+      } else if (unknowns.length === 0) {
+        used.add(f);
+        checks.push(f);
       }
     }
-    return false;
   }
+  return { steps, checks };
+}
 
-  function run(f: Formula): FormulaResult {
-    const done = results.get(f);
-    if (done) return done;
-    const base = { name: f.name, label: f.label, text: f.text };
-    if (f.error || !f.compiled) return finish(f, { ...base, error: f.error });
-    if (dependsOn(f.name, f.name)) return finish(f, { ...base, error: "Refers back to itself through other formulas" });
+// Works out, from structure alone, which variables the held ones determine and how.
+function propagate(equations: Formula[], held: Set<string>): Step[] {
+  const known = new Set(held);
+  const used = new Set<Formula>();
+  const steps: Step[] = [...propagateDirect(equations, known, used).steps];
 
-    // Collect what this formula is waiting for, naming the empty inputs rather than
-    // the intermediate formulas when that's the reason.
-    const waiting = new Set<string>();
-    for (const dep of f.deps) {
-      const upstream = byName.get(dep);
-      if (upstream) {
-        const r = run(upstream);
-        if (r.missing) r.missing.forEach((m) => waiting.add(m));
-        else if (r.error) waiting.add(dep);
-      } else if (analysis.inputs.some((x) => x.name === dep) && !scope.has(dep)) {
-        waiting.add(dep);
+  // Stuck: try guessing one unknown and see whether that closes a group of equations.
+  for (;;) {
+    const unknownVars = [...new Set(equations.filter((f) => !used.has(f)).flatMap((f) => f.vars))].filter(
+      (v) => !known.has(v),
+    );
+    let found = false;
+    for (const tear of unknownVars) {
+      const k = new Set(known).add(tear);
+      const u = new Set(used);
+      const inner = propagateDirect(equations, k, u);
+      if (inner.checks.length === 0) continue;
+      const [check] = inner.checks;
+      steps.push({ kind: "tear", tear, steps: inner.steps, check });
+      k.forEach((v) => known.add(v));
+      u.forEach((f) => used.add(f));
+      steps.push(...propagateDirect(equations, known, used).steps);
+      found = true;
+      break;
+    }
+    if (!found) return steps;
+  }
+}
+
+// `recent` is most recent first. Variables nobody edited fall back to the order they
+// appear, preferring ones no formula defines, so a fresh calculation behaves like
+// "fill in the inputs, get the results".
+export function planSolve(analysis: Analysis, recent: string[]): Plan {
+  const equations = analysis.formulas.filter((f) => !f.error);
+  const names = analysis.variables.map((v) => v.name);
+  const defined = new Set(equations.map((f) => f.name));
+  const order = [
+    ...recent.filter((n) => names.includes(n)),
+    ...names.filter((n) => !recent.includes(n) && !defined.has(n)),
+    ...names.filter((n) => !recent.includes(n) && defined.has(n)),
+  ];
+
+  const held: string[] = [];
+  let steps: Step[] = [];
+  for (const name of order) {
+    if (held.includes(name) || steps.some((s) => stepVariables(s).includes(name))) continue;
+    held.push(name);
+    steps = propagate(equations, new Set(held));
+    if (held.length + steps.flatMap(stepVariables).length === names.length) break;
+  }
+  return { held, steps };
+}
+
+export type SolveResult = {
+  values: Record<string, number | undefined>;
+  failed?: string; // the variable that couldn't be made to fit
+};
+
+function toNumber(v: unknown): number | undefined {
+  if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+  if (typeof v === "boolean") return v ? 1 : 0;
+  // mathjs can return BigNumber/Fraction-like objects for some functions.
+  if (v && typeof v === "object" && "valueOf" in v) {
+    const n = Number((v as { valueOf(): unknown }).valueOf());
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+}
+
+// left side minus right side of an equation, given values for all its variables.
+function residualOf(formula: Formula, values: Record<string, number | undefined>): number {
+  if (formula.vars.some((v) => values[v] === undefined)) return NaN;
+  try {
+    const rhs = toNumber(formula.compiled!.evaluate(new Map(formula.vars.map((v) => [v, values[v]]))));
+    return rhs === undefined ? NaN : values[formula.name]! - rhs;
+  } catch {
+    return NaN;
+  }
+}
+
+// Runs steps in order, filling in `values`. Returns the variable that couldn't be solved, if any.
+function runSteps(steps: Step[], values: Record<string, number | undefined>, previous: Record<string, number | undefined>): string | undefined {
+  for (const step of steps) {
+    if (step.kind === "tear") {
+      const vars = stepFormulas(step).flatMap((f) => f.vars);
+      const inputs = vars.filter((v) => v !== step.tear && !stepVariables(step).includes(v));
+      if (inputs.some((v) => values[v] === undefined)) {
+        stepVariables(step).forEach((v) => (values[v] = undefined));
+        continue;
       }
+      const g = (x: number) => {
+        values[step.tear] = x;
+        if (runSteps(step.steps, values, previous)) return NaN;
+        return residualOf(step.check, values);
+      };
+      const scale = Math.abs(values[step.check.name] ?? 1);
+      const x = findRoot(g, previous[step.tear], scale);
+      if (x === null) return step.tear;
+      g(x); // leave the values from the solution in place
+      continue;
     }
 
-    if (waiting.size) {
-      const missing = [...waiting];
-      return finish(f, { ...base, error: `Needs ${missing.join(", ")}`, missing });
+    const { formula, unknown } = step;
+    const others = formula.vars.filter((v) => v !== unknown);
+    if (others.some((v) => values[v] === undefined)) {
+      values[unknown] = undefined; // waiting for a value further up
+      continue;
     }
-    try {
-      const raw = f.compiled.evaluate(new Map(scope));
-      if (typeof raw === "function") throw new Error("Formula must produce a value");
-      scope.set(f.name, raw);
-      return finish(f, { ...base, value: formatValue(raw), raw });
-    } catch (e) {
-      return finish(f, { ...base, error: e instanceof Error ? e.message : "Could not calculate" });
+    if (unknown === formula.name && !formula.selfReferencing) {
+      // The usual direction: evaluate the right side.
+      try {
+        values[unknown] = toNumber(formula.compiled!.evaluate(new Map(others.map((v) => [v, values[v]]))));
+      } catch {
+        values[unknown] = undefined;
+      }
+      continue;
     }
+    // Backwards: find the value that makes the left side equal the right side.
+    const g = (x: number) => residualOf(formula, { ...values, [unknown]: x });
+    const x = findRoot(g, previous[unknown], Math.abs(values[formula.name] ?? 1));
+    if (x === null) return unknown;
+    values[unknown] = x;
   }
-
-  function finish(f: Formula, r: FormulaResult) {
-    results.set(f, r);
-    return r;
-  }
-
-  return analysis.formulas.map(run);
+  return undefined;
 }
 
-// The inputs a formula depends on, directly or through other formulas, in the order they're used.
-export function inputsBehind(analysis: Analysis, name: string): string[] {
-  const inputNames = new Set(analysis.inputs.map((i) => i.name));
-  const byName = new Map(analysis.formulas.filter((f) => !f.error).map((f) => [f.name, f]));
-  const found: string[] = [];
-  const seen = new Set<string>();
-  (function walk(n: string) {
-    for (const dep of byName.get(n)?.deps ?? []) {
-      if (seen.has(dep)) continue;
-      seen.add(dep);
-      if (inputNames.has(dep)) found.push(dep);
-      else walk(dep);
-    }
-  })(name);
-  return found;
-}
-
-// Works backwards: finds the value of `unknown` that makes formula `target` equal `goal`,
-// keeping every other input as it is. Returns null when no such value can be found.
-export function solveForInput(
+export function solve(
   analysis: Analysis,
-  values: Record<string, string>,
-  target: string,
-  goal: number,
-  unknown: string,
-): number | null {
-  const scope = new Map<string, unknown>();
-  for (const input of analysis.inputs) {
-    const v = parseInputValue(values[input.name]);
-    if (v !== undefined) scope.set(input.name, v);
-  }
-  const index = analysis.formulas.findIndex((f) => f.name === target);
-  if (index < 0) return null;
+  plan: Plan,
+  given: Record<string, number | undefined>,
+  previous: Record<string, number | undefined> = {},
+): SolveResult {
+  const values: Record<string, number | undefined> = {};
+  for (const name of plan.held) values[name] = given[name];
+  const failed = runSteps(plan.steps, values, previous);
+  return { values, failed };
+}
 
-  const g = (x: number) => {
-    const s = new Map(scope);
-    s.set(unknown, x);
-    const raw = computeAll(analysis, s)[index].raw;
-    return typeof raw === "number" ? raw - goal : NaN;
-  };
-  const tolerance = 1e-9 * Math.max(1, Math.abs(goal));
-  const current = scope.get(unknown);
-  const start = typeof current === "number" && current !== 0 ? current : 1;
+// Finds x with g(x) = 0, preferring the solution nearest `guess`.
+export function findRoot(g: (x: number) => number, guess: number | undefined, scale: number): number | null {
+  const tolerance = 1e-9 * Math.max(1, scale);
+  const start = guess !== undefined && Number.isFinite(guess) && guess !== 0 ? guess : 1;
 
   // Secant method from the current value: fast, and finds the nearest solution.
   let x0 = start;
   let x1 = start * 1.01 + 0.01;
   let f0 = g(x0);
   let f1 = g(x1);
+  if (Math.abs(f0) <= tolerance) return x0;
   for (let i = 0; i < 100 && Number.isFinite(f0) && Number.isFinite(f1); i++) {
     if (Math.abs(f1) <= tolerance) return x1;
     if (f1 === f0) break;
@@ -282,7 +328,7 @@ export function solveForInput(
   }
 
   // Fall back to scanning for a sign change, nearest the current value first, then bisecting.
-  const samples = new Set<number>([start]);
+  const samples = new Set<number>([start, 0]);
   for (let k = -6; k <= 12; k++) {
     samples.add(10 ** k).add(-(10 ** k));
     samples.add(start + Math.abs(start) * 10 ** (k / 2)).add(start - Math.abs(start) * 10 ** (k / 2));
@@ -291,6 +337,7 @@ export function solveForInput(
   const fs = xs.map(g);
   const brackets: [number, number][] = [];
   for (let i = 0; i + 1 < xs.length; i++) {
+    if (fs[i] === 0) return xs[i];
     if (Number.isFinite(fs[i]) && Number.isFinite(fs[i + 1]) && Math.sign(fs[i]) !== Math.sign(fs[i + 1])) {
       brackets.push([xs[i], xs[i + 1]]);
     }
@@ -308,8 +355,38 @@ export function solveForInput(
     }
     const mid = (lo + hi) / 2;
     // A sign change across a pole (like 1/x at 0) is not a solution.
-    if (Math.abs(g(mid)) <= 1e-6 * Math.max(1, Math.abs(goal))) return mid;
+    if (Math.abs(g(mid)) <= 1e-6 * Math.max(1, scale)) return mid;
   }
   return null;
 }
 
+// Equations the held values over-determine, which may not hold (e.g. a = 1 and a = 2).
+export function brokenFormulas(analysis: Analysis, plan: Plan, values: Record<string, number | undefined>): Formula[] {
+  const solvedWith = new Set(plan.steps.flatMap(stepFormulas));
+  return analysis.formulas.filter((f) => {
+    if (f.error || solvedWith.has(f) || f.vars.some((v) => values[v] === undefined)) return false;
+    try {
+      const rhs = toNumber(f.compiled!.evaluate(new Map(f.vars.map((v) => [v, values[v]]))));
+      const lhs = values[f.name]!;
+      return rhs === undefined || Math.abs(lhs - rhs) > 1e-6 * Math.max(1, Math.abs(lhs));
+    } catch {
+      return true;
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Text <-> numbers for the variable fields
+
+export function parseValue(text: string | undefined): number | undefined {
+  const trimmed = (text ?? "").trim().replace(/,/g, "");
+  if (trimmed === "") return undefined;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+// Calculated values are shown with up to 10 significant digits and no float noise.
+export function formatNumber(value: number | undefined): string {
+  if (value === undefined) return "";
+  return String(Number(value.toPrecision(10)));
+}

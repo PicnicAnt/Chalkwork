@@ -94,9 +94,9 @@ export function CalculationEditor() {
         <div>
           <h2 className="text-lg font-semibold">Formulas</h2>
           <p className="text-sm text-black/60 dark:text-white/60">
-            One per line, like <code className="font-mono">area = width * height</code>. Any name you use but
-            don&apos;t define becomes an input. Formulas can use each other in any order. Supports + − × ÷, ^,
-            parentheses, and functions like sqrt, round, min, max.
+            One per line, like <code className="font-mono">area = width * height</code>. Every name becomes a
+            variable, and any variable can be changed: the others adjust so all formulas still hold. Supports + − ×
+            ÷, ^, parentheses, and functions like sqrt, round, min, max.
           </p>
         </div>
         <textarea
@@ -116,7 +116,8 @@ export function CalculationEditor() {
         <div>
           <h2 className="text-lg font-semibold">Try it</h2>
           <p className="text-sm text-black/60 dark:text-white/60">
-            Values you enter here are saved as the starting values people see.
+            Change any variable. The ones you changed most recently stay put, and the rest are recalculated.
+            These values are saved as what people see first.
           </p>
         </div>
         <CalculatorPanel analysis={analysis} values={values} onChange={setValues} />
