@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { brokenFormulas, decidedBy, formatNumber, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
@@ -14,6 +14,9 @@ function compute(analysis: Analysis, values: Record<string, string>, locked: str
   }
   return { plan, result, display, broken: brokenFormulas(analysis, plan, result.values) };
 }
+
+type Computed = ReturnType<typeof compute>;
+type Rejected = { name: string; text: string; reason: string };
 
 // One list of variables, all editable. A value the user types is locked and never changed by
 // the formulas; every unlocked variable is recalculated so all formulas still hold.
@@ -30,53 +33,91 @@ export function CalculatorPanel({
   const [locked, setLocked] = useState<string[]>([]);
   const inputs = useRef(new Map<string, HTMLInputElement>());
   // A value that couldn't be applied stays visible in its field with the reason.
-  const [rejected, setRejected] = useState<{ name: string; text: string; reason: string } | null>(null);
-  const { display, broken } = useMemo(() => compute(analysis, values, locked), [analysis, values, locked]);
+  const [rejected, setRejected] = useState<Rejected | null>(null);
+
+  // An edit already computes its result to decide whether to accept it. Remember that, so the
+  // render that follows doesn't solve the same thing a second time.
+  const [computedByEdit, setComputedByEdit] = useState<{
+    values: Record<string, string>;
+    locked: string[];
+    out: Computed;
+  } | null>(null);
+  const { display, broken } = useMemo(() => {
+    if (computedByEdit && computedByEdit.values === values && computedByEdit.locked === locked) {
+      return computedByEdit.out;
+    }
+    return compute(analysis, values, locked);
+  }, [analysis, values, locked, computedByEdit]);
   const decided = useMemo(() => decidedBy(analysis, locked), [analysis, locked]);
 
-  function apply(nextLocked: string[], nextValues: Record<string, string>, edited?: { name: string; text: string }) {
-    const next = compute(analysis, nextValues, nextLocked);
-    if (edited && !next.plan.held.includes(edited.name)) {
-      const constant = analysis.formulas.some((f) => !f.error && f.name === edited.name && f.vars.length === 1);
-      const others = nextLocked.filter((n) => n !== edited.name);
-      const reason = constant
-        ? "Fixed by its formula, can't be changed"
-        : `Already decided by locked ${others.join(", ")}. Unlock one to change this.`;
-      setRejected({ ...edited, reason });
-      return;
-    }
-    if (edited && next.result.failed) {
-      setRejected({ ...edited, reason: "No values fit this with the current locks" });
-      return;
-    }
-    setRejected(null);
-    flash(analysis.variables.map((v) => v.name).filter((n) => n !== edited?.name && next.display[n] !== display[n]));
-    setLocked(nextLocked);
-    // Store calculated values too, so the next change starts from what's on screen.
-    onChange(next.display);
-  }
-
   // Recalculated values briefly flash in the accent color so the change is noticed.
-  function flash(names: string[]) {
+  const flash = useCallback((names: string[]) => {
     const styles = getComputedStyle(document.documentElement);
     const from = styles.getPropertyValue("--accent").trim();
     const to = styles.getPropertyValue("--ink").trim();
     for (const name of names) {
-      inputs.current.get(name)?.animate([{ color: from }, { color: from, offset: 0.35 }, { color: to }], {
-        duration: 2000,
-        easing: "ease-in",
-      });
+      const el = inputs.current.get(name);
+      if (!el) continue;
+      el.getAnimations().forEach((a) => a.cancel());
+      el.animate([{ color: from }, { color: from, offset: 0.35 }, { color: to }], { duration: 2000, easing: "ease-in" });
     }
-  }
+  }, []);
 
-  function edit(name: string, text: string) {
-    apply([...locked.filter((n) => n !== name), name], { ...display, [name]: text }, { name, text });
-  }
+  // The handlers below are shared by every row and read the latest state from here, so rows
+  // can stay memoized and only the ones whose values changed re-render.
+  const latest = useRef({ analysis, locked, display, onChange });
+  useLayoutEffect(() => {
+    latest.current = { analysis, locked, display, onChange };
+  });
 
-  function toggleLock(name: string) {
-    if (locked.includes(name)) apply(locked.filter((n) => n !== name), display);
-    else edit(name, display[name]);
-  }
+  const apply = useCallback(
+    (nextLocked: string[], nextValues: Record<string, string>, edited?: { name: string; text: string }) => {
+      const { analysis, display, onChange } = latest.current;
+      const next = compute(analysis, nextValues, nextLocked);
+      if (edited && !next.plan.held.includes(edited.name)) {
+        const constant = analysis.formulas.some((f) => !f.error && f.name === edited.name && f.vars.length === 1);
+        const others = nextLocked.filter((n) => n !== edited.name);
+        const reason = constant
+          ? "Fixed by its formula, can't be changed"
+          : `Already decided by locked ${others.join(", ")}. Unlock one to change this.`;
+        setRejected({ ...edited, reason });
+        return;
+      }
+      if (edited && next.result.failed) {
+        setRejected({ ...edited, reason: "No values fit this with the current locks" });
+        return;
+      }
+      setRejected(null);
+      flash(analysis.variables.map((v) => v.name).filter((n) => n !== edited?.name && next.display[n] !== display[n]));
+      setComputedByEdit({ values: next.display, locked: nextLocked, out: next });
+      setLocked(nextLocked);
+      // Store calculated values too, so the next change starts from what's on screen.
+      onChange(next.display);
+    },
+    [flash],
+  );
+
+  const edit = useCallback(
+    (name: string, text: string) => {
+      const { locked, display } = latest.current;
+      apply([...locked.filter((n) => n !== name), name], { ...display, [name]: text }, { name, text });
+    },
+    [apply],
+  );
+
+  const toggleLock = useCallback(
+    (name: string) => {
+      const { locked, display } = latest.current;
+      if (locked.includes(name)) apply(locked.filter((n) => n !== name), display);
+      else edit(name, display[name]);
+    },
+    [apply, edit],
+  );
+
+  const register = useCallback((name: string, el: HTMLInputElement | null) => {
+    if (el) inputs.current.set(name, el);
+    else inputs.current.delete(name);
+  }, []);
 
   if (analysis.variables.length === 0) {
     return <p className="text-ink-muted">Variables from your formulas show up here.</p>;
@@ -86,43 +127,20 @@ export function CalculatorPanel({
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">
         {analysis.variables.map((v) => {
-          const isLocked = locked.includes(v.name);
           const problem = rejected?.name === v.name ? rejected : null;
-          const readOnly = decided.has(v.name) && !problem;
-          const id = `var-${v.name}`;
           return (
-            <div key={v.name} className="flex min-w-0 flex-col">
-              {/* Written like a line on the board: name = value */}
-              <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
-                <label htmlFor={id} className="max-w-[55%] shrink-0 break-words text-xl">
-                  {v.name}
-                </label>
-                <span className="text-xl text-ink-muted">=</span>
-                <input
-                  id={id}
-                  ref={(el) => {
-                    if (el) inputs.current.set(v.name, el);
-                    else inputs.current.delete(v.name);
-                  }}
-                  className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
-                    readOnly ? "field-decided" : ""
-                  }`}
-                  inputMode="decimal"
-                  placeholder="?"
-                  readOnly={readOnly}
-                  tabIndex={readOnly ? -1 : undefined}
-                  value={problem ? problem.text : display[v.name]}
-                  onChange={(e) => edit(v.name, e.target.value)}
-                />
-                {readOnly ? (
-                  <span className="w-[30px] shrink-0" aria-hidden />
-                ) : (
-                  <LockButton locked={isLocked} label={v.name} onClick={() => toggleLock(v.name)} />
-                )}
-              </span>
-              {problem && <span className="text-sm text-danger">{problem.reason}</span>}
-              {v.formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{v.formula}</span>}
-            </div>
+            <VariableRow
+              key={v.name}
+              name={v.name}
+              formula={v.formula}
+              value={problem ? problem.text : display[v.name]}
+              problem={problem?.reason ?? null}
+              readOnly={decided.has(v.name) && !problem}
+              locked={locked.includes(v.name)}
+              onEdit={edit}
+              onToggleLock={toggleLock}
+              register={register}
+            />
           );
         })}
       </div>
@@ -137,6 +155,60 @@ export function CalculatorPanel({
   );
 }
 
+// Written like a line on the board: name = value
+const VariableRow = memo(function VariableRow({
+  name,
+  formula,
+  value,
+  problem,
+  readOnly,
+  locked,
+  onEdit,
+  onToggleLock,
+  register,
+}: {
+  name: string;
+  formula?: string;
+  value: string;
+  problem: string | null;
+  readOnly: boolean;
+  locked: boolean;
+  onEdit: (name: string, text: string) => void;
+  onToggleLock: (name: string) => void;
+  register: (name: string, el: HTMLInputElement | null) => void;
+}) {
+  const id = `var-${name}`;
+  return (
+    <div className="flex min-w-0 flex-col">
+      <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
+        <label htmlFor={id} className="max-w-[55%] shrink-0 break-words text-xl">
+          {name}
+        </label>
+        <span className="text-xl text-ink-muted">=</span>
+        <input
+          id={id}
+          ref={(el) => register(name, el)}
+          className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
+            readOnly ? "field-decided" : ""
+          }`}
+          inputMode="decimal"
+          placeholder="?"
+          readOnly={readOnly}
+          tabIndex={readOnly ? -1 : undefined}
+          value={value}
+          onChange={(e) => onEdit(name, e.target.value)}
+        />
+        {readOnly ? (
+          <span className="w-[30px] shrink-0" aria-hidden />
+        ) : (
+          <LockButton locked={locked} label={name} onClick={() => onToggleLock(name)} />
+        )}
+      </span>
+      {problem && <span className="text-sm text-danger">{problem}</span>}
+      {formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{formula}</span>}
+    </div>
+  );
+});
 function LockButton({ locked, label, onClick }: { locked: boolean; label: string; onClick: () => void }) {
   return (
     <button
