@@ -51,6 +51,7 @@ export type FormulaResult = {
   label: string;
   text: string;
   value?: string;
+  raw?: unknown;
   error?: string;
   missing?: string[]; // set when the error is only that some values aren't filled in
 };
@@ -142,11 +143,16 @@ function formatValue(value: unknown): string {
   return format(value, { precision: 10 });
 }
 
-function parseInputValue(value: string | undefined): unknown {
+export function parseInputValue(value: string | undefined): unknown {
   const trimmed = (value ?? "").trim();
   if (trimmed === "") return undefined;
   const num = Number(trimmed.replace(/,/g, ""));
   return Number.isFinite(num) ? num : trimmed;
+}
+
+// A number written back into an input field: no float noise, no thousands separators.
+export function formatForInput(value: number): string {
+  return String(Number(value.toPrecision(10)));
 }
 
 // Evaluates every formula, in dependency order, against the given input values.
@@ -157,7 +163,10 @@ export function evaluateFormulas(analysis: Analysis, values: Record<string, stri
     const v = parseInputValue(values[input.name]);
     if (v !== undefined) scope.set(input.name, v);
   }
+  return computeAll(analysis, scope);
+}
 
+function computeAll(analysis: Analysis, scope: Map<string, unknown>): FormulaResult[] {
   const byName = new Map(analysis.formulas.filter((f) => !f.error).map((f) => [f.name, f]));
   const results = new Map<Formula, FormulaResult>();
 
@@ -201,7 +210,7 @@ export function evaluateFormulas(analysis: Analysis, values: Record<string, stri
       const raw = f.compiled.evaluate(new Map(scope));
       if (typeof raw === "function") throw new Error("Formula must produce a value");
       scope.set(f.name, raw);
-      return finish(f, { ...base, value: formatValue(raw) });
+      return finish(f, { ...base, value: formatValue(raw), raw });
     } catch (e) {
       return finish(f, { ...base, error: e instanceof Error ? e.message : "Could not calculate" });
     }
@@ -214,3 +223,93 @@ export function evaluateFormulas(analysis: Analysis, values: Record<string, stri
 
   return analysis.formulas.map(run);
 }
+
+// The inputs a formula depends on, directly or through other formulas, in the order they're used.
+export function inputsBehind(analysis: Analysis, name: string): string[] {
+  const inputNames = new Set(analysis.inputs.map((i) => i.name));
+  const byName = new Map(analysis.formulas.filter((f) => !f.error).map((f) => [f.name, f]));
+  const found: string[] = [];
+  const seen = new Set<string>();
+  (function walk(n: string) {
+    for (const dep of byName.get(n)?.deps ?? []) {
+      if (seen.has(dep)) continue;
+      seen.add(dep);
+      if (inputNames.has(dep)) found.push(dep);
+      else walk(dep);
+    }
+  })(name);
+  return found;
+}
+
+// Works backwards: finds the value of `unknown` that makes formula `target` equal `goal`,
+// keeping every other input as it is. Returns null when no such value can be found.
+export function solveForInput(
+  analysis: Analysis,
+  values: Record<string, string>,
+  target: string,
+  goal: number,
+  unknown: string,
+): number | null {
+  const scope = new Map<string, unknown>();
+  for (const input of analysis.inputs) {
+    const v = parseInputValue(values[input.name]);
+    if (v !== undefined) scope.set(input.name, v);
+  }
+  const index = analysis.formulas.findIndex((f) => f.name === target);
+  if (index < 0) return null;
+
+  const g = (x: number) => {
+    const s = new Map(scope);
+    s.set(unknown, x);
+    const raw = computeAll(analysis, s)[index].raw;
+    return typeof raw === "number" ? raw - goal : NaN;
+  };
+  const tolerance = 1e-9 * Math.max(1, Math.abs(goal));
+  const current = scope.get(unknown);
+  const start = typeof current === "number" && current !== 0 ? current : 1;
+
+  // Secant method from the current value: fast, and finds the nearest solution.
+  let x0 = start;
+  let x1 = start * 1.01 + 0.01;
+  let f0 = g(x0);
+  let f1 = g(x1);
+  for (let i = 0; i < 100 && Number.isFinite(f0) && Number.isFinite(f1); i++) {
+    if (Math.abs(f1) <= tolerance) return x1;
+    if (f1 === f0) break;
+    const x2 = x1 - (f1 * (x1 - x0)) / (f1 - f0);
+    if (!Number.isFinite(x2)) break;
+    [x0, f0, x1, f1] = [x1, f1, x2, g(x2)];
+  }
+
+  // Fall back to scanning for a sign change, nearest the current value first, then bisecting.
+  const samples = new Set<number>([start]);
+  for (let k = -6; k <= 12; k++) {
+    samples.add(10 ** k).add(-(10 ** k));
+    samples.add(start + Math.abs(start) * 10 ** (k / 2)).add(start - Math.abs(start) * 10 ** (k / 2));
+  }
+  const xs = [...samples].sort((a, b) => a - b);
+  const fs = xs.map(g);
+  const brackets: [number, number][] = [];
+  for (let i = 0; i + 1 < xs.length; i++) {
+    if (Number.isFinite(fs[i]) && Number.isFinite(fs[i + 1]) && Math.sign(fs[i]) !== Math.sign(fs[i + 1])) {
+      brackets.push([xs[i], xs[i + 1]]);
+    }
+  }
+  brackets.sort((a, b) => Math.abs((a[0] + a[1]) / 2 - start) - Math.abs((b[0] + b[1]) / 2 - start));
+  for (let [lo, hi] of brackets) {
+    let flo = g(lo);
+    for (let i = 0; i < 200; i++) {
+      const mid = (lo + hi) / 2;
+      const fmid = g(mid);
+      if (!Number.isFinite(fmid)) break;
+      if (Math.abs(fmid) <= tolerance) return mid;
+      if (Math.sign(fmid) === Math.sign(flo)) [lo, flo] = [mid, fmid];
+      else hi = mid;
+    }
+    const mid = (lo + hi) / 2;
+    // A sign change across a pole (like 1/x at 0) is not a solution.
+    if (Math.abs(g(mid)) <= 1e-6 * Math.max(1, Math.abs(goal))) return mid;
+  }
+  return null;
+}
+

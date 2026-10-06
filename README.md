@@ -16,6 +16,7 @@ Open http://localhost:3000.
 - **Stack:** Next.js (App Router) with TypeScript and Tailwind.
 - **Storage:** SQLite via `better-sqlite3`, in `data/calcshare.db` (created on first run, not committed).
 - **Formulas:** one per line, `name = expression`, parsed and evaluated with [mathjs](https://mathjs.org). Every name a formula uses but no formula defines becomes an input; formulas can refer to each other in any order and are evaluated in dependency order (loops are reported). Functions that could redefine things (`import`, `createUnit`, `evaluate`, …) are disabled. The creator's values in the editor are saved as starting values.
+- **Two-way:** results are editable too. Typing a result solves numerically (secant method, then a bracketed bisection) for one input behind it: by default the least recently edited one, or whichever the user picks under the field.
 - **Sharing:** saving a calculation gives it an unguessable link at `/c/<id>`. There are no accounts yet; the home page lists calculations created in the current browser (kept in localStorage).
 
 ## Layout
