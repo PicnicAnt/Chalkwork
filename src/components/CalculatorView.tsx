@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { brokenFormulas, decidedBy, formatNumber, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
@@ -203,9 +203,7 @@ const VariableRow = memo(function VariableRow({
   return (
     <div className="flex min-w-0 flex-col">
       <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
-        <label htmlFor={id} className="max-w-[55%] shrink-0 break-words text-xl">
-          {name}
-        </label>
+        <VariableName name={name} inputId={id} description={description} />
         <span className="text-xl text-ink-muted">=</span>
         <input
           id={id}
@@ -215,6 +213,7 @@ const VariableRow = memo(function VariableRow({
           }`}
           inputMode="decimal"
           placeholder="?"
+          aria-label={description ? name : undefined}
           readOnly={readOnly}
           tabIndex={readOnly ? -1 : undefined}
           value={value}
@@ -228,11 +227,63 @@ const VariableRow = memo(function VariableRow({
         )}
       </span>
       {problem && <span className="text-sm text-danger">{problem}</span>}
-      {description && <span className="pt-0.5 text-base leading-snug text-ink-muted">{description}</span>}
       {formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{formula}</span>}
     </div>
   );
 });
+
+// The variable's name. When it has a note, the name is dotted-underlined and the note appears as a
+// tooltip: on hover with a mouse, on keyboard focus, and on tap, which also works on phones.
+function VariableName({ name, inputId, description }: { name: string; inputId: string; description?: string }) {
+  const [open, setOpen] = useState(false);
+  const wrapper = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (!wrapper.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  if (!description) {
+    return (
+      <label htmlFor={inputId} className="max-w-[55%] shrink-0 break-words text-xl">
+        {name}
+      </label>
+    );
+  }
+
+  const tipId = `${inputId}-note`;
+  return (
+    <span ref={wrapper} className="group relative max-w-[55%] shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-describedby={tipId}
+        aria-expanded={open}
+        className="break-words text-left text-xl underline decoration-ink-faint decoration-dotted underline-offset-4"
+      >
+        {name}
+      </button>
+      <span
+        id={tipId}
+        role="tooltip"
+        className={`tooltip ${open ? "block" : "hidden"} group-hover:block group-has-[:focus-visible]:block`}
+      >
+        {description}
+      </span>
+    </span>
+  );
+}
 
 function LockButton({
   locked,

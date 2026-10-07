@@ -118,6 +118,25 @@ h3,
   background: color-mix(in srgb, var(--ink) 12%, transparent);
   border-left-color: var(--accent);
 }
+/* Variable notes: a small board panel under the variable name. */
+.tooltip {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 30;
+  margin-top: 6px;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 4rem));
+  padding: 0.5rem 0.75rem;
+  background: var(--board);
+  color: var(--ink);
+  border: 2px solid var(--ink-faint);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  font-size: 1rem;
+  line-height: 1.35;
+  text-shadow: none;
+}
 /* The textarea above the colored text only draws a caret and a selection. */
 .formula-textarea {
   caret-color: var(--ink);
