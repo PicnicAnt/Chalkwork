@@ -15,16 +15,21 @@ export function VariableEditor({
   analysis,
   descriptions,
   units,
+  decimals,
   onRename,
   onDescribe,
   onUnit,
+  onDecimals,
 }: {
   analysis: Analysis;
   descriptions: Record<string, string>;
   units: Record<string, string>;
+  /** Decimals to show per variable, as typed (empty means automatic). */
+  decimals: Record<string, string>;
   onRename: (from: string, to: string) => void;
   onDescribe: (name: string, text: string) => void;
   onUnit: (name: string, unit: string) => void;
+  onDecimals: (name: string, decimals: string) => void;
 }) {
   // The section can be folded away once the names, units and notes are as wanted. Its fields stay
   // mounted while hidden, so a half-typed name isn't lost.
@@ -51,7 +56,8 @@ export function VariableEditor({
         </div>
         <p className={`text-base text-ink-muted ${open ? "" : "hidden"}`}>
           Rename a variable and every formula that uses it is updated. A unit (like % or m²) is shown next to the
-          value, and a note appears as a tooltip on the name. Units are labels only and don&apos;t change any maths.
+          value, decimals set how many digits a calculated value shows, and a note appears as a tooltip on the
+          name. Units and decimals only change what is displayed, never the maths.
         </p>
       </div>
       <div id={bodyId} className={open ? "flex flex-col gap-3" : "hidden"}>
@@ -66,11 +72,13 @@ export function VariableEditor({
             key={v.name}
             name={v.name}
             unit={units[v.name] ?? ""}
+            decimals={decimals[v.name] ?? ""}
             description={descriptions[v.name] ?? ""}
             validate={(next) => checkVariableName(next, v.name, analysis)}
             onRename={(next) => onRename(v.name, next)}
             onDescribe={(text) => onDescribe(v.name, text)}
             onUnit={(unit) => onUnit(v.name, unit)}
+            onDecimals={(text) => onDecimals(v.name, text)}
           />
         ))}
       </div>
@@ -82,19 +90,23 @@ export function VariableEditor({
 function VariableLine({
   name,
   unit,
+  decimals,
   description,
   validate,
   onRename,
   onDescribe,
   onUnit,
+  onDecimals,
 }: {
   name: string;
   unit: string;
+  decimals: string;
   description: string;
   validate: (name: string) => string | null;
   onRename: (name: string) => void;
   onDescribe: (text: string) => void;
   onUnit: (unit: string) => void;
+  onDecimals: (decimals: string) => void;
 }) {
   // The new name is applied when the field is left or Enter is pressed, so half-typed names
   // never rewrite the formulas.
@@ -125,10 +137,9 @@ function VariableLine({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-4">
-        <div className="flex items-end gap-3 sm:w-1/2">
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
         <input
-          className={`field min-w-0 flex-1 text-xl ${error ? "!border-danger" : ""}`}
+          className={`field w-full text-xl sm:w-[38%] ${error ? "!border-danger" : ""}`}
           value={draft ?? name}
           onChange={(e) => {
             setDraft(e.target.value);
@@ -149,7 +160,7 @@ function VariableLine({
           aria-label={`Name of ${name}`}
         />
         <input
-          className="field w-24 shrink-0 text-lg"
+          className="field w-24 text-lg"
           value={unit}
           maxLength={LIMITS.unit}
           list="unit-suggestions"
@@ -160,9 +171,21 @@ function VariableLine({
           spellCheck={false}
           aria-label={`Unit of ${name}`}
         />
-        </div>
         <input
-          className="field text-lg sm:flex-1"
+          className="field w-24 text-lg"
+          value={decimals}
+          inputMode="numeric"
+          placeholder="decimals"
+          onChange={(e) => {
+            // Whole numbers from 0 to 10; anything else is dropped as it is typed.
+            const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+            onDecimals(digits !== "" && Number(digits) > LIMITS.maxDecimals ? String(LIMITS.maxDecimals) : digits);
+          }}
+          aria-label={`Decimals of ${name}`}
+          title="How many decimals to show for the calculated value. Empty shows it automatically."
+        />
+        <input
+          className="field min-w-[10rem] w-full text-lg sm:w-auto sm:flex-1"
           value={description}
           maxLength={LIMITS.variableDescription}
           placeholder="What is this? (optional)"

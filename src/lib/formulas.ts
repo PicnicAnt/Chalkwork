@@ -472,6 +472,12 @@ export function parseValue(text: string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+// A number shown with a fixed number of decimals, for a variable that asks for one. Never "-0.00".
+export function formatDecimals(value: number, decimals: number): string {
+  const text = value.toFixed(decimals);
+  return Number(text) === 0 ? text.replace("-", "") : text;
+}
+
 // Calculated values are shown with up to 10 significant digits and no float noise.
 export function formatNumber(value: number | undefined): string {
   if (value === undefined) return "";

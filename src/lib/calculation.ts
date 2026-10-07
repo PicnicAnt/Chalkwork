@@ -11,6 +11,9 @@ export type CalculationDraft = {
   descriptions: Record<string, string>;
   // A unit label for each variable, such as % or m², keyed by variable name. Display only.
   units: Record<string, string>;
+  // How many decimals to show for each variable's calculated value, keyed by variable name.
+  // Display only: the maths always uses the full value. Variables without an entry show automatically.
+  decimals: Record<string, number>;
 };
 
 export type Calculation = CalculationDraft & {
@@ -26,6 +29,7 @@ export const LIMITS = {
   value: 50,
   variableDescription: 200,
   unit: 12,
+  maxDecimals: 10,
 };
 
 // The editor holds formulas as one block of text, one per line.
@@ -86,5 +90,18 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
     else if (u) units[variable.name] = u;
   }
 
-  return errors.length ? { errors } : { draft: { title, description, formulas, values, descriptions, units }, errors };
+  const rawDecimals =
+    typeof r.decimals === "object" && r.decimals !== null ? (r.decimals as Record<string, unknown>) : {};
+  const decimals: Record<string, number> = {};
+  for (const variable of analysis.variables) {
+    const d = rawDecimals[variable.name];
+    if (d === undefined || d === null || d === "") continue;
+    if (typeof d !== "number" || !Number.isInteger(d) || d < 0 || d > LIMITS.maxDecimals) {
+      errors.push(`Decimals for ${variable.name} must be a whole number from 0 to ${LIMITS.maxDecimals}.`);
+    } else decimals[variable.name] = d;
+  }
+
+  return errors.length
+    ? { errors }
+    : { draft: { title, description, formulas, values, descriptions, units, decimals }, errors };
 }

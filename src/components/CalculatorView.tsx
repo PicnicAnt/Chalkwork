@@ -1,7 +1,16 @@
 "use client";
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { brokenFormulas, decidedBy, formatNumber, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
+import {
+  brokenFormulas,
+  decidedBy,
+  formatDecimals,
+  formatNumber,
+  parseValue,
+  planSolve,
+  solve,
+  type Analysis,
+} from "@/lib/formulas";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
   const plan = planSolve(analysis, locked);
@@ -26,6 +35,7 @@ export function CalculatorPanel({
   onChange,
   descriptions,
   units,
+  decimals,
 }: {
   analysis: Analysis;
   values: Record<string, string>;
@@ -34,6 +44,8 @@ export function CalculatorPanel({
   descriptions?: Record<string, string>;
   /** A unit label per variable name, shown after the value. */
   units?: Record<string, string>;
+  /** Decimals to show per variable name for calculated values. Display only. */
+  decimals?: Record<string, number>;
 }) {
   // Locked variables, in the order they were locked.
   const [locked, setLocked] = useState<string[]>([]);
@@ -51,13 +63,24 @@ export function CalculatorPanel({
     locked: string[];
     out: Computed;
   } | null>(null);
-  const { display, broken } = useMemo(() => {
+  const { display, broken, plan } = useMemo(() => {
     if (computedByEdit && computedByEdit.values === values && computedByEdit.locked === locked) {
       return computedByEdit.out;
     }
     return compute(analysis, values, locked);
   }, [analysis, values, locked, computedByEdit]);
   const decided = useMemo(() => decidedBy(analysis, locked), [analysis, locked]);
+  // What is shown. `display` keeps full precision because it is fed back into the next solve;
+  // rounding is only applied here. Values the user typed are shown exactly as typed.
+  const shown = useMemo(() => {
+    if (!decimals) return display;
+    const out = { ...display };
+    for (const [name, places] of Object.entries(decimals)) {
+      const n = parseValue(display[name]);
+      if (n !== undefined && !plan.held.includes(name)) out[name] = formatDecimals(n, places);
+    }
+    return out;
+  }, [display, decimals, plan]);
 
   // Recalculated values briefly flash in the accent color so the change is noticed.
   const flash = useCallback((names: string[]) => {
@@ -150,7 +173,7 @@ export function CalculatorPanel({
               formula={v.formula}
               description={descriptions?.[v.name]}
               unit={units?.[v.name]}
-              value={problem ? problem.text : draft?.name === v.name ? draft.text : display[v.name]}
+              value={problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]}
               problem={problem?.reason ?? null}
               canLock={parseValue(display[v.name]) !== undefined}
               readOnly={decided.has(v.name) && !problem}

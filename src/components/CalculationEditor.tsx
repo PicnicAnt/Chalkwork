@@ -38,6 +38,14 @@ const EXAMPLE = {
     more_dmg: "49",
     inc_dmg: "250",
   },
+  decimals: {
+    dps: "1",
+    avg_hit: "1",
+    aps: "2",
+    crit_factor: "3",
+    hit_chance: "1",
+    crit_chance: "1",
+  } as Record<string, string>,
   units: {
     dps: "dmg/s",
     aps: "/s",
@@ -85,6 +93,19 @@ export function CalculationEditor({
   const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
   const [descriptions, setDescriptions] = useState<Record<string, string>>(initial?.descriptions ?? {});
   const [units, setUnits] = useState<Record<string, string>>(initial?.units ?? {});
+  // Held as typed so the field can be emptied; turned into numbers when shown and saved.
+  const [decimalText, setDecimalText] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(initial?.decimals ?? {}).map(([k, v]) => [k, String(v)])),
+  );
+  const decimals = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(decimalText)
+          .filter(([, text]) => text !== "")
+          .map(([name, text]) => [name, Number(text)]),
+      ),
+    [decimalText],
+  );
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
@@ -105,6 +126,7 @@ export function CalculationEditor({
     setValues(EXAMPLE.values);
     setDescriptions(EXAMPLE.descriptions);
     setUnits(EXAMPLE.units);
+    setDecimalText(EXAMPLE.decimals);
     setErrors([]);
   }
 
@@ -114,11 +136,12 @@ export function CalculationEditor({
     setValues((v) => renameKey(v, from, to));
     setDescriptions((d) => renameKey(d, from, to));
     setUnits((u) => renameKey(u, from, to));
+    setDecimalText((d) => renameKey(d, from, to));
   }
 
   function save() {
     startTransition(async () => {
-      const draft = { title, description, formulas, values, descriptions, units };
+      const draft = { title, description, formulas, values, descriptions, units, decimals };
       const result = editing
         ? await updateCalculation(editing.id, editing.editKey, draft)
         : await createCalculation(draft);
@@ -197,9 +220,11 @@ export function CalculationEditor({
         analysis={analysis}
         descriptions={descriptions}
         units={units}
+        decimals={decimalText}
         onRename={renameVariable}
         onDescribe={(name, text) => setDescriptions((d) => ({ ...d, [name]: text }))}
         onUnit={(name, unit) => setUnits((u) => ({ ...u, [name]: unit }))}
+        onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
       />
 
       <section className="flex flex-col gap-4">
@@ -210,7 +235,7 @@ export function CalculationEditor({
             unlocked is recalculated. Tap a lock to release it. These values are saved as what people see first.
           </p>
         </div>
-        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} />
+        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} decimals={decimals} />
       </section>
 
       {errors.length > 0 && (

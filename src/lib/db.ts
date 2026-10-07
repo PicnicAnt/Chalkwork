@@ -45,6 +45,11 @@ if (version < 5) {
   db.exec(`ALTER TABLE calculations ADD COLUMN variable_units TEXT NOT NULL DEFAULT '{}';`);
   db.pragma("user_version = 5");
 }
+if (version < 6) {
+  // Decimals to show per variable, as JSON keyed by variable name.
+  db.exec(`ALTER TABLE calculations ADD COLUMN variable_decimals TEXT NOT NULL DEFAULT '{}';`);
+  db.pragma("user_version = 6");
+}
 
 type Row = {
   id: string;
@@ -54,6 +59,7 @@ type Row = {
   input_values: string;
   variable_descriptions: string;
   variable_units: string;
+  variable_decimals: string;
   created_at: string;
   edit_key_hash: string | null;
 };
@@ -64,7 +70,7 @@ export function insertCalculation(draft: CalculationDraft): { id: string; editKe
   const id = randomBytes(9).toString("base64url");
   const editKey = randomBytes(18).toString("base64url");
   db.prepare(
-    "INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions, variable_units, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions, variable_units, variable_decimals, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     id,
     draft.title,
@@ -73,6 +79,7 @@ export function insertCalculation(draft: CalculationDraft): { id: string; editKe
     JSON.stringify(draft.values),
     JSON.stringify(draft.descriptions),
     JSON.stringify(draft.units),
+    JSON.stringify(draft.decimals),
     hashKey(editKey).toString("hex"),
   );
   return { id, editKey };
@@ -89,7 +96,7 @@ export function canEdit(id: string, editKey: string): boolean {
 export function updateCalculation(id: string, draft: CalculationDraft) {
   db.prepare(
     `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?, variable_descriptions = ?,
-       variable_units = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+       variable_units = ?, variable_decimals = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
   ).run(
     draft.title,
     draft.description,
@@ -97,6 +104,7 @@ export function updateCalculation(id: string, draft: CalculationDraft) {
     JSON.stringify(draft.values),
     JSON.stringify(draft.descriptions),
     JSON.stringify(draft.units),
+    JSON.stringify(draft.decimals),
     id,
   );
 }
@@ -112,6 +120,7 @@ export function getCalculation(id: string): Calculation | null {
     values: JSON.parse(row.input_values),
     descriptions: JSON.parse(row.variable_descriptions || "{}"),
     units: JSON.parse(row.variable_units || "{}"),
+    decimals: JSON.parse(row.variable_decimals || "{}"),
     createdAt: row.created_at,
   };
 }

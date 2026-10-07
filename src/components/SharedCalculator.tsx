@@ -32,6 +32,7 @@ export function SharedCalculator({ calculation }: { calculation: Calculation }) 
         onChange={setValues}
         descriptions={calculation.descriptions}
         units={calculation.units}
+        decimals={calculation.decimals}
       />
     </div>
   );
