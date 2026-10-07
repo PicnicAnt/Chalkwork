@@ -25,7 +25,13 @@ export function SharedCalculator({ calculation }: { calculation: Calculation }) 
           Erase and start over
         </button>
       )}
-      <CalculatorPanel key={resets} analysis={analysis} values={values} onChange={setValues} />
+      <CalculatorPanel
+        key={resets}
+        analysis={analysis}
+        values={values}
+        onChange={setValues}
+        descriptions={calculation.descriptions}
+      />
     </div>
   );
 }

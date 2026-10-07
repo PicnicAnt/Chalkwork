@@ -58,7 +58,7 @@ export function humanize(name: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-function isVariableName(name: string) {
+export function isVariableName(name: string) {
   // A bare word mathjs already knows as a function (e.g. "sqrt") is not a variable.
   return !CONSTANTS.has(name) && typeof (math as unknown as Record<string, unknown>)[name] !== "function";
 }

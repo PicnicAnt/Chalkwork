@@ -24,10 +24,13 @@ export function CalculatorPanel({
   analysis,
   values,
   onChange,
+  descriptions,
 }: {
   analysis: Analysis;
   values: Record<string, string>;
   onChange: (values: Record<string, string>) => void;
+  /** A short note per variable name, shown under the variable. */
+  descriptions?: Record<string, string>;
 }) {
   // Locked variables, in the order they were locked.
   const [locked, setLocked] = useState<string[]>([]);
@@ -142,6 +145,7 @@ export function CalculatorPanel({
               key={v.name}
               name={v.name}
               formula={v.formula}
+              description={descriptions?.[v.name]}
               value={problem ? problem.text : draft?.name === v.name ? draft.text : display[v.name]}
               problem={problem?.reason ?? null}
               canLock={parseValue(display[v.name]) !== undefined}
@@ -170,6 +174,7 @@ export function CalculatorPanel({
 const VariableRow = memo(function VariableRow({
   name,
   formula,
+  description,
   value,
   problem,
   readOnly,
@@ -182,6 +187,7 @@ const VariableRow = memo(function VariableRow({
 }: {
   name: string;
   formula?: string;
+  description?: string;
   value: string;
   problem: string | null;
   readOnly: boolean;
@@ -222,6 +228,7 @@ const VariableRow = memo(function VariableRow({
         )}
       </span>
       {problem && <span className="text-sm text-danger">{problem}</span>}
+      {description && <span className="pt-0.5 text-base leading-snug text-ink-muted">{description}</span>}
       {formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{formula}</span>}
     </div>
   );

@@ -6,8 +6,10 @@ import { createCalculation, updateCalculation } from "@/app/actions";
 import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
 import { analyzeFormulas, formulaProblems } from "@/lib/formulas";
 import { rememberCalculation } from "@/lib/my-calculations";
+import { renameKey, renameVariableInText } from "@/lib/rename";
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
+import { VariableEditor } from "./VariableEditor";
 
 // An ARPG damage sheet in the style of Path of Exile: weapon damage scaled by increased and more
 // modifiers, attack speed, crit, and chance to hit. Written dps-first so it heads the list, and
@@ -36,6 +38,20 @@ const EXAMPLE = {
     more_dmg: "49",
     inc_dmg: "250",
   },
+  descriptions: {
+    dps: "Damage per second against this enemy",
+    avg_hit: "Average damage of one hit, before crits",
+    aps: "Attacks per second",
+    crit_factor: "Average damage multiplier from crits",
+    hit_chance: "Chance to hit, from accuracy against evasion (%)",
+    crit_chance: "Chance for a hit to crit (%)",
+    base_aps: "Attack speed of the weapon",
+    inc_aps: "Total increased attack speed (%)",
+    inc_dmg: "Sum of all increased damage modifiers (%)",
+    more_dmg: "Combined more damage multipliers (%)",
+    inc_crit: "Total increased crit chance (%)",
+    crit_multi: "Critical strike multiplier (%)",
+  },
 };
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
@@ -54,6 +70,7 @@ export function CalculationEditor({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [formulaText, setFormulaText] = useState(initial?.formulas.join("\n") ?? "");
   const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
+  const [descriptions, setDescriptions] = useState<Record<string, string>>(initial?.descriptions ?? {});
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
@@ -72,12 +89,20 @@ export function CalculationEditor({
     setDescription(EXAMPLE.description);
     setFormulaText(EXAMPLE.formulas);
     setValues(EXAMPLE.values);
+    setDescriptions(EXAMPLE.descriptions);
     setErrors([]);
+  }
+
+  // Renaming rewrites the formulas, and the starting value and note move to the new name.
+  function renameVariable(from: string, to: string) {
+    setFormulaText((text) => renameVariableInText(text, analysis, from, to));
+    setValues((v) => renameKey(v, from, to));
+    setDescriptions((d) => renameKey(d, from, to));
   }
 
   function save() {
     startTransition(async () => {
-      const draft = { title, description, formulas, values };
+      const draft = { title, description, formulas, values, descriptions };
       const result = editing
         ? await updateCalculation(editing.id, editing.editKey, draft)
         : await createCalculation(draft);
@@ -152,6 +177,13 @@ export function CalculationEditor({
         )}
       </section>
 
+      <VariableEditor
+        analysis={analysis}
+        descriptions={descriptions}
+        onRename={renameVariable}
+        onDescribe={(name, text) => setDescriptions((d) => ({ ...d, [name]: text }))}
+      />
+
       <section className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold">Try it</h2>
@@ -160,7 +192,7 @@ export function CalculationEditor({
             unlocked is recalculated. Tap a lock to release it. These values are saved as what people see first.
           </p>
         </div>
-        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} />
+        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} />
       </section>
 
       {errors.length > 0 && (

@@ -7,6 +7,8 @@ export type CalculationDraft = {
   formulas: string[];
   // Starting values, keyed by variable name.
   values: Record<string, string>;
+  // A short note on what each variable means, keyed by variable name.
+  descriptions: Record<string, string>;
 };
 
 export type Calculation = CalculationDraft & {
@@ -20,6 +22,7 @@ export const LIMITS = {
   formula: 500,
   formulas: 50,
   value: 50,
+  variableDescription: 200,
 };
 
 // The editor holds formulas as one block of text, one per line.
@@ -62,5 +65,15 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
     if (v) values[variable.name] = v;
   }
 
-  return errors.length ? { errors } : { draft: { title, description, formulas, values }, errors };
+  const rawDescriptions =
+    typeof r.descriptions === "object" && r.descriptions !== null ? (r.descriptions as Record<string, unknown>) : {};
+  const descriptions: Record<string, string> = {};
+  for (const variable of analysis.variables) {
+    const d = str(rawDescriptions[variable.name]);
+    if (d.length > LIMITS.variableDescription)
+      errors.push(`The note on ${variable.name} must be at most ${LIMITS.variableDescription} characters.`);
+    else if (d) descriptions[variable.name] = d;
+  }
+
+  return errors.length ? { errors } : { draft: { title, description, formulas, values, descriptions }, errors };
 }

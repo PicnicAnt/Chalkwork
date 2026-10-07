@@ -35,6 +35,11 @@ if (version < 3) {
   `);
   db.pragma("user_version = 3");
 }
+if (version < 4) {
+  // A short description per variable, as JSON keyed by variable name.
+  db.exec(`ALTER TABLE calculations ADD COLUMN variable_descriptions TEXT NOT NULL DEFAULT '{}';`);
+  db.pragma("user_version = 4");
+}
 
 type Row = {
   id: string;
@@ -42,6 +47,7 @@ type Row = {
   description: string;
   formulas: string;
   input_values: string;
+  variable_descriptions: string;
   created_at: string;
   edit_key_hash: string | null;
 };
@@ -52,13 +58,14 @@ export function insertCalculation(draft: CalculationDraft): { id: string; editKe
   const id = randomBytes(9).toString("base64url");
   const editKey = randomBytes(18).toString("base64url");
   db.prepare(
-    "INSERT INTO calculations (id, title, description, formulas, input_values, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).run(
     id,
     draft.title,
     draft.description,
     JSON.stringify(draft.formulas),
     JSON.stringify(draft.values),
+    JSON.stringify(draft.descriptions),
     hashKey(editKey).toString("hex"),
   );
   return { id, editKey };
@@ -74,9 +81,16 @@ export function canEdit(id: string, editKey: string): boolean {
 
 export function updateCalculation(id: string, draft: CalculationDraft) {
   db.prepare(
-    `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
+    `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?, variable_descriptions = ?,
        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
-  ).run(draft.title, draft.description, JSON.stringify(draft.formulas), JSON.stringify(draft.values), id);
+  ).run(
+    draft.title,
+    draft.description,
+    JSON.stringify(draft.formulas),
+    JSON.stringify(draft.values),
+    JSON.stringify(draft.descriptions),
+    id,
+  );
 }
 
 export function getCalculation(id: string): Calculation | null {
@@ -88,6 +102,7 @@ export function getCalculation(id: string): Calculation | null {
     description: row.description,
     formulas: JSON.parse(row.formulas),
     values: JSON.parse(row.input_values),
+    descriptions: JSON.parse(row.variable_descriptions || "{}"),
     createdAt: row.created_at,
   };
 }
