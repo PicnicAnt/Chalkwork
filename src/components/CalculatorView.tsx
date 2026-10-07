@@ -34,6 +34,9 @@ export function CalculatorPanel({
   const inputs = useRef(new Map<string, HTMLInputElement>());
   // A value that couldn't be applied stays visible in its field with the reason.
   const [rejected, setRejected] = useState<Rejected | null>(null);
+  // A field that was just cleared (or holds half a number like "-") keeps what was typed while it
+  // has focus, instead of being refilled by a calculated value mid-edit.
+  const [draft, setDraft] = useState<{ name: string; text: string } | null>(null);
 
   // An edit already computes its result to decide whether to accept it. Remember that, so the
   // render that follows doesn't solve the same thing a second time.
@@ -73,8 +76,11 @@ export function CalculatorPanel({
   const apply = useCallback(
     (nextLocked: string[], nextValues: Record<string, string>, edited?: { name: string; text: string }) => {
       const { analysis, display, onChange } = latest.current;
-      const next = compute(analysis, nextValues, nextLocked);
-      if (edited && !next.plan.held.includes(edited.name)) {
+      // A variable with no value (shown as "?") is never locked: there is nothing to keep.
+      const unspecified = edited !== undefined && parseValue(edited.text) === undefined;
+      const lockedNow = unspecified ? nextLocked.filter((n) => n !== edited.name) : nextLocked;
+      const next = compute(analysis, nextValues, lockedNow);
+      if (edited && !unspecified && !next.plan.held.includes(edited.name)) {
         const constant = analysis.formulas.some((f) => !f.error && f.name === edited.name && f.vars.length === 1);
         const others = nextLocked.filter((n) => n !== edited.name);
         const reason = constant
@@ -83,14 +89,15 @@ export function CalculatorPanel({
         setRejected({ ...edited, reason });
         return;
       }
-      if (edited && next.result.failed) {
+      if (edited && !unspecified && next.result.failed) {
         setRejected({ ...edited, reason: "No values fit this with the current locks" });
         return;
       }
       setRejected(null);
+      setDraft(unspecified ? edited : null);
       flash(analysis.variables.map((v) => v.name).filter((n) => n !== edited?.name && next.display[n] !== display[n]));
-      setComputedByEdit({ values: next.display, locked: nextLocked, out: next });
-      setLocked(nextLocked);
+      setComputedByEdit({ values: next.display, locked: lockedNow, out: next });
+      setLocked(lockedNow);
       // Store calculated values too, so the next change starts from what's on screen.
       onChange(next.display);
     },
@@ -109,10 +116,12 @@ export function CalculatorPanel({
     (name: string) => {
       const { locked, display } = latest.current;
       if (locked.includes(name)) apply(locked.filter((n) => n !== name), display);
-      else edit(name, display[name]);
+      else if (parseValue(display[name]) !== undefined) edit(name, display[name]); // nothing to lock without a value
     },
     [apply, edit],
   );
+
+  const endDraft = useCallback((name: string) => setDraft((d) => (d?.name === name ? null : d)), []);
 
   const register = useCallback((name: string, el: HTMLInputElement | null) => {
     if (el) inputs.current.set(name, el);
@@ -133,12 +142,14 @@ export function CalculatorPanel({
               key={v.name}
               name={v.name}
               formula={v.formula}
-              value={problem ? problem.text : display[v.name]}
+              value={problem ? problem.text : draft?.name === v.name ? draft.text : display[v.name]}
               problem={problem?.reason ?? null}
+              canLock={parseValue(display[v.name]) !== undefined}
               readOnly={decided.has(v.name) && !problem}
               locked={locked.includes(v.name)}
               onEdit={edit}
               onToggleLock={toggleLock}
+              onBlur={endDraft}
               register={register}
             />
           );
@@ -163,8 +174,10 @@ const VariableRow = memo(function VariableRow({
   problem,
   readOnly,
   locked,
+  canLock,
   onEdit,
   onToggleLock,
+  onBlur,
   register,
 }: {
   name: string;
@@ -173,8 +186,11 @@ const VariableRow = memo(function VariableRow({
   problem: string | null;
   readOnly: boolean;
   locked: boolean;
+  /** False while the variable has no value: there is nothing to lock. */
+  canLock: boolean;
   onEdit: (name: string, text: string) => void;
   onToggleLock: (name: string) => void;
+  onBlur: (name: string) => void;
   register: (name: string, el: HTMLInputElement | null) => void;
 }) {
   const id = `var-${name}`;
@@ -197,11 +213,12 @@ const VariableRow = memo(function VariableRow({
           tabIndex={readOnly ? -1 : undefined}
           value={value}
           onChange={(e) => onEdit(name, e.target.value)}
+          onBlur={() => onBlur(name)}
         />
         {readOnly ? (
           <span className="w-[30px] shrink-0" aria-hidden />
         ) : (
-          <LockButton locked={locked} label={name} onClick={() => onToggleLock(name)} />
+          <LockButton locked={locked} disabled={!locked && !canLock} label={name} onClick={() => onToggleLock(name)} />
         )}
       </span>
       {problem && <span className="text-sm text-danger">{problem}</span>}
@@ -209,15 +226,35 @@ const VariableRow = memo(function VariableRow({
     </div>
   );
 });
-function LockButton({ locked, label, onClick }: { locked: boolean; label: string; onClick: () => void }) {
+
+function LockButton({
+  locked,
+  disabled,
+  label,
+  onClick,
+}: {
+  locked: boolean;
+  disabled: boolean;
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={locked}
       aria-label={locked ? `Unlock ${label}` : `Lock ${label}`}
-      title={locked ? "Locked: formulas won't change this. Tap to unlock." : "Tap to lock this value"}
-      className={`shrink-0 p-1 transition-colors ${locked ? "text-accent" : "text-ink-faint hover:text-ink-muted"}`}
+      title={
+        locked
+          ? "Locked: formulas won't change this. Tap to unlock."
+          : disabled
+            ? "Enter a value to lock it"
+            : "Tap to lock this value"
+      }
+      className={`shrink-0 p-1 transition-colors ${
+        locked ? "text-accent" : disabled ? "cursor-not-allowed text-ink-faint opacity-40" : "text-ink-faint hover:text-ink-muted"
+      }`}
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
