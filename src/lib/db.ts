@@ -40,6 +40,11 @@ if (version < 4) {
   db.exec(`ALTER TABLE calculations ADD COLUMN variable_descriptions TEXT NOT NULL DEFAULT '{}';`);
   db.pragma("user_version = 4");
 }
+if (version < 5) {
+  // A unit label per variable, as JSON keyed by variable name.
+  db.exec(`ALTER TABLE calculations ADD COLUMN variable_units TEXT NOT NULL DEFAULT '{}';`);
+  db.pragma("user_version = 5");
+}
 
 type Row = {
   id: string;
@@ -48,6 +53,7 @@ type Row = {
   formulas: string;
   input_values: string;
   variable_descriptions: string;
+  variable_units: string;
   created_at: string;
   edit_key_hash: string | null;
 };
@@ -58,7 +64,7 @@ export function insertCalculation(draft: CalculationDraft): { id: string; editKe
   const id = randomBytes(9).toString("base64url");
   const editKey = randomBytes(18).toString("base64url");
   db.prepare(
-    "INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions, variable_units, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     id,
     draft.title,
@@ -66,6 +72,7 @@ export function insertCalculation(draft: CalculationDraft): { id: string; editKe
     JSON.stringify(draft.formulas),
     JSON.stringify(draft.values),
     JSON.stringify(draft.descriptions),
+    JSON.stringify(draft.units),
     hashKey(editKey).toString("hex"),
   );
   return { id, editKey };
@@ -82,13 +89,14 @@ export function canEdit(id: string, editKey: string): boolean {
 export function updateCalculation(id: string, draft: CalculationDraft) {
   db.prepare(
     `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?, variable_descriptions = ?,
-       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+       variable_units = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
   ).run(
     draft.title,
     draft.description,
     JSON.stringify(draft.formulas),
     JSON.stringify(draft.values),
     JSON.stringify(draft.descriptions),
+    JSON.stringify(draft.units),
     id,
   );
 }
@@ -103,6 +111,7 @@ export function getCalculation(id: string): Calculation | null {
     formulas: JSON.parse(row.formulas),
     values: JSON.parse(row.input_values),
     descriptions: JSON.parse(row.variable_descriptions || "{}"),
+    units: JSON.parse(row.variable_units || "{}"),
     createdAt: row.created_at,
   };
 }

@@ -38,6 +38,19 @@ const EXAMPLE = {
     more_dmg: "49",
     inc_dmg: "250",
   },
+  units: {
+    dps: "dmg/s",
+    aps: "/s",
+    base_aps: "/s",
+    hit_chance: "%",
+    crit_chance: "%",
+    base_crit: "%",
+    inc_crit: "%",
+    crit_multi: "%",
+    inc_aps: "%",
+    inc_dmg: "%",
+    more_dmg: "%",
+  },
   descriptions: {
     dps: "Damage per second against this enemy",
     avg_hit: "Average damage of one hit, before crits",
@@ -71,6 +84,7 @@ export function CalculationEditor({
   const [formulaText, setFormulaText] = useState(initial?.formulas.join("\n") ?? "");
   const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
   const [descriptions, setDescriptions] = useState<Record<string, string>>(initial?.descriptions ?? {});
+  const [units, setUnits] = useState<Record<string, string>>(initial?.units ?? {});
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
@@ -90,6 +104,7 @@ export function CalculationEditor({
     setFormulaText(EXAMPLE.formulas);
     setValues(EXAMPLE.values);
     setDescriptions(EXAMPLE.descriptions);
+    setUnits(EXAMPLE.units);
     setErrors([]);
   }
 
@@ -98,11 +113,12 @@ export function CalculationEditor({
     setFormulaText((text) => renameVariableInText(text, analysis, from, to));
     setValues((v) => renameKey(v, from, to));
     setDescriptions((d) => renameKey(d, from, to));
+    setUnits((u) => renameKey(u, from, to));
   }
 
   function save() {
     startTransition(async () => {
-      const draft = { title, description, formulas, values, descriptions };
+      const draft = { title, description, formulas, values, descriptions, units };
       const result = editing
         ? await updateCalculation(editing.id, editing.editKey, draft)
         : await createCalculation(draft);
@@ -180,8 +196,10 @@ export function CalculationEditor({
       <VariableEditor
         analysis={analysis}
         descriptions={descriptions}
+        units={units}
         onRename={renameVariable}
         onDescribe={(name, text) => setDescriptions((d) => ({ ...d, [name]: text }))}
+        onUnit={(name, unit) => setUnits((u) => ({ ...u, [name]: unit }))}
       />
 
       <section className="flex flex-col gap-4">
@@ -192,7 +210,7 @@ export function CalculationEditor({
             unlocked is recalculated. Tap a lock to release it. These values are saved as what people see first.
           </p>
         </div>
-        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} />
+        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} />
       </section>
 
       {errors.length > 0 && (

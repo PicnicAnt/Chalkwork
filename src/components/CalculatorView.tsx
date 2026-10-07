@@ -25,12 +25,15 @@ export function CalculatorPanel({
   values,
   onChange,
   descriptions,
+  units,
 }: {
   analysis: Analysis;
   values: Record<string, string>;
   onChange: (values: Record<string, string>) => void;
-  /** A short note per variable name, shown under the variable. */
+  /** A short note per variable name, shown as a tooltip on the name. */
   descriptions?: Record<string, string>;
+  /** A unit label per variable name, shown after the value. */
+  units?: Record<string, string>;
 }) {
   // Locked variables, in the order they were locked.
   const [locked, setLocked] = useState<string[]>([]);
@@ -146,6 +149,7 @@ export function CalculatorPanel({
               name={v.name}
               formula={v.formula}
               description={descriptions?.[v.name]}
+              unit={units?.[v.name]}
               value={problem ? problem.text : draft?.name === v.name ? draft.text : display[v.name]}
               problem={problem?.reason ?? null}
               canLock={parseValue(display[v.name]) !== undefined}
@@ -175,6 +179,7 @@ const VariableRow = memo(function VariableRow({
   name,
   formula,
   description,
+  unit,
   value,
   problem,
   readOnly,
@@ -188,6 +193,7 @@ const VariableRow = memo(function VariableRow({
   name: string;
   formula?: string;
   description?: string;
+  unit?: string;
   value: string;
   problem: string | null;
   readOnly: boolean;
@@ -220,6 +226,7 @@ const VariableRow = memo(function VariableRow({
           onChange={(e) => onEdit(name, e.target.value)}
           onBlur={() => onBlur(name)}
         />
+        {unit && <span className="shrink-0 text-lg text-ink-muted">{unit}</span>}
         {readOnly ? (
           <span className="w-[30px] shrink-0" aria-hidden />
         ) : (

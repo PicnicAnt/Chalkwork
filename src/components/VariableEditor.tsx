@@ -5,18 +5,26 @@ import { LIMITS } from "@/lib/calculation";
 import type { Analysis } from "@/lib/formulas";
 import { checkVariableName } from "@/lib/rename";
 
+// Units people commonly want, offered as suggestions while typing a unit.
+const COMMON_UNITS = ["%", "m", "m²", "m³", "cm", "mm", "km", "kg", "g", "s", "ms", "min", "h", "km/h", "m/s", "/s", "°C", "$", "€", "£", "USD", "kW", "kWh", "W", "V", "A", "L", "px"];
+
 // One line per variable: its name, which can be changed (the formulas are rewritten to match),
-// and a short note about what it means that people see on the shared page.
+// a unit such as % or m², and a short note about what it means. People see the unit and the note
+// on the shared page.
 export function VariableEditor({
   analysis,
   descriptions,
+  units,
   onRename,
   onDescribe,
+  onUnit,
 }: {
   analysis: Analysis;
   descriptions: Record<string, string>;
+  units: Record<string, string>;
   onRename: (from: string, to: string) => void;
   onDescribe: (name: string, text: string) => void;
+  onUnit: (name: string, unit: string) => void;
 }) {
   if (analysis.variables.length === 0) return null;
 
@@ -25,19 +33,26 @@ export function VariableEditor({
       <div>
         <h2 className="text-2xl font-bold">Variables</h2>
         <p className="text-base text-ink-muted">
-          Rename a variable and every formula that uses it is updated. Notes show up next to the variable for anyone
-          who opens the calculation.
+          Rename a variable and every formula that uses it is updated. A unit (like % or m²) is shown next to the
+          value, and a note appears as a tooltip on the name. Units are labels only and don&apos;t change any maths.
         </p>
       </div>
+      <datalist id="unit-suggestions">
+        {COMMON_UNITS.map((u) => (
+          <option key={u} value={u} />
+        ))}
+      </datalist>
       <div className="flex flex-col gap-4">
         {analysis.variables.map((v) => (
           <VariableLine
             key={v.name}
             name={v.name}
+            unit={units[v.name] ?? ""}
             description={descriptions[v.name] ?? ""}
             validate={(next) => checkVariableName(next, v.name, analysis)}
             onRename={(next) => onRename(v.name, next)}
             onDescribe={(text) => onDescribe(v.name, text)}
+            onUnit={(unit) => onUnit(v.name, unit)}
           />
         ))}
       </div>
@@ -47,16 +62,20 @@ export function VariableEditor({
 
 function VariableLine({
   name,
+  unit,
   description,
   validate,
   onRename,
   onDescribe,
+  onUnit,
 }: {
   name: string;
+  unit: string;
   description: string;
   validate: (name: string) => string | null;
   onRename: (name: string) => void;
   onDescribe: (text: string) => void;
+  onUnit: (unit: string) => void;
 }) {
   // The new name is applied when the field is left or Enter is pressed, so half-typed names
   // never rewrite the formulas.
@@ -88,8 +107,9 @@ function VariableLine({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-4">
+        <div className="flex items-end gap-3 sm:w-1/2">
         <input
-          className={`field text-xl sm:w-2/5 ${error ? "!border-danger" : ""}`}
+          className={`field min-w-0 flex-1 text-xl ${error ? "!border-danger" : ""}`}
           value={draft ?? name}
           onChange={(e) => {
             setDraft(e.target.value);
@@ -109,6 +129,19 @@ function VariableLine({
           autoCorrect="off"
           aria-label={`Name of ${name}`}
         />
+        <input
+          className="field w-24 shrink-0 text-lg"
+          value={unit}
+          maxLength={LIMITS.unit}
+          list="unit-suggestions"
+          placeholder="unit"
+          onChange={(e) => onUnit(e.target.value)}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label={`Unit of ${name}`}
+        />
+        </div>
         <input
           className="field text-lg sm:flex-1"
           value={description}

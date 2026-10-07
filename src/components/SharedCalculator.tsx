@@ -31,6 +31,7 @@ export function SharedCalculator({ calculation }: { calculation: Calculation }) 
         values={values}
         onChange={setValues}
         descriptions={calculation.descriptions}
+        units={calculation.units}
       />
     </div>
   );

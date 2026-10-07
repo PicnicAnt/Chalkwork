@@ -9,6 +9,8 @@ export type CalculationDraft = {
   values: Record<string, string>;
   // A short note on what each variable means, keyed by variable name.
   descriptions: Record<string, string>;
+  // A unit label for each variable, such as % or m², keyed by variable name. Display only.
+  units: Record<string, string>;
 };
 
 export type Calculation = CalculationDraft & {
@@ -23,6 +25,7 @@ export const LIMITS = {
   formulas: 50,
   value: 50,
   variableDescription: 200,
+  unit: 12,
 };
 
 // The editor holds formulas as one block of text, one per line.
@@ -75,5 +78,13 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
     else if (d) descriptions[variable.name] = d;
   }
 
-  return errors.length ? { errors } : { draft: { title, description, formulas, values, descriptions }, errors };
+  const rawUnits = typeof r.units === "object" && r.units !== null ? (r.units as Record<string, unknown>) : {};
+  const units: Record<string, string> = {};
+  for (const variable of analysis.variables) {
+    const u = str(rawUnits[variable.name]);
+    if (u.length > LIMITS.unit) errors.push(`The unit of ${variable.name} must be at most ${LIMITS.unit} characters.`);
+    else if (u) units[variable.name] = u;
+  }
+
+  return errors.length ? { errors } : { draft: { title, description, formulas, values, descriptions, units }, errors };
 }
