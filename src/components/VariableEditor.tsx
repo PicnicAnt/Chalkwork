@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { LIMITS } from "@/lib/calculation";
 import type { Analysis } from "@/lib/formulas";
 import { checkVariableName } from "@/lib/rename";
@@ -26,17 +26,35 @@ export function VariableEditor({
   onDescribe: (name: string, text: string) => void;
   onUnit: (name: string, unit: string) => void;
 }) {
+  // The section can be folded away once the names, units and notes are as wanted. Its fields stay
+  // mounted while hidden, so a half-typed name isn't lost.
+  const [open, setOpen] = useState(true);
+  const bodyId = useId();
   if (analysis.variables.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h2 className="text-2xl font-bold">Variables</h2>
-        <p className="text-base text-ink-muted">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-2xl font-bold">
+            Variables <span className="text-lg font-normal text-ink-muted">({analysis.variables.length})</span>
+          </h2>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-controls={bodyId}
+            className="link text-base"
+          >
+            {open ? "Hide" : "Show"}
+          </button>
+        </div>
+        <p className={`text-base text-ink-muted ${open ? "" : "hidden"}`}>
           Rename a variable and every formula that uses it is updated. A unit (like % or m²) is shown next to the
           value, and a note appears as a tooltip on the name. Units are labels only and don&apos;t change any maths.
         </p>
       </div>
+      <div id={bodyId} className={open ? "flex flex-col gap-3" : "hidden"}>
       <datalist id="unit-suggestions">
         {COMMON_UNITS.map((u) => (
           <option key={u} value={u} />
@@ -55,6 +73,7 @@ export function VariableEditor({
             onUnit={(unit) => onUnit(v.name, unit)}
           />
         ))}
+      </div>
       </div>
     </section>
   );
