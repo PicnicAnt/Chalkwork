@@ -38,6 +38,25 @@ const EXAMPLE = {
     more_dmg: "49",
     inc_dmg: "250",
   },
+  labels: {
+    dps: "DPS",
+    avg_hit: "Average hit",
+    aps: "Attack speed",
+    crit_factor: "Crit factor",
+    hit_chance: "Hit chance",
+    accuracy: "Accuracy",
+    enemy_evasion: "Enemy evasion",
+    crit_chance: "Crit chance",
+    crit_multi: "Crit multiplier",
+    base_crit: "Base crit chance",
+    inc_crit: "Increased crit chance",
+    base_aps: "Base attack speed",
+    inc_aps: "Increased attack speed",
+    min_dmg: "Minimum damage",
+    max_dmg: "Maximum damage",
+    more_dmg: "More damage",
+    inc_dmg: "Increased damage",
+  } as Record<string, string>,
   decimals: {
     dps: "1",
     avg_hit: "1",
@@ -93,6 +112,7 @@ export function CalculationEditor({
   const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
   const [descriptions, setDescriptions] = useState<Record<string, string>>(initial?.descriptions ?? {});
   const [units, setUnits] = useState<Record<string, string>>(initial?.units ?? {});
+  const [labels, setLabels] = useState<Record<string, string>>(initial?.labels ?? {});
   // Held as typed so the field can be emptied; turned into numbers when shown and saved.
   const [decimalText, setDecimalText] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(initial?.decimals ?? {}).map(([k, v]) => [k, String(v)])),
@@ -126,6 +146,7 @@ export function CalculationEditor({
     setValues(EXAMPLE.values);
     setDescriptions(EXAMPLE.descriptions);
     setUnits(EXAMPLE.units);
+    setLabels(EXAMPLE.labels);
     setDecimalText(EXAMPLE.decimals);
     setErrors([]);
   }
@@ -136,12 +157,13 @@ export function CalculationEditor({
     setValues((v) => renameKey(v, from, to));
     setDescriptions((d) => renameKey(d, from, to));
     setUnits((u) => renameKey(u, from, to));
+    setLabels((l) => renameKey(l, from, to));
     setDecimalText((d) => renameKey(d, from, to));
   }
 
   function save() {
     startTransition(async () => {
-      const draft = { title, description, formulas, values, descriptions, units, decimals };
+      const draft = { title, description, formulas, values, descriptions, units, labels, decimals };
       const result = editing
         ? await updateCalculation(editing.id, editing.editKey, draft)
         : await createCalculation(draft);
@@ -220,10 +242,12 @@ export function CalculationEditor({
         analysis={analysis}
         descriptions={descriptions}
         units={units}
+        labels={labels}
         decimals={decimalText}
         onRename={renameVariable}
         onDescribe={(name, text) => setDescriptions((d) => ({ ...d, [name]: text }))}
         onUnit={(name, unit) => setUnits((u) => ({ ...u, [name]: unit }))}
+        onLabel={(name, text) => setLabels((l) => ({ ...l, [name]: text }))}
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
       />
 
@@ -235,7 +259,7 @@ export function CalculationEditor({
             unlocked is recalculated. Tap a lock to release it. These values are saved as what people see first.
           </p>
         </div>
-        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} decimals={decimals} />
+        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} labels={labels} decimals={decimals} />
       </section>
 
       {errors.length > 0 && (

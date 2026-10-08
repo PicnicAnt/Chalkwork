@@ -11,6 +11,8 @@ export type CalculationDraft = {
   descriptions: Record<string, string>;
   // A unit label for each variable, such as % or m², keyed by variable name. Display only.
   units: Record<string, string>;
+  // A friendlier name shown instead of the variable name, keyed by variable name. Display only.
+  labels: Record<string, string>;
   // How many decimals to show for each variable's calculated value, keyed by variable name.
   // Display only: the maths always uses the full value. Variables without an entry show automatically.
   decimals: Record<string, number>;
@@ -30,6 +32,7 @@ export const LIMITS = {
   variableDescription: 200,
   unit: 12,
   maxDecimals: 10,
+  label: 40,
 };
 
 // The editor holds formulas as one block of text, one per line.
@@ -90,6 +93,14 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
     else if (u) units[variable.name] = u;
   }
 
+  const rawLabels = typeof r.labels === "object" && r.labels !== null ? (r.labels as Record<string, unknown>) : {};
+  const labels: Record<string, string> = {};
+  for (const variable of analysis.variables) {
+    const l = str(rawLabels[variable.name]);
+    if (l.length > LIMITS.label) errors.push(`The display name of ${variable.name} must be at most ${LIMITS.label} characters.`);
+    else if (l) labels[variable.name] = l;
+  }
+
   const rawDecimals =
     typeof r.decimals === "object" && r.decimals !== null ? (r.decimals as Record<string, unknown>) : {};
   const decimals: Record<string, number> = {};
@@ -103,5 +114,5 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
 
   return errors.length
     ? { errors }
-    : { draft: { title, description, formulas, values, descriptions, units, decimals }, errors };
+    : { draft: { title, description, formulas, values, descriptions, units, labels, decimals }, errors };
 }

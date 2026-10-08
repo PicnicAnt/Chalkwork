@@ -35,6 +35,7 @@ export function CalculatorPanel({
   onChange,
   descriptions,
   units,
+  labels,
   decimals,
 }: {
   analysis: Analysis;
@@ -44,6 +45,8 @@ export function CalculatorPanel({
   descriptions?: Record<string, string>;
   /** A unit label per variable name, shown after the value. */
   units?: Record<string, string>;
+  /** A display name per variable name, shown instead of the variable name. */
+  labels?: Record<string, string>;
   /** Decimals to show per variable name for calculated values. Display only. */
   decimals?: Record<string, number>;
 }) {
@@ -97,21 +100,21 @@ export function CalculatorPanel({
 
   // The handlers below are shared by every row and read the latest state from here, so rows
   // can stay memoized and only the ones whose values changed re-render.
-  const latest = useRef({ analysis, locked, display, onChange });
+  const latest = useRef({ analysis, locked, display, onChange, labels });
   useLayoutEffect(() => {
-    latest.current = { analysis, locked, display, onChange };
+    latest.current = { analysis, locked, display, onChange, labels };
   });
 
   const apply = useCallback(
     (nextLocked: string[], nextValues: Record<string, string>, edited?: { name: string; text: string }) => {
-      const { analysis, display, onChange } = latest.current;
+      const { analysis, display, onChange, labels } = latest.current;
       // A variable with no value (shown as "?") is never locked: there is nothing to keep.
       const unspecified = edited !== undefined && parseValue(edited.text) === undefined;
       const lockedNow = unspecified ? nextLocked.filter((n) => n !== edited.name) : nextLocked;
       const next = compute(analysis, nextValues, lockedNow);
       if (edited && !unspecified && !next.plan.held.includes(edited.name)) {
         const constant = analysis.formulas.some((f) => !f.error && f.name === edited.name && f.vars.length === 1);
-        const others = nextLocked.filter((n) => n !== edited.name);
+        const others = nextLocked.filter((n) => n !== edited.name).map((n) => labels?.[n] || n);
         const reason = constant
           ? "Fixed by its formula, can't be changed"
           : `Already decided by locked ${others.join(", ")}. Unlock one to change this.`;
@@ -173,6 +176,7 @@ export function CalculatorPanel({
               formula={v.formula}
               description={descriptions?.[v.name]}
               unit={units?.[v.name]}
+              label={labels?.[v.name]}
               value={problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]}
               problem={problem?.reason ?? null}
               canLock={parseValue(display[v.name]) !== undefined}
@@ -203,6 +207,7 @@ const VariableRow = memo(function VariableRow({
   formula,
   description,
   unit,
+  label,
   value,
   problem,
   readOnly,
@@ -217,6 +222,7 @@ const VariableRow = memo(function VariableRow({
   formula?: string;
   description?: string;
   unit?: string;
+  label?: string;
   value: string;
   problem: string | null;
   readOnly: boolean;
@@ -232,7 +238,7 @@ const VariableRow = memo(function VariableRow({
   return (
     <div className="flex min-w-0 flex-col">
       <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
-        <VariableName name={name} inputId={id} description={description} />
+        <VariableName name={name} label={label || name} inputId={id} description={description} />
         <span className="text-xl text-ink-muted">=</span>
         <input
           id={id}
@@ -242,7 +248,7 @@ const VariableRow = memo(function VariableRow({
           }`}
           inputMode="decimal"
           placeholder="?"
-          aria-label={description ? name : undefined}
+          aria-label={description || label ? label || name : undefined}
           readOnly={readOnly}
           tabIndex={readOnly ? -1 : undefined}
           value={value}
@@ -253,7 +259,7 @@ const VariableRow = memo(function VariableRow({
         {readOnly ? (
           <span className="w-[30px] shrink-0" aria-hidden />
         ) : (
-          <LockButton locked={locked} disabled={!locked && !canLock} label={name} onClick={() => onToggleLock(name)} />
+          <LockButton locked={locked} disabled={!locked && !canLock} label={label || name} onClick={() => onToggleLock(name)} />
         )}
       </span>
       {problem && <span className="text-sm text-danger">{problem}</span>}
@@ -264,7 +270,17 @@ const VariableRow = memo(function VariableRow({
 
 // The variable's name. When it has a note, the name is dotted-underlined and the note appears as a
 // tooltip: on hover with a mouse, on keyboard focus, and on tap, which also works on phones.
-function VariableName({ name, inputId, description }: { name: string; inputId: string; description?: string }) {
+function VariableName({
+  name,
+  label,
+  inputId,
+  description,
+}: {
+  name: string;
+  label: string;
+  inputId: string;
+  description?: string;
+}) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLSpanElement>(null);
 
@@ -286,8 +302,8 @@ function VariableName({ name, inputId, description }: { name: string; inputId: s
 
   if (!description) {
     return (
-      <label htmlFor={inputId} className="max-w-[55%] shrink-0 break-words text-xl">
-        {name}
+      <label htmlFor={inputId} title={label !== name ? name : undefined} className="max-w-[55%] shrink-0 break-words text-xl">
+        {label}
       </label>
     );
   }
@@ -300,9 +316,10 @@ function VariableName({ name, inputId, description }: { name: string; inputId: s
         onClick={() => setOpen((o) => !o)}
         aria-describedby={tipId}
         aria-expanded={open}
+        title={label !== name ? name : undefined}
         className="break-words text-left text-xl underline decoration-ink-faint decoration-dotted underline-offset-4"
       >
-        {name}
+        {label}
       </button>
       <span
         id={tipId}

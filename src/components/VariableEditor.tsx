@@ -15,20 +15,24 @@ export function VariableEditor({
   analysis,
   descriptions,
   units,
+  labels,
   decimals,
   onRename,
   onDescribe,
   onUnit,
+  onLabel,
   onDecimals,
 }: {
   analysis: Analysis;
   descriptions: Record<string, string>;
   units: Record<string, string>;
+  labels: Record<string, string>;
   /** Decimals to show per variable, as typed (empty means automatic). */
   decimals: Record<string, string>;
   onRename: (from: string, to: string) => void;
   onDescribe: (name: string, text: string) => void;
   onUnit: (name: string, unit: string) => void;
+  onLabel: (name: string, label: string) => void;
   onDecimals: (name: string, decimals: string) => void;
 }) {
   // The section can be folded away once the names, units and notes are as wanted. Its fields stay
@@ -55,7 +59,8 @@ export function VariableEditor({
           </button>
         </div>
         <p className={`text-base text-ink-muted ${open ? "" : "hidden"}`}>
-          Rename a variable and every formula that uses it is updated. A unit (like % or m²) is shown next to the
+          Rename a variable and every formula that uses it is updated. A display name is shown instead of it on the
+          rows (the formulas still use the real name). A unit (like % or m²) is shown next to the
           value, decimals set how many digits a calculated value shows, and a note appears as a tooltip on the
           name. Units and decimals only change what is displayed, never the maths.
         </p>
@@ -72,12 +77,14 @@ export function VariableEditor({
             key={v.name}
             name={v.name}
             unit={units[v.name] ?? ""}
+            label={labels[v.name] ?? ""}
             decimals={decimals[v.name] ?? ""}
             description={descriptions[v.name] ?? ""}
             validate={(next) => checkVariableName(next, v.name, analysis)}
             onRename={(next) => onRename(v.name, next)}
             onDescribe={(text) => onDescribe(v.name, text)}
             onUnit={(unit) => onUnit(v.name, unit)}
+            onLabel={(text) => onLabel(v.name, text)}
             onDecimals={(text) => onDecimals(v.name, text)}
           />
         ))}
@@ -90,22 +97,26 @@ export function VariableEditor({
 function VariableLine({
   name,
   unit,
+  label,
   decimals,
   description,
   validate,
   onRename,
   onDescribe,
   onUnit,
+  onLabel,
   onDecimals,
 }: {
   name: string;
   unit: string;
+  label: string;
   decimals: string;
   description: string;
   validate: (name: string) => string | null;
   onRename: (name: string) => void;
   onDescribe: (text: string) => void;
   onUnit: (unit: string) => void;
+  onLabel: (label: string) => void;
   onDecimals: (decimals: string) => void;
 }) {
   // The new name is applied when the field is left or Enter is pressed, so half-typed names
@@ -137,9 +148,9 @@ function VariableLine({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
         <input
-          className={`field w-full text-xl sm:w-[38%] ${error ? "!border-danger" : ""}`}
+          className={`field text-xl sm:w-[38%] ${error ? "!border-danger" : ""}`}
           value={draft ?? name}
           onChange={(e) => {
             setDraft(e.target.value);
@@ -159,6 +170,16 @@ function VariableLine({
           autoCorrect="off"
           aria-label={`Name of ${name}`}
         />
+        <input
+          className="field text-lg sm:flex-1"
+          value={label}
+          maxLength={LIMITS.label}
+          placeholder="Display name (optional)"
+          onChange={(e) => onLabel(e.target.value)}
+          aria-label={`Display name of ${name}`}
+        />
+      </div>
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
         <input
           className="field w-24 text-lg"
           value={unit}
