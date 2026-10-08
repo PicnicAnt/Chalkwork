@@ -189,6 +189,15 @@ h3,
     border: 2px solid var(--ink-muted);
     border-radius: 30px 8px 26px 10px / 10px 26px 8px 30px;
     padding: 1rem 1.25rem 1.25rem;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    box-shadow: inset 0 0 18px rgb(0 0 0 / 0.12);
+  }
+  .group-title {
+    font-family: var(--font-sketch), var(--font-hand), cursive;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    border-bottom: 2px solid var(--ink-faint);
+    padding-bottom: 0.25rem;
   }
   .variable-box {
     border: 1.5px solid var(--ink-faint);

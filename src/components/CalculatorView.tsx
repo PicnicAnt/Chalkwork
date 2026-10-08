@@ -223,8 +223,7 @@ export function CalculatorPanel({
         return (
           <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
             {section.key && groups?.[section.key] && (
-              <h3 className="text-xl text-ink-muted">
-                From{" "}
+              <h3 className="group-title">
                 <a
                   href={`/c/${groups[section.key].board}`}
                   target={revealHidden ? "_blank" : undefined}

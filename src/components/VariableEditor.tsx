@@ -105,8 +105,8 @@ export function VariableEditor({
         {sections.map((section) => (
           <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
             {section.key && groups[section.key] && (
-              <h3 className="text-xl text-ink-muted">
-                From {groups[section.key].title}{" "}
+              <h3 className="group-title">
+                {groups[section.key].title}{" "}
                 <span className="text-base text-ink-faint">
                   (used as {section.key}; its names can&apos;t be changed here, but everything else can)
                 </span>
