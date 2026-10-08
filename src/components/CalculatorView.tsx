@@ -237,6 +237,12 @@ export function CalculatorPanel({
         return null;
       }
     },
+    focus: (name) => {
+      const field = inputs.current.get(name);
+      if (!field) return;
+      field.scrollIntoView({ block: "center", behavior: "smooth" });
+      field.focus({ preventScroll: true });
+    },
     formulas: () => analysis.formulas.filter((f) => !f.error).map((f) => ({ name: f.name, vars: f.vars })),
     // What the charts depend on: the numbers and the locks.
     signature: JSON.stringify([display, locked]),

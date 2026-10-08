@@ -20,6 +20,8 @@ export type VizValues = {
    * lock) and returns every variable's number, or null if that can't be solved.
    */
   evaluate: (overrides: Record<string, number>) => Record<string, number> | null;
+  /** Moves the focus to the variable's field on the board, scrolling it into view. Does nothing if it isn't shown. */
+  focus: (name: string) => void;
   /** The board's equations: what each variable is worked out from. */
   formulas: () => { name: string; vars: string[] }[];
   /** Changes whenever anything a chart depends on changes, so a chart can compute only then. */

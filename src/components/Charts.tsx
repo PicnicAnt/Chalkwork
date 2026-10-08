@@ -554,7 +554,10 @@ export function DependencyDiagram({ viz, values }: { viz: Visualization; values:
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(n)}
                 onBlur={() => setActive(null)}
-                onClick={() => setActive((a) => (a === n ? null : n))}
+                onClick={() => {
+                  setActive(n);
+                  values.focus(n);
+                }}
                 opacity={near ? 1 : 0.4}
                 style={{ cursor: "pointer", outline: "none", transition: "opacity 0.15s" }}
               >
