@@ -236,7 +236,7 @@ const VariableRow = memo(function VariableRow({
 }) {
   const id = `var-${name}`;
   return (
-    <div className="row-focus -mx-2 -my-1 flex min-w-0 flex-col rounded-md px-2 py-1">
+    <div className="row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1">
       <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
         <VariableName name={name} label={label || name} inputId={id} description={description} />
         <span className="text-xl text-ink-muted">=</span>
