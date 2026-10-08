@@ -1,22 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { devSignIn, type LoginState } from "@/app/login/actions";
+import { devSignIn, enterAccessCode, type LoginState } from "@/app/login/actions";
 
 export type KnownUser = { name: string; boards: number };
 
 // The test login. The people who have signed in before come first, one tap each; below that,
 // a new name can be typed, which creates that user.
-export function DevLoginForm({
-  next,
-  knownUsers,
-  needsCode = false,
-}: {
-  next: string;
-  knownUsers: KnownUser[];
-  /** True when the site asks for an access code before anyone can sign in. */
-  needsCode?: boolean;
-}) {
+export function DevLoginForm({ next, knownUsers }: { next: string; knownUsers: KnownUser[] }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(devSignIn, {});
 
   return (
@@ -63,17 +54,6 @@ export function DevLoginForm({
             maxLength={30}
             required
           />
-          {needsCode && (
-            <input
-              name="code"
-              type="password"
-              className="field text-2xl"
-              placeholder="Access code"
-              autoComplete="off"
-              aria-label="Access code"
-              required
-            />
-          )}
           {state.error && <p className="text-danger">{state.error}</p>}
           <div>
             <button type="submit" disabled={pending} className="btn btn-primary">
@@ -83,5 +63,32 @@ export function DevLoginForm({
         </form>
       </section>
     </div>
+  );
+}
+// Asked once per device when the site has an access code; after it, the users are listed.
+export function AccessCodeForm({ next }: { next: string }) {
+  const [state, action, pending] = useActionState<LoginState, FormData>(enterAccessCode, {});
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <input type="hidden" name="next" value={next} />
+      <label htmlFor="access-code" className="text-2xl font-bold">
+        Access code
+      </label>
+      <input
+        id="access-code"
+        name="code"
+        type="password"
+        className="field text-2xl"
+        placeholder="Access code"
+        autoComplete="off"
+        required
+      />
+      {state.error && <p className="text-danger">{state.error}</p>}
+      <div>
+        <button type="submit" disabled={pending} className="btn btn-primary">
+          {pending ? "Checking…" : "Continue"}
+        </button>
+      </div>
+    </form>
   );
 }

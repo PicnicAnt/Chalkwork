@@ -1,5 +1,6 @@
 import "server-only";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { cookies } from "next/headers";
 import type { SignInProfile } from "./auth";
 
 // The test login: anyone can sign in as any name, with no password. It exists so the app can be
@@ -30,6 +31,31 @@ export function checkAccessCode(raw: unknown): { ok: true } | { ok: false; error
   if (typeof raw === "string" && timingSafeEqual(digest(raw.trim()), digest(code))) return { ok: true };
   MISSES.push(now);
   return { ok: false, error: "That access code is not right." };
+}
+
+// Once the code is right, the device is remembered with a cookie that holds a keyed hash of the
+// code, never the code itself. It stays valid for a year, and changing the code invalidates it.
+const ACCESS_COOKIE = "chalkwork_access";
+const proofOf = () => createHmac("sha256", process.env.CHALKWORK_ACCESS_CODE ?? "").update("chalkwork-access-v1").digest("hex");
+
+export async function hasAccess(): Promise<boolean> {
+  if (!accessCodeRequired()) return true;
+  const have = (await cookies()).get(ACCESS_COOKIE)?.value;
+  return typeof have === "string" && timingSafeEqual(digest(have), digest(proofOf()));
+}
+
+// Checks the code and, if it is right, remembers this device.
+export async function grantAccess(raw: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const result = checkAccessCode(raw);
+  if (!result.ok) return result;
+  (await cookies()).set(ACCESS_COOKIE, proofOf(), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 365 * 24 * 60 * 60,
+    secure: process.env.COOKIE_SECURE === "1",
+  });
+  return { ok: true };
 }
 
 export const DEV_PROVIDER = "dev";
