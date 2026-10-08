@@ -61,8 +61,8 @@ export function VariableEditor({
         <p className={`text-base text-ink-muted ${open ? "" : "hidden"}`}>
           Rename a variable and every formula that uses it is updated. A display name is shown instead of it on the
           rows (the formulas still use the real name). A unit (like % or m²) is shown next to the
-          value, decimals set how many digits a calculated value shows, and a note appears as a tooltip on the
-          name. Units and decimals only change what is displayed, never the maths.
+          value, decimals set how many digits a calculated value shows, and a note is shown under the variable.
+          Units and decimals only change what is displayed, never the maths.
         </p>
       </div>
       <div id={bodyId} className={open ? "flex flex-col gap-3" : "hidden"}>
