@@ -173,7 +173,6 @@ export function CalculatorPanel({
             <VariableRow
               key={v.name}
               name={v.name}
-              formula={v.formula}
               description={descriptions?.[v.name]}
               unit={units?.[v.name]}
               label={labels?.[v.name]}
@@ -204,7 +203,6 @@ export function CalculatorPanel({
 // Written like a line on the board: name = value
 const VariableRow = memo(function VariableRow({
   name,
-  formula,
   description,
   unit,
   label,
@@ -219,7 +217,6 @@ const VariableRow = memo(function VariableRow({
   register,
 }: {
   name: string;
-  formula?: string;
   description?: string;
   unit?: string;
   label?: string;
@@ -263,7 +260,7 @@ const VariableRow = memo(function VariableRow({
         )}
       </span>
       {problem && <span className="text-sm text-danger">{problem}</span>}
-      {formula && !problem && <span className="truncate pt-0.5 text-sm text-accent-2">{formula}</span>}
+      {description && !problem && <span className="pt-0.5 text-base leading-snug text-ink-muted">{description}</span>}
     </div>
   );
 });
