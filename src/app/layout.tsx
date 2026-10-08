@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cabin_Sketch, Patrick_Hand } from "next/font/google";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { MainNav } from "@/components/MainNav";
 import { UserMenu } from "@/components/UserMenu";
 import "./globals.css";
 
@@ -46,20 +46,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-2 py-3 sm:px-4 sm:py-6">
           <div className="board flex flex-1 flex-col">
-            <header className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 pt-4 sm:px-8 sm:pt-6">
-              <Link href="/" className="sketch text-2xl font-bold sm:text-3xl">
-                Chalkwork
-              </Link>
-              <nav className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Link href="/new" className="link text-lg">
-                  New
-                </Link>
-                <Link href="/boards" className="link text-lg">
-                  Browse
+            <header className="relative flex flex-col gap-3 px-4 pt-4 sm:px-8 sm:pt-6">
+              <div className="flex items-start justify-between gap-3">
+                <Link href="/" className="sketch text-2xl font-bold sm:text-3xl">
+                  Chalkwork
                 </Link>
                 <UserMenu />
-                <ThemeToggle />
-              </nav>
+              </div>
+              <MainNav />
             </header>
             <main className="relative w-full flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
           </div>
