@@ -19,12 +19,15 @@ export function VariableEditor({
   units,
   labels,
   hidden,
+  links,
+  ownLinks,
   decimals,
   onRename,
   onDescribe,
   onUnit,
   onLabel,
   onHide,
+  onLink,
   onDecimals,
 }: {
   analysis: Analysis;
@@ -35,6 +38,10 @@ export function VariableEditor({
   labels: Record<string, string>;
   /** Variables hidden from the board. */
   hidden: Record<string, boolean>;
+  /** Every link, including those made by used boards, by variable name. */
+  links: Record<string, string>;
+  /** The links made on this board, which are the ones that can be changed here. */
+  ownLinks: Record<string, string>;
   /** Decimals to show per variable, as typed (empty means automatic). */
   decimals: Record<string, string>;
   onRename: (from: string, to: string) => void;
@@ -42,6 +49,8 @@ export function VariableEditor({
   onUnit: (name: string, unit: string) => void;
   onLabel: (name: string, label: string) => void;
   onHide: (name: string, hidden: boolean) => void;
+  /** Links a variable to another (by the other's internal name), or removes the link (null). */
+  onLink: (name: string, target: string | null) => void;
   onDecimals: (name: string, decimals: string) => void;
 }) {
   // The section can be folded away once the names, units and notes are as wanted. Its fields stay
@@ -82,6 +91,11 @@ export function VariableEditor({
         </p>
       </div>
       <div id={bodyId} className={open ? "flex flex-col gap-3" : "hidden"}>
+      <datalist id="link-targets">
+        {analysis.variables.map((v) => (
+          <option key={v.name} value={displayName(v.name)} />
+        ))}
+      </datalist>
       <datalist id="unit-suggestions">
         {COMMON_UNITS.map((u) => (
           <option key={u} value={u} />
@@ -106,6 +120,8 @@ export function VariableEditor({
                 unit={units[v.name] ?? ""}
                 label={labels[v.name] ?? ""}
                 hidden={hidden[v.name] === true}
+                linkedTo={links[v.name] ? displayName(links[v.name]) : ""}
+                linkLocked={v.name in links && !(v.name in ownLinks)}
                 decimals={decimals[v.name] ?? ""}
                 description={descriptions[v.name] ?? ""}
                 validate={(next) => checkVariableName(next, v.name, analysis)}
@@ -114,6 +130,19 @@ export function VariableEditor({
                 onUnit={(unit) => onUnit(v.name, unit)}
                 onLabel={(text) => onLabel(v.name, text)}
                 onHide={(value) => onHide(v.name, value)}
+                onLink={(text) => {
+                  const target = text.trim().replaceAll(".", "$");
+                  if (!target) {
+                    onLink(v.name, null);
+                    return null;
+                  }
+                  if (!analysis.variables.some((other) => other.name === target)) {
+                    return `No variable called ${text.trim()}`;
+                  }
+                  if (target === v.name) return "A variable can't be linked to itself";
+                  onLink(v.name, target);
+                  return null;
+                }}
                 onDecimals={(text) => onDecimals(v.name, text)}
               />
             ))}
@@ -131,6 +160,8 @@ function VariableLine({
   unit,
   label,
   hidden,
+  linkedTo,
+  linkLocked,
   decimals,
   description,
   validate,
@@ -139,6 +170,7 @@ function VariableLine({
   onUnit,
   onLabel,
   onHide,
+  onLink,
   onDecimals,
 }: {
   name: string;
@@ -147,6 +179,10 @@ function VariableLine({
   unit: string;
   label: string;
   hidden: boolean;
+  /** The variable this one is linked to, written as a person would (board.variable), or empty. */
+  linkedTo: string;
+  /** True when the link comes from a used board, so it can't be changed here. */
+  linkLocked: boolean;
   decimals: string;
   description: string;
   validate: (name: string) => string | null;
@@ -155,8 +191,21 @@ function VariableLine({
   onUnit: (unit: string) => void;
   onLabel: (label: string) => void;
   onHide: (hidden: boolean) => void;
+  /** Applies a link typed by the user. Returns why it can't be used, or null when it was applied. */
+  onLink: (text: string) => string | null;
   onDecimals: (decimals: string) => void;
 }) {
+  // The link is applied when the field is left or Enter is pressed, like the name.
+  const [linkDraft, setLinkDraft] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  function commitLink() {
+    if (linkDraft === null) return;
+    const problem = onLink(linkDraft);
+    setLinkError(problem);
+    if (!problem) setLinkDraft(null);
+  }
+
   // The new name is applied when the field is left or Enter is pressed, so half-typed names
   // never rewrite the formulas.
   const [draft, setDraft] = useState<string | null>(null);
@@ -249,6 +298,36 @@ function VariableLine({
           aria-label={`Decimals of ${name}`}
           title="How many decimals to show for the calculated value. Empty shows it automatically."
         />
+        <input
+          className={`field w-48 text-lg ${linkError ? "!border-danger" : ""}`}
+          value={linkDraft ?? linkedTo}
+          list="link-targets"
+          placeholder="linked to…"
+          disabled={linkLocked}
+          title={
+            linkLocked
+              ? "This link comes from a board that is used"
+              : "Link this variable to another: the two follow each other"
+          }
+          onChange={(e) => {
+            setLinkDraft(e.target.value);
+            setLinkError(null);
+          }}
+          onBlur={commitLink}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commitLink();
+            } else if (e.key === "Escape") {
+              setLinkDraft(null);
+              setLinkError(null);
+            }
+          }}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label={`Variable ${displayName(name)} is linked to`}
+        />
         <label className="flex shrink-0 items-center gap-2 pb-1 text-lg" title="Hidden variables still take part in the calculation, but are not shown on the board.">
           <input
             type="checkbox"
@@ -269,6 +348,7 @@ function VariableLine({
         />
       </div>
       {error && <span className="text-sm text-danger">{error}</span>}
+      {linkError && <span className="text-sm text-danger">{linkError}</span>}
     </div>
   );
 }

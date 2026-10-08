@@ -1,6 +1,6 @@
 // Shared types and validation for calculations. Safe to import from client and server.
 import { flatten, type Include, type IncludedBundle } from "./boards";
-import { analyzeFormulas, formulaProblems } from "./formulas";
+import { analyzeFormulas, displayName, formulaProblems } from "./formulas";
 
 export type CalculationDraft = {
   title: string;
@@ -22,6 +22,8 @@ export type CalculationDraft = {
   decimals: Record<string, number>;
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
   includes: Include[];
+  // Variables linked to another variable, keyed by variable name: the two follow each other.
+  links: Record<string, string>;
 };
 
 export type Calculation = CalculationDraft & {
@@ -80,18 +82,35 @@ export function validateDraft(
     errors.push(`Each formula must be at most ${LIMITS.formula} characters.`);
   if (errors.length) return { errors };
 
-  // What this board and the boards it uses make up together, before anything is overridden.
-  const { bundle: inherited, ownErrors } = flatten(
-    { formulas, values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {} },
-    included,
-  );
+  // What this board and the boards it uses make up together, before anything is overridden. Links
+  // are left out here: they can only join variables that exist, so these are found first.
+  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, links: {} };
+  const { bundle: inherited, ownErrors } = flatten({ formulas, ...none }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
   const analysis = analyzeFormulas(inherited.formulas);
-  for (const problem of formulaProblems(analysis)) {
+
+  // A link joins two different variables that exist.
+  const rawLinks = typeof r.links === "object" && r.links !== null ? (r.links as Record<string, unknown>) : {};
+  const known = new Set(analysis.variables.map((v) => v.name));
+  const links: Record<string, string> = {};
+  for (const [from, to] of Object.entries(rawLinks)) {
+    if (typeof to !== "string" || !known.has(from) || !known.has(to)) continue; // left over from a removed board
+    if (from === to) errors.push(`${displayName(from)} can't be linked to itself.`);
+    else links[from] = to;
+  }
+
+  // Problems with the formulas, the links and the used boards together. They are numbered formulas
+  // first, then links, then the formulas of the used boards.
+  const linkList = Object.entries(links);
+  const system = analyzeFormulas(flatten({ formulas, ...none, links }, included).bundle.formulas);
+  for (const problem of formulaProblems(system)) {
+    const link = linkList[problem.line - formulas.length - 1];
     errors.push(
       problem.line <= formulas.length
         ? `Line ${problem.line}: ${problem.message}`
-        : `A formula from a board that is used: ${problem.message}`,
+        : link
+          ? `The link between ${displayName(link[0])} and ${displayName(link[1])}: ${problem.message}`
+          : `A formula from a board that is used: ${problem.message}`,
     );
   }
 
@@ -162,6 +181,7 @@ export function validateDraft(
           labels,
           decimals,
           includes: included.map((i) => ({ board: i.board, alias: i.alias })),
+          links,
         },
         errors,
       };

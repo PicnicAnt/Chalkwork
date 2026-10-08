@@ -92,6 +92,11 @@ if (version < 10) {
   db.exec(`ALTER TABLE calculations ADD COLUMN board_includes TEXT NOT NULL DEFAULT '[]';`);
   db.pragma("user_version = 10");
 }
+if (version < 11) {
+  // Variables linked to another variable, as JSON: { "variable": "other variable" }.
+  db.exec(`ALTER TABLE calculations ADD COLUMN variable_links TEXT NOT NULL DEFAULT '{}';`);
+  db.pragma("user_version = 11");
+}
 
 // ---------------------------------------------------------------------------
 // Users and sessions
@@ -167,6 +172,7 @@ type Row = {
   variable_labels: string;
   variable_hidden: string;
   board_includes: string;
+  variable_links: string;
   created_at: string;
   owner_id: string | null;
   owner_name: string | null;
@@ -176,8 +182,8 @@ export function insertCalculation(draft: CalculationDraft, ownerId: string): str
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, variable_links, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     draft.title,
@@ -190,6 +196,7 @@ export function insertCalculation(draft: CalculationDraft, ownerId: string): str
     JSON.stringify(draft.labels),
     JSON.stringify(draft.hidden),
     JSON.stringify(draft.includes),
+    JSON.stringify(draft.links),
     ownerId,
   );
   return id;
@@ -201,7 +208,7 @@ export function updateCalculation(id: string, ownerId: string, draft: Calculatio
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
          variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_labels = ?, variable_hidden = ?,
-         board_includes = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         board_includes = ?, variable_links = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
     .run(
@@ -215,6 +222,7 @@ export function updateCalculation(id: string, ownerId: string, draft: Calculatio
       JSON.stringify(draft.labels),
       JSON.stringify(draft.hidden),
       JSON.stringify(draft.includes),
+      JSON.stringify(draft.links),
       id,
       ownerId,
     );
@@ -233,6 +241,7 @@ const parse = (row: Row): Calculation => ({
   decimals: JSON.parse(row.variable_decimals || "{}"),
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
+  links: JSON.parse(row.variable_links || "{}"),
   createdAt: row.created_at,
   ownerId: row.owner_id,
   ownerName: row.owner_name,

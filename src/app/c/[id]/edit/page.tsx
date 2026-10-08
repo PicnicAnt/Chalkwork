@@ -36,6 +36,7 @@ export default async function EditCalculationPage({ params }: PageProps<"/c/[id]
     hidden: calculation.hidden,
     decimals: calculation.decimals,
     includes: calculation.includes,
+    links: calculation.links,
   };
   const isOwner = calculation.ownerId === user.id;
 

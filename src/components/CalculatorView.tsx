@@ -40,6 +40,7 @@ export function CalculatorPanel({
   labels,
   hidden,
   revealHidden = false,
+  links,
   groups,
   decimals,
 }: {
@@ -56,6 +57,8 @@ export function CalculatorPanel({
   hidden?: Record<string, boolean>;
   /** Show hidden variables anyway, marked as hidden. The editor does this so its creator can see them. */
   revealHidden?: boolean;
+  /** Variables linked to another variable, by name, shown under the variable. */
+  links?: Record<string, string>;
   /** The boards behind variables that come from boards in use, by alias, for the headings. */
   groups?: Record<string, { title: string; board: string }>;
   /** Decimals to show per variable name for calculated values. Display only. */
@@ -198,6 +201,7 @@ export function CalculatorPanel({
         // A variable from a board in use is shown without the board''s alias, under that board''s heading.
         label={labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined)}
         hidden={isHidden}
+        linkedTo={links?.[v.name] ? displayName(links[v.name]) : undefined}
         value={problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]}
         problem={problem?.reason ?? null}
         canLock={parseValue(display[v.name]) !== undefined}
@@ -252,6 +256,7 @@ const VariableRow = memo(function VariableRow({
   unit,
   label,
   hidden,
+  linkedTo,
   value,
   problem,
   readOnly,
@@ -267,6 +272,8 @@ const VariableRow = memo(function VariableRow({
   unit?: string;
   label?: string;
   hidden?: boolean;
+  /** The variable this one is linked to, shown under it. */
+  linkedTo?: string;
   value: string;
   problem: string | null;
   readOnly: boolean;
@@ -314,6 +321,7 @@ const VariableRow = memo(function VariableRow({
       </span>
       {problem && <span className="text-sm text-danger">{problem}</span>}
       {description && !problem && <span className="pt-0.5 text-base leading-snug text-note">{description}</span>}
+      {linkedTo && !problem && <span className="text-sm text-ink-faint">linked to {linkedTo}</span>}
     </div>
   );
 });

@@ -5,9 +5,12 @@ import { useMemo, useState, useTransition } from "react";
 import { createCalculation, loadBoardToUse, updateCalculation } from "@/app/actions";
 import {
   defaultAlias,
+  dropAliasLinks,
   flatten,
   renameAliasInText,
   renameAliasKeys,
+  renameAliasLinks,
+  renameLinks,
   type IncludedBundle,
 } from "@/lib/boards";
 import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
@@ -127,6 +130,8 @@ export function CalculationEditor({
   const [units, setUnits] = useState<Record<string, string>>(initial?.units ?? {});
   const [labels, setLabels] = useState<Record<string, string>>(initial?.labels ?? {});
   const [hidden, setHidden] = useState<Record<string, boolean>>(initial?.hidden ?? {});
+  // Variables linked to another variable (this board's own links), by variable name.
+  const [links, setLinks] = useState<Record<string, string>>(initial?.links ?? {});
   // Held as typed so the field can be emptied; turned into numbers when shown and saved.
   const [decimalText, setDecimalText] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(initial?.decimals ?? {}).map(([k, v]) => [k, String(v)])),
@@ -151,20 +156,27 @@ export function CalculationEditor({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, links }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, links, included],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas), [flat]);
-  // Problems are numbered among this board's formulas (line 0 is about a board that is used).
-  const problems = useMemo(
-    () => [
+  // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
+  const problems = useMemo(() => {
+    const linkList = Object.entries(links);
+    return [
       ...flat.ownErrors.map((e) => ({ line: e.index + 1, message: e.message })),
-      ...formulaProblems(analysis).map((p) =>
-        p.line <= formulas.length ? p : { line: 0, message: `A formula from a board that is used: ${p.message}` },
-      ),
-    ],
-    [flat, analysis, formulas],
-  );
+      ...formulaProblems(analysis).map((p) => {
+        if (p.line <= formulas.length) return p;
+        const link = linkList[p.line - formulas.length - 1];
+        return {
+          line: 0,
+          message: link
+            ? `The link between ${displayName(link[0])} and ${displayName(link[1])}: ${p.message}`
+            : `A formula from a board that is used: ${p.message}`,
+        };
+      }),
+    ];
+  }, [flat, analysis, formulas, links]);
   // The box also has blank lines, so problems are matched to the text lines that have something in them.
   const badLines = useMemo(() => {
     const textLines = formulaText.split("\n");
@@ -210,6 +222,7 @@ export function CalculationEditor({
     setLabels((l) => renameAliasKeys(l, from, to));
     setHidden((h) => renameAliasKeys(h, from, to));
     setDecimalText((d) => renameAliasKeys(d, from, to));
+    setLinks((l) => renameAliasLinks(l, from, to));
   }
 
   function loadExample() {
@@ -223,6 +236,7 @@ export function CalculationEditor({
     setHidden({});
     setDecimalText(EXAMPLE.decimals);
     setIncluded([]);
+    setLinks({});
     setBoardError(null);
     setErrors([]);
   }
@@ -236,12 +250,13 @@ export function CalculationEditor({
     setLabels((l) => renameKey(l, from, to));
     setHidden((h) => renameKey(h, from, to));
     setDecimalText((d) => renameKey(d, from, to));
+    setLinks((l) => renameLinks(l, from, to));
   }
 
   function save() {
     startTransition(async () => {
       const includes = included.map((i) => ({ board: i.board, alias: i.alias }));
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes, links };
       const result = editing
         ? await updateCalculation(editing.id, draft)
         : await createCalculation(draft);
@@ -325,7 +340,10 @@ export function CalculationEditor({
         error={boardError}
         onAdd={addBoard}
         onAlias={renameAlias}
-        onRemove={(alias) => setIncluded((list) => list.filter((i) => i.alias !== alias))}
+        onRemove={(alias) => {
+          setIncluded((list) => list.filter((i) => i.alias !== alias));
+          setLinks((l) => dropAliasLinks(l, alias));
+        }}
       />
 
       <VariableEditor
@@ -335,12 +353,21 @@ export function CalculationEditor({
         units={flat.bundle.units}
         labels={flat.bundle.labels}
         hidden={flat.bundle.hidden}
+        links={flat.bundle.links}
+        ownLinks={links}
         decimals={Object.fromEntries(Object.entries(flat.bundle.decimals).map(([k, v]) => [k, String(v)]))}
         onRename={renameVariable}
         onDescribe={(name, text) => setDescriptions((d) => ({ ...d, [name]: text }))}
         onUnit={(name, unit) => setUnits((u) => ({ ...u, [name]: unit }))}
         onLabel={(name, text) => setLabels((l) => ({ ...l, [name]: text }))}
         onHide={(name, value) => setHidden((h) => ({ ...h, [name]: value }))}
+        onLink={(name, target) =>
+          setLinks((l) => {
+            const { [name]: _removed, ...rest } = l;
+            void _removed;
+            return target ? { ...rest, [name]: target } : rest;
+          })
+        }
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
       />
 
@@ -360,6 +387,7 @@ export function CalculationEditor({
           units={flat.bundle.units}
           labels={flat.bundle.labels}
           hidden={flat.bundle.hidden}
+          links={flat.bundle.links}
           revealHidden
           decimals={flat.bundle.decimals}
           groups={flat.bundle.groups}

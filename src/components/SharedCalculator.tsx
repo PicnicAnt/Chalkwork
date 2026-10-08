@@ -36,6 +36,7 @@ export function SharedCalculator({ flat }: { flat: Bundle }) {
         labels={flat.labels}
         hidden={flat.hidden}
         decimals={flat.decimals}
+        links={flat.links}
         groups={flat.groups}
       />
     </div>
