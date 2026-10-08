@@ -68,7 +68,7 @@ export default async function BoardPage({ params }: PageProps<"/c/[id]">) {
       ) : (
         <SharedCalculator
           flat={resolved.bundle}
-          equations={calculation.formulas}
+          formulas={calculation.formulas}
           editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}
         />
       )}

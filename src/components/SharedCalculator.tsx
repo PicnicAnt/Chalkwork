@@ -5,16 +5,17 @@ import type { Bundle } from "@/lib/boards";
 import { analyzeFormulas } from "@/lib/formulas";
 import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
+import { FormulaText } from "./FormulaText";
 
 // `flat` is the board together with the boards it uses, as one set of formulas and settings.
 export function SharedCalculator({
   flat,
-  equations = [],
+  formulas = [],
   editable,
 }: {
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
-  equations?: string[];
+  formulas?: string[];
   /** Set when the signed-in user owns the board: the Connections view can then change its links. */
   editable?: { boardId: string; ownLinks: Record<string, string> };
 }) {
@@ -83,13 +84,13 @@ export function SharedCalculator({
           visualizations={flat.visualizations}
         />
       )}
-      {view === "board" && equations.length > 0 && (
+      {view === "board" && formulas.length > 0 && (
         <section className="mt-6 flex flex-col gap-2">
-          <h2 className="text-2xl font-bold">Equations</h2>
-          <ul className="sketch-box flex flex-col gap-1 px-4 py-3 text-xl text-accent-2" aria-label="The equations of this board, read only">
-            {equations.map((text, i) => (
+          <h2 className="text-2xl font-bold">Formulas</h2>
+          <ul className="sketch-box flex flex-col gap-1 px-4 py-3 text-xl" aria-label="The formulas of this board, read only">
+            {formulas.map((text, i) => (
               <li key={i} className="break-words">
-                {text}
+                <FormulaText text={text} />
               </li>
             ))}
           </ul>
