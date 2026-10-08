@@ -5,11 +5,16 @@ import { listAllCalculations } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Browse · Chalkwork" };
 
-// Every board by every user, searchable. Only signed-in users can browse, so a board's link stays
+// Every board by every user, or just your own, searchable. Only signed-in users can browse, so a board's link stays
 // something you have to be given unless you have an account.
 export default async function BoardsPage({ searchParams }: PageProps<"/boards">) {
-  const { q } = await searchParams;
-  const user = await requireUser(q ? `/boards?q=${encodeURIComponent(String(q))}` : "/boards");
+  const { q, mine } = await searchParams;
+  const wantsMine = mine === "1";
+  const query = typeof q === "string" ? q : "";
+  const params = new URLSearchParams();
+  if (wantsMine) params.set("mine", "1");
+  if (query) params.set("q", query);
+  const user = await requireUser(params.size ? `/boards?${params}` : "/boards");
   const boards = listAllCalculations().map((b) => ({
     id: b.id,
     title: b.title,
@@ -21,8 +26,8 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold sm:text-4xl">All boards</h1>
-      <BoardList boards={boards} initialQuery={typeof q === "string" ? q : ""} />
+      <h1 className="text-3xl font-bold sm:text-4xl">Boards</h1>
+      <BoardList boards={boards} initialQuery={query} initialMine={wantsMine} />
     </div>
   );
 }

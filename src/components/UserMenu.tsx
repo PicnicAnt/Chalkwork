@@ -13,13 +13,18 @@ export async function UserMenu() {
     );
   }
   return (
-    <form action={signOutAction} className="flex items-center gap-2">
+    <>
+      <Link href="/boards?mine=1" className="link text-lg">
+        My boards
+      </Link>
+      <form action={signOutAction} className="flex items-center gap-2">
       <span className="max-w-[7rem] truncate text-lg" title={user.name}>
         {user.name}
       </span>
       <button type="submit" className="link text-base">
         Sign out
       </button>
-    </form>
+      </form>
+    </>
   );
 }
