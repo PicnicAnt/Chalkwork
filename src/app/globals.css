@@ -191,6 +191,13 @@ h3,
   .field:focus {
     border-bottom-color: var(--accent);
   }
+  /* Values you can change are written without a line under them; it shows up while you type. */
+  .field-bare {
+    border-bottom-color: transparent;
+  }
+  .field-bare:focus {
+    border-bottom-color: var(--accent);
+  }
   /* Read-only: fully decided by the locked values or formulas. The whole line is underlined
      twice, like a final answer, and the field's own underline is hidden. */
   .row-decided {

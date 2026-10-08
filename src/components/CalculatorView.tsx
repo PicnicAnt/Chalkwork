@@ -244,7 +244,7 @@ const VariableRow = memo(function VariableRow({
           id={id}
           ref={(el) => register(name, el)}
           className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
-            readOnly ? "field-decided" : ""
+            readOnly ? "field-decided" : "field-bare"
           }`}
           inputMode="decimal"
           placeholder="?"
