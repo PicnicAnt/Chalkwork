@@ -182,6 +182,8 @@ export function CalculatorPanel({
   const vizValues: VizValues = {
     ...makeVizValues({ analysis, display, shown, units, labels, groups, locked }),
     focus: focusField,
+    // Written with four significant digits, like a number someone would type.
+    setValue: (name, value) => edit(name, String(Number(value.toPrecision(4)))),
   };
   const drawingsOf = (group: string | null) =>
     (visualizations ?? [])

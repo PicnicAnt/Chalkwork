@@ -24,6 +24,8 @@ export type VizValues = {
    * lock) and returns every variable's number, or null if that can't be solved.
    */
   evaluate: (overrides: Record<string, number>) => Record<string, number> | null;
+  /** Sets the variable to this number, as if it had been typed (so it is locked at that value). */
+  setValue: (name: string, value: number) => void;
   /** Moves the focus to the variable's field on the board, scrolling it into view. Does nothing if it isn't shown. */
   focus: (name: string) => void;
   /** The board's equations: what each variable is worked out from. */
@@ -51,7 +53,7 @@ export function makeVizValues({
   labels?: Record<string, string>;
   groups?: Record<string, { title: string; board: string }>;
   locked: string[];
-}): Omit<VizValues, "focus"> {
+}): Omit<VizValues, "focus" | "setValue"> {
   // A variable of a used board without the board's alias in front.
   const local = (name: string) => labels?.[name] || displayName(groupOf(name) ? name.slice(name.indexOf("$") + 1) : name);
   return {

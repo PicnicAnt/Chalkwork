@@ -50,6 +50,16 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
   const px = (x: number) => m.l + ((x - line.from) / (line.to - line.from)) * (W - m.l - m.r);
   const py = (y: number) => H - m.b - ((y - lo) / (hi - lo)) * (H - m.t - m.b);
 
+  // The pointer's place on the picture, as a value on the horizontal axis (within the range drawn).
+  const dragTo = (e: React.PointerEvent<SVGGElement>) => {
+    const svg = e.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const box = svg.getBoundingClientRect();
+    const at = ((e.clientX - box.left) / box.width) * W;
+    const x = line.from + ((at - m.l) / (W - m.l - m.r)) * (line.to - line.from);
+    values.setValue(xName, Math.min(line.to, Math.max(line.from, x)));
+  };
+
   let path = "";
   let pen = false;
   for (const p of line.points) {
@@ -88,7 +98,33 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
         {finite(y0) && x0 >= line.from && x0 <= line.to && (
           <g>
             <line x1={px(x0)} y1={py(y0)} x2={px(x0)} y2={H - m.b} stroke={MUTED} strokeDasharray="4 4" />
-            <circle cx={px(x0)} cy={py(y0)} r={5} fill="var(--accent)" stroke={INK} strokeWidth={1.5} />
+            {/* The dot can be dragged (or moved with the arrow keys) to set the value on the horizontal axis. */}
+            <g
+              tabIndex={0}
+              role="slider"
+              aria-label={`Value of ${values.name(xName)}`}
+              aria-valuemin={line.from}
+              aria-valuemax={line.to}
+              aria-valuenow={x0}
+              aria-valuetext={values.text(xName)}
+              style={{ cursor: "ew-resize", touchAction: "none", outline: "none" }}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                dragTo(e);
+              }}
+              onPointerMove={(e) => e.currentTarget.hasPointerCapture(e.pointerId) && dragTo(e)}
+              onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
+              onKeyDown={(e) => {
+                const step = (line.to - line.from) / (POINTS - 1);
+                if (e.key === "ArrowLeft" || e.key === "ArrowDown") values.setValue(xName, Math.max(line.from, x0 - step));
+                else if (e.key === "ArrowRight" || e.key === "ArrowUp") values.setValue(xName, Math.min(line.to, x0 + step));
+                else return;
+                e.preventDefault();
+              }}
+            >
+              <circle cx={px(x0)} cy={py(y0)} r={16} fill="transparent" />
+              <circle cx={px(x0)} cy={py(y0)} r={6.5} fill="var(--accent)" stroke={INK} strokeWidth={1.5} />
+            </g>
           </g>
         )}
         <Text x={(m.l + W - m.r) / 2} y={H - 10} size={14}>
@@ -99,7 +135,7 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
         </text>
       </svg>
       <p className="text-center text-base text-ink-muted">
-        Now: {values.text(xName)} gives {values.text(yName)}
+        Now: {values.text(xName)} gives {values.text(yName)}. Drag the dot to change {values.name(xName)}.
       </p>
     </Figure>
   );
