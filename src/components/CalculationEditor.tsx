@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { createCalculation, createSuggestion, loadBoardToUse, updateCalculation } from "@/app/actions";
+import { createCalculation, loadBoardToUse, updateCalculation } from "@/app/actions/boards";
+import { createSuggestion } from "@/app/actions/suggestions";
 import {
   defaultAlias,
   dropAliasLinks,
@@ -14,115 +15,15 @@ import {
   type IncludedBundle,
 } from "@/lib/boards";
 import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
+import { EXAMPLE } from "@/lib/example-board";
 import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardsSection, type BoardChoice } from "./BoardsSection";
 import { VisualizationEditor } from "./VisualizationEditor";
-import type { Visualization } from "@/lib/visualizations";
+import { dropFromVisualizations, renameInVisualizations, type Visualization } from "@/lib/visualizations";
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
-
-// An ARPG damage sheet in the style of Path of Exile: weapon damage scaled by increased and more
-// modifiers, attack speed, crit, and chance to hit. Written dps-first so it heads the list, and
-// with inc_dmg appearing last, so typing a target dps solves for how much increased damage it takes.
-const EXAMPLE = {
-  title: "Attack DPS",
-  description: "Path of Exile style damage per second for a melee attack: weapon damage, increased and more modifiers, attack speed, crit and accuracy.",
-  formulas: [
-    "dps = avg_hit * aps * crit_factor * hit_chance / 100",
-    "hit_chance = min(max(125 * accuracy / (accuracy + (enemy_evasion / 5) ^ 0.9), 5), 100)",
-    "crit_factor = 1 + crit_chance / 100 * (crit_multi / 100 - 1)",
-    "crit_chance = min(base_crit * (1 + inc_crit / 100), 100)",
-    "aps = base_aps * (1 + inc_aps / 100)",
-    "avg_hit = (min_dmg + max_dmg) / 2 * (1 + more_dmg / 100) * (1 + inc_dmg / 100)",
-  ].join("\n"),
-  values: {
-    accuracy: "2400",
-    enemy_evasion: "12000",
-    crit_multi: "380",
-    base_crit: "6.5",
-    inc_crit: "300",
-    base_aps: "1.55",
-    inc_aps: "32",
-    min_dmg: "38",
-    max_dmg: "115",
-    more_dmg: "49",
-    inc_dmg: "250",
-  },
-  labels: {
-    dps: "DPS",
-    avg_hit: "Average hit",
-    aps: "Attack speed",
-    crit_factor: "Crit factor",
-    hit_chance: "Hit chance",
-    accuracy: "Accuracy",
-    enemy_evasion: "Enemy evasion",
-    crit_chance: "Crit chance",
-    crit_multi: "Crit multiplier",
-    base_crit: "Base crit chance",
-    inc_crit: "Increased crit chance",
-    base_aps: "Base attack speed",
-    inc_aps: "Increased attack speed",
-    min_dmg: "Minimum damage",
-    max_dmg: "Maximum damage",
-    more_dmg: "More damage",
-    inc_dmg: "Increased damage",
-  } as Record<string, string>,
-  decimals: {
-    dps: "1",
-    avg_hit: "1",
-    aps: "2",
-    crit_factor: "3",
-    hit_chance: "1",
-    crit_chance: "1",
-  } as Record<string, string>,
-  units: {
-    dps: "dmg/s",
-    aps: "/s",
-    base_aps: "/s",
-    hit_chance: "%",
-    crit_chance: "%",
-    base_crit: "%",
-    inc_crit: "%",
-    crit_multi: "%",
-    inc_aps: "%",
-    inc_dmg: "%",
-    more_dmg: "%",
-  },
-  descriptions: {
-    dps: "Damage per second against this enemy",
-    avg_hit: "Average damage of one hit, before crits",
-    aps: "Attacks per second",
-    crit_factor: "Average damage multiplier from crits",
-    hit_chance: "Chance to hit, from accuracy against evasion (%)",
-    crit_chance: "Chance for a hit to crit (%)",
-    base_aps: "Attack speed of the weapon",
-    inc_aps: "Total increased attack speed (%)",
-    inc_dmg: "Sum of all increased damage modifiers (%)",
-    more_dmg: "Combined more damage multipliers (%)",
-    inc_crit: "Total increased crit chance (%)",
-    crit_multi: "Critical strike multiplier (%)",
-  },
-};
-
-// A variable is renamed: the drawings that read it follow.
-function renameInVisualizations(vs: Visualization[], rename: (name: string) => string): Visualization[] {
-  return vs.map((v) => ({
-    ...v,
-    map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, rename(name)])),
-    lists: v.lists && Object.fromEntries(Object.entries(v.lists).map(([slot, names]) => [slot, names.map(rename)])),
-  }));
-}
-
-// Variables are gone (a used board was removed): the drawings stop reading them.
-function dropFromVisualizations(vs: Visualization[], gone: (name: string) => boolean): Visualization[] {
-  return vs.map((v) => ({
-    ...v,
-    map: Object.fromEntries(Object.entries(v.map).filter(([, name]) => !gone(name))),
-    lists: v.lists && Object.fromEntries(Object.entries(v.lists).map(([slot, names]) => [slot, names.filter((n) => !gone(n))])),
-  }));
-}
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
 // existing one (which the signed-in user owns); with `initial` but no `editing`, it saves a new copy.

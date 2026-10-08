@@ -1,45 +1,14 @@
 "use client";
 
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import {
-  brokenFormulas,
-  decidedBy,
-  formatDecimals,
-  displayName,
-  formatNumber,
-  parseValue,
-  planSolve,
-  solve,
-  type Analysis,
-} from "@/lib/formulas";
-import { groupOf } from "@/lib/boards";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { sectionsByBoard } from "@/lib/boards";
+import { compute, initialLocks, type Computed } from "@/lib/calculator";
+import { decidedBy, displayName, formatDecimals, parseValue, type Analysis } from "@/lib/formulas";
 import type { BundleVisualization } from "@/lib/visualizations";
+import { VariableRow } from "./VariableRow";
 import { VisualizationView } from "./Visualization";
-import type { VizValues } from "./viz-values";
+import { makeVizValues, type VizValues } from "./viz-values";
 
-function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
-  const plan = planSolve(analysis, locked);
-  const numbers = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, parseValue(v)]));
-  const result = solve(analysis, plan, numbers, numbers);
-  // Values being kept show their exact text; everything else shows the calculated number.
-  const display: Record<string, string> = {};
-  for (const v of analysis.variables) {
-    display[v.name] = plan.held.includes(v.name) ? (values[v.name] ?? "") : formatNumber(result.values[v.name]);
-  }
-  return { plan, result, display, broken: brokenFormulas(analysis, plan, result.values) };
-}
-
-// The variables that start out locked: those with a starting value, inputs before results, as far as
-// the formulas allow every one of them to be kept at once.
-function initialLocks(analysis: Analysis, values: Record<string, string>): string[] {
-  const defined = new Set(analysis.formulas.filter((f) => !f.error).map((f) => f.name));
-  const valued = analysis.variables.map((v) => v.name).filter((name) => parseValue(values[name] ?? "") !== undefined);
-  const ordered = [...valued.filter((n) => !defined.has(n)), ...valued.filter((n) => defined.has(n))];
-  const held = planSolve(analysis, ordered).held;
-  return ordered.filter((n) => held.includes(n));
-}
-
-type Computed = ReturnType<typeof compute>;
 type Rejected = { name: string; text: string; reason: string };
 
 // One list of variables, all editable. A value the user types is locked and never changed by
@@ -191,6 +160,14 @@ export function CalculatorPanel({
     else inputs.current.delete(name);
   }, []);
 
+  // Moves the focus to a variable's field, for the charts that can be clicked.
+  const focusField = useCallback((name: string) => {
+    const field = inputs.current.get(name);
+    if (!field) return;
+    field.scrollIntoView({ block: "center", behavior: "smooth" });
+    field.focus({ preventScroll: true });
+  }, []);
+
   if (analysis.variables.length === 0) {
     return <p className="text-ink-muted">Variables from your formulas show up here.</p>;
   }
@@ -199,53 +176,12 @@ export function CalculatorPanel({
   }
 
   // This board's own variables first, then the variables of each board in use under its title.
-  const topGroups = Object.keys(groups ?? {}).filter((key) => !key.includes("$"));
-  const sections = [
-    { key: null as string | null, variables: analysis.variables.filter((v) => !topGroups.includes(groupOf(v.name) ?? "")) },
-    ...topGroups.map((key) => ({ key, variables: analysis.variables.filter((v) => groupOf(v.name) === key) })),
-  ].filter((section) => section.variables.length > 0);
+  const sections = sectionsByBoard(analysis.variables, groups ?? {});
 
-  // What the drawings read: the numbers as they are right now, and how to write them.
+  // What the drawings and charts read from the board.
   const vizValues: VizValues = {
-    number: (name) => parseValue(display[name]),
-    text: (name) => {
-      const unit = units?.[name];
-      return `${shown[name] ?? ""}${unit ? " " + unit : ""}`;
-    },
-    name: (name) => labels?.[name] || displayName(groupOf(name) ? name.slice(name.indexOf("$") + 1) : name),
-    fullName: (name) => {
-      const group = groupOf(name);
-      const local = labels?.[name] || displayName(group ? name.slice(name.indexOf("$") + 1) : name);
-      return group && groups?.[group] ? `${groups[group].title}: ${local}` : local;
-    },
-    unit: (name) => units?.[name] ?? "",
-    isLocked: (name) => locked.includes(name),
-    inputs: () => locked.filter((n) => parseValue(display[n]) !== undefined),
-    // The board solved again with some variables held at other numbers, as if they had been typed.
-    evaluate: (overrides) => {
-      const names = Object.keys(overrides);
-      try {
-      const next = compute(
-        analysis,
-        { ...display, ...Object.fromEntries(names.map((n) => [n, String(overrides[n])])) },
-        [...names, ...locked.filter((n) => !names.includes(n))],
-      );
-      const out: Record<string, number> = {};
-      for (const [name, value] of Object.entries(next.result.values)) if (value !== undefined && Number.isFinite(value)) out[name] = value;
-      return out;
-      } catch {
-        return null;
-      }
-    },
-    focus: (name) => {
-      const field = inputs.current.get(name);
-      if (!field) return;
-      field.scrollIntoView({ block: "center", behavior: "smooth" });
-      field.focus({ preventScroll: true });
-    },
-    formulas: () => analysis.formulas.filter((f) => !f.error).map((f) => ({ name: f.name, vars: f.vars })),
-    // What the charts depend on: the numbers and the locks.
-    signature: JSON.stringify([display, locked]),
+    ...makeVizValues({ analysis, display, shown, units, labels, groups, locked }),
+    focus: focusField,
   };
   const drawingsOf = (group: string | null) =>
     (visualizations ?? [])
@@ -310,124 +246,5 @@ export function CalculatorPanel({
         </ul>
       )}
     </div>
-  );
-}
-
-// Written like a line on the board: name = value
-const VariableRow = memo(function VariableRow({
-  name,
-  description,
-  unit,
-  label,
-  hidden,
-  linkedTo,
-  value,
-  problem,
-  readOnly,
-  locked,
-  canLock,
-  onEdit,
-  onToggleLock,
-  onBlur,
-  register,
-}: {
-  name: string;
-  description?: string;
-  unit?: string;
-  label?: string;
-  hidden?: boolean;
-  /** The variable this one is linked to, shown under it. */
-  linkedTo?: string;
-  value: string;
-  problem: string | null;
-  readOnly: boolean;
-  locked: boolean;
-  /** False while the variable has no value: there is nothing to lock. */
-  canLock: boolean;
-  onEdit: (name: string, text: string) => void;
-  onToggleLock: (name: string) => void;
-  onBlur: (name: string) => void;
-  register: (name: string, el: HTMLInputElement | null) => void;
-}) {
-  const id = `var-${name}`;
-  return (
-    <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
-      <span className="flex items-center gap-2">
-        <label
-          htmlFor={id}
-          title={label && label !== name ? displayName(name) : undefined}
-          className="max-w-[55%] shrink-0 break-words text-xl"
-        >
-          {label || name}
-        </label>
-        <span className="text-xl text-ink-muted">=</span>
-        {/* The field is only as wide as its text, so the unit follows the value directly and the double line of a
-            fixed value sits under the value alone. */}
-        <span className="flex min-w-0 flex-1 items-baseline">
-        <input
-          id={id}
-          ref={(el) => register(name, el)}
-          style={{ width: `${Math.max(value.length, readOnly ? 1 : 3) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
-          className={`field min-w-0 flex-none rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
-            readOnly ? "field-decided" : locked ? "field-bare field-locked" : "field-bare"
-          }`}
-          inputMode="decimal"
-          placeholder="?"
-          readOnly={readOnly}
-          tabIndex={readOnly ? -1 : undefined}
-          value={value}
-          onChange={(e) => onEdit(name, e.target.value)}
-          onBlur={() => onBlur(name)}
-        />
-        {unit && <span className="shrink-0 text-lg text-ink-muted">{unit}</span>}
-        </span>
-        {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
-        {readOnly ? (
-          <span className="w-[30px] shrink-0" aria-hidden />
-        ) : (
-          <LockButton locked={locked} disabled={!locked && !canLock} label={label || name} onClick={() => onToggleLock(name)} />
-        )}
-      </span>
-      {problem && <span className="text-sm text-danger">{problem}</span>}
-      {description && !problem && <span className="pt-0.5 text-base leading-snug text-note">{description}</span>}
-      {linkedTo && !problem && <span className="text-sm text-ink-faint">linked to {linkedTo}</span>}
-    </div>
-  );
-});
-
-function LockButton({
-  locked,
-  disabled,
-  label,
-  onClick,
-}: {
-  locked: boolean;
-  disabled: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={locked}
-      aria-label={locked ? `Unlock ${label}` : `Lock ${label}`}
-      title={
-        locked
-          ? "Locked: formulas won't change this. Tap to unlock."
-          : disabled
-            ? "Enter a value to lock it"
-            : "Tap to lock this value"
-      }
-      className={`shrink-0 p-1 transition-colors ${
-        locked ? "text-accent" : disabled ? "cursor-not-allowed text-ink-faint opacity-40" : "text-ink-faint hover:text-ink-muted"
-      }`}
-    >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
-        {locked ? <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /> : <path d="M8 10.5V7a4 4 0 0 1 7.6-1.7" />}
-      </svg>
-    </button>
   );
 }

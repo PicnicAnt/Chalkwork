@@ -1,0 +1,124 @@
+"use client";
+
+import { memo } from "react";
+import { displayName } from "@/lib/formulas";
+
+// Written like a line on the board: name = value
+export const VariableRow = memo(function VariableRow({
+  name,
+  description,
+  unit,
+  label,
+  hidden,
+  linkedTo,
+  value,
+  problem,
+  readOnly,
+  locked,
+  canLock,
+  onEdit,
+  onToggleLock,
+  onBlur,
+  register,
+}: {
+  name: string;
+  description?: string;
+  unit?: string;
+  label?: string;
+  hidden?: boolean;
+  /** The variable this one is linked to, shown under it. */
+  linkedTo?: string;
+  value: string;
+  problem: string | null;
+  readOnly: boolean;
+  locked: boolean;
+  /** False while the variable has no value: there is nothing to lock. */
+  canLock: boolean;
+  onEdit: (name: string, text: string) => void;
+  onToggleLock: (name: string) => void;
+  onBlur: (name: string) => void;
+  register: (name: string, el: HTMLInputElement | null) => void;
+}) {
+  const id = `var-${name}`;
+  return (
+    <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
+      <span className="flex items-center gap-2">
+        <label
+          htmlFor={id}
+          title={label && label !== name ? displayName(name) : undefined}
+          className="max-w-[55%] shrink-0 break-words text-xl"
+        >
+          {label || name}
+        </label>
+        <span className="text-xl text-ink-muted">=</span>
+        {/* The field is only as wide as its text, so the unit follows the value directly and the double line of a
+            fixed value sits under the value alone. */}
+        <span className="flex min-w-0 flex-1 items-baseline">
+        <input
+          id={id}
+          ref={(el) => register(name, el)}
+          style={{ width: `${Math.max(value.length, readOnly ? 1 : 3) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
+          className={`field min-w-0 flex-none rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
+            readOnly ? "field-decided" : locked ? "field-bare field-locked" : "field-bare"
+          }`}
+          inputMode="decimal"
+          placeholder="?"
+          readOnly={readOnly}
+          tabIndex={readOnly ? -1 : undefined}
+          value={value}
+          onChange={(e) => onEdit(name, e.target.value)}
+          onBlur={() => onBlur(name)}
+        />
+        {unit && <span className="shrink-0 text-lg text-ink-muted">{unit}</span>}
+        </span>
+        {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
+        {readOnly ? (
+          <span className="w-[30px] shrink-0" aria-hidden />
+        ) : (
+          <LockButton locked={locked} disabled={!locked && !canLock} label={label || name} onClick={() => onToggleLock(name)} />
+        )}
+      </span>
+      {problem && <span className="text-sm text-danger">{problem}</span>}
+      {description && !problem && <span className="pt-0.5 text-base leading-snug text-note">{description}</span>}
+      {linkedTo && !problem && <span className="text-sm text-ink-faint">linked to {linkedTo}</span>}
+    </div>
+  );
+});
+
+function LockButton({
+  locked,
+  disabled,
+  label,
+  onClick,
+}: {
+  locked: boolean;
+  disabled: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={locked}
+      aria-label={locked ? `Unlock ${label}` : `Lock ${label}`}
+      title={
+        locked
+          ? "Locked: formulas won't change this. Tap to unlock."
+          : disabled
+            ? "Enter a value to lock it"
+            : "Tap to lock this value"
+      }
+      className={`shrink-0 p-1 transition-colors ${
+        locked ? "text-accent" : disabled ? "cursor-not-allowed text-ink-faint opacity-40" : "text-ink-faint hover:text-ink-muted"
+      }`}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+        {locked ? <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /> : <path d="M8 10.5V7a4 4 0 0 1 7.6-1.7" />}
+      </svg>
+    </button>
+  );
+}
+

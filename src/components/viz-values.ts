@@ -1,3 +1,7 @@
+import { groupOf } from "@/lib/boards";
+import { compute } from "@/lib/calculator";
+import { displayName, parseValue, type Analysis } from "@/lib/formulas";
+
 // What a drawing or chart can ask the board it is on. Shapes only need `number` and `text`; the
 // charts also re-solve the board with other values (`evaluate`).
 export type VizValues = {
@@ -27,3 +31,63 @@ export type VizValues = {
   /** Changes whenever anything a chart depends on changes, so a chart can compute only then. */
   signature: string;
 };
+
+// What the drawings and charts of a board read: the numbers as they are right now, how to write them, and a
+// way to solve the board again with other values. `display` has every variable's number as text and `shown`
+// the same rounded as the board shows it.
+export function makeVizValues({
+  analysis,
+  display,
+  shown,
+  units,
+  labels,
+  groups,
+  locked,
+}: {
+  analysis: Analysis;
+  display: Record<string, string>;
+  shown: Record<string, string>;
+  units?: Record<string, string>;
+  labels?: Record<string, string>;
+  groups?: Record<string, { title: string; board: string }>;
+  locked: string[];
+}): Omit<VizValues, "focus"> {
+  // A variable of a used board without the board's alias in front.
+  const local = (name: string) => labels?.[name] || displayName(groupOf(name) ? name.slice(name.indexOf("$") + 1) : name);
+  return {
+    number: (name) => parseValue(display[name]),
+    text: (name) => {
+      const unit = units?.[name];
+      return `${shown[name] ?? ""}${unit ? " " + unit : ""}`;
+    },
+    name: local,
+    fullName: (name) => {
+      const group = groupOf(name);
+      return group && groups?.[group] ? `${groups[group].title}: ${local(name)}` : local(name);
+    },
+    unit: (name) => units?.[name] ?? "",
+    isLocked: (name) => locked.includes(name),
+    inputs: () => locked.filter((n) => parseValue(display[n]) !== undefined),
+    // The board solved again with some variables held at other numbers, as if they had been typed.
+    evaluate: (overrides) => {
+      const names = Object.keys(overrides);
+      try {
+        const next = compute(
+          analysis,
+          { ...display, ...Object.fromEntries(names.map((n) => [n, String(overrides[n])])) },
+          [...names, ...locked.filter((n) => !names.includes(n))],
+        );
+        const out: Record<string, number> = {};
+        for (const [name, value] of Object.entries(next.result.values)) {
+          if (value !== undefined && Number.isFinite(value)) out[name] = value;
+        }
+        return out;
+      } catch {
+        return null;
+      }
+    },
+    formulas: () => analysis.formulas.filter((f) => !f.error).map((f) => ({ name: f.name, vars: f.vars })),
+    // What the charts depend on: the numbers and the locks.
+    signature: JSON.stringify([display, locked]),
+  };
+}

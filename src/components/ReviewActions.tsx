@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { approveSuggestion, rejectSuggestion, withdrawSuggestion, type DecisionResult } from "@/app/actions";
+import { approveSuggestion, rejectSuggestion, withdrawSuggestion, type DecisionResult } from "@/app/actions/suggestions";
 
 // The owner approves or rejects an open suggestion; the person who made it can withdraw it.
 export function ReviewActions({ id, role }: { id: string; role: "owner" | "author" }) {

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { setBoardLinks } from "@/app/actions";
+import { setBoardLinks } from "@/app/actions/boards";
 import { groupOf, type Bundle } from "@/lib/boards";
 import { displayName, type Analysis } from "@/lib/formulas";
 

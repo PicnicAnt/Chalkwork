@@ -391,7 +391,6 @@ function runSteps(
 }
 
 export function solve(
-  analysis: Analysis,
   plan: Plan,
   given: Record<string, number | undefined>,
   previous: Record<string, number | undefined> = {},
@@ -510,7 +509,7 @@ export function formulaProblems(analysis: Analysis): FormulaProblem[] {
   let message = "";
   for (let k = 0; k < 3; k++) {
     const given = Object.fromEntries(plan.held.map((name, i) => [name, 1 + ((i * 7 + k * 5) % 11) / 3]));
-    const result = solve(analysis, plan, given, given);
+    const result = solve(plan, given, given);
     const unsolved = result.failedFormula ? [result.failedFormula] : [];
     const contradicted = unsolved.length ? [] : brokenFormulas(analysis, plan, result.values);
     if (unsolved.length === 0 && contradicted.length === 0) return problems;

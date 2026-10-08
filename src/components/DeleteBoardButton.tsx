@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteBoard } from "@/app/actions";
+import { deleteBoard } from "@/app/actions/boards";
 
 // Deleting is permanent, so it takes two steps: the button, then a question to confirm. The button
 // stays where it is while the question is open.

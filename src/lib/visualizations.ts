@@ -284,3 +284,21 @@ export function parseVisualizations(
   }
   return { visualizations, errors };
 }
+
+// A variable is renamed: the drawings that read it follow.
+export function renameInVisualizations(vs: Visualization[], rename: (name: string) => string): Visualization[] {
+  return vs.map((v) => ({
+    ...v,
+    map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, rename(name)])),
+    lists: v.lists && Object.fromEntries(Object.entries(v.lists).map(([slot, names]) => [slot, names.map(rename)])),
+  }));
+}
+
+// Variables are gone (a used board was removed): the drawings stop reading them.
+export function dropFromVisualizations(vs: Visualization[], gone: (name: string) => boolean): Visualization[] {
+  return vs.map((v) => ({
+    ...v,
+    map: Object.fromEntries(Object.entries(v.map).filter(([, name]) => !gone(name))),
+    lists: v.lists && Object.fromEntries(Object.entries(v.lists).map(([slot, names]) => [slot, names.filter((n) => !gone(n))])),
+  }));
+}
