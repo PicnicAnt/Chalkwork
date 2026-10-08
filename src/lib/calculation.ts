@@ -1,4 +1,5 @@
 // Shared types and validation for calculations. Safe to import from client and server.
+import { flatten, type Include, type IncludedBundle } from "./boards";
 import { analyzeFormulas, formulaProblems } from "./formulas";
 
 export type CalculationDraft = {
@@ -19,6 +20,8 @@ export type CalculationDraft = {
   // How many decimals to show for each variable's calculated value, keyed by variable name.
   // Display only: the maths always uses the full value. Variables without an entry show automatically.
   decimals: Record<string, number>;
+  // Existing boards this one uses. Their variables are added under the alias, as alias.name.
+  includes: Include[];
 };
 
 export type Calculation = CalculationDraft & {
@@ -52,7 +55,12 @@ export function splitFormulas(text: string): string[] {
     .filter(Boolean);
 }
 
-export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors: string[] } {
+// `included` is the boards this one uses, already loaded by the server (see resolve-boards.ts). They
+// are part of the system of formulas, so their variables can be named, noted and linked here too.
+export function validateDraft(
+  raw: unknown,
+  included: readonly IncludedBundle[] = [],
+): { draft?: CalculationDraft; errors: string[] } {
   const errors: string[] = [];
   if (typeof raw !== "object" || raw === null) return { errors: ["Invalid data."] };
   const r = raw as Record<string, unknown>;
@@ -72,16 +80,28 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
     errors.push(`Each formula must be at most ${LIMITS.formula} characters.`);
   if (errors.length) return { errors };
 
-  const analysis = analyzeFormulas(formulas);
+  // What this board and the boards it uses make up together, before anything is overridden.
+  const { bundle: inherited, ownErrors } = flatten(
+    { formulas, values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {} },
+    included,
+  );
+  for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
+  const analysis = analyzeFormulas(inherited.formulas);
   for (const problem of formulaProblems(analysis)) {
-    errors.push(`Line ${problem.line}: ${problem.message}`);
+    errors.push(
+      problem.line <= formulas.length
+        ? `Line ${problem.line}: ${problem.message}`
+        : `A formula from a board that is used: ${problem.message}`,
+    );
   }
 
   const rawValues = typeof r.values === "object" && r.values !== null ? (r.values as Record<string, unknown>) : {};
   const values: Record<string, string> = {};
   for (const variable of analysis.variables) {
     const v = str(rawValues[variable.name]).slice(0, LIMITS.value);
-    if (v) values[variable.name] = v;
+    // A value that is just what the used board already says is not kept here, so that later
+    // changes to that board still show through.
+    if (v && !(variable.name in inherited.values && inherited.values[variable.name] === v)) values[variable.name] = v;
   }
 
   const rawDescriptions =
@@ -113,7 +133,8 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
   const rawHidden = typeof r.hidden === "object" && r.hidden !== null ? (r.hidden as Record<string, unknown>) : {};
   const hidden: Record<string, boolean> = {};
   for (const variable of analysis.variables) {
-    if (rawHidden[variable.name] === true) hidden[variable.name] = true;
+    // false is kept too: it shows a variable that a used board hides.
+    if (typeof rawHidden[variable.name] === "boolean") hidden[variable.name] = rawHidden[variable.name] as boolean;
   }
 
   const rawDecimals =
@@ -128,6 +149,20 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
   }
 
   return errors.length
-    ? { errors }
-    : { draft: { title, description, formulas, values, descriptions, units, hidden, labels, decimals }, errors };
+    ? { errors: [...new Set(errors)] }
+    : {
+        draft: {
+          title,
+          description,
+          formulas,
+          values,
+          descriptions,
+          units,
+          hidden,
+          labels,
+          decimals,
+          includes: included.map((i) => ({ board: i.board, alias: i.alias })),
+        },
+        errors,
+      };
 }

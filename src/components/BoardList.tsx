@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
+import { matchesWords, wordsOf } from "@/lib/board-search";
 
 export type BoardItem = {
   id: string;
@@ -14,14 +15,7 @@ export type BoardItem = {
 
 const escapeForRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// The words typed in the search box. A board matches when every word is found in its title or
-// description, ignoring case, so "dps exile" finds a board with both anywhere in those two fields.
-const wordsOf = (query: string) => query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
-
-const matches = (board: BoardItem, words: string[]) => {
-  const haystack = `${board.title}\n${board.description}`.toLocaleLowerCase();
-  return words.every((w) => haystack.includes(w));
-};
+const matches = (board: BoardItem, words: string[]) => matchesWords(`${board.title}\n${board.description}`, words);
 
 // Text with the searched words picked out in the accent color.
 function Highlighted({ text, words }: { text: string; words: string[] }) {

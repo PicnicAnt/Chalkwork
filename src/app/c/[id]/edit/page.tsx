@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { CalculationEditor } from "@/components/CalculationEditor";
 import { requireUser } from "@/lib/auth";
-import { getCalculation } from "@/lib/db";
+import { getCalculation, listAllCalculations } from "@/lib/db";
+import { resolveIncludes } from "@/lib/resolve-boards";
 
 async function load(id: string) {
   // better-sqlite3 is synchronous, so opt out of prerendering explicitly.
@@ -34,10 +35,37 @@ export default async function EditCalculationPage({ params }: PageProps<"/c/[id]
     labels: calculation.labels,
     hidden: calculation.hidden,
     decimals: calculation.decimals,
+    includes: calculation.includes,
   };
+  const isOwner = calculation.ownerId === user.id;
 
-  if (calculation.ownerId === user.id) {
-    return <CalculationEditor initial={draft} editing={{ id }} heading={`Edit ${draft.title}`} />;
+  // The boards this one uses, loaded for the editor. When editing the owner's board, none of them
+  // may use that board in turn.
+  const resolved = resolveIncludes(calculation.includes, isOwner ? id : undefined);
+  if ("error" in resolved) {
+    return (
+      <p className="sketch-box px-4 py-3 text-danger">
+        This board uses another board that can&apos;t be loaded, so it can&apos;t be edited right now: {resolved.error}
+      </p>
+    );
+  }
+  const availableBoards = listAllCalculations().map((b) => ({
+    id: b.id,
+    title: b.title,
+    description: b.description,
+    ownerName: b.ownerName,
+  }));
+
+  if (isOwner) {
+    return (
+      <CalculationEditor
+        initial={draft}
+        editing={{ id }}
+        heading={`Edit ${draft.title}`}
+        availableBoards={availableBoards}
+        initialIncluded={resolved.included}
+      />
+    );
   }
 
   return (
@@ -46,7 +74,12 @@ export default async function EditCalculationPage({ params }: PageProps<"/c/[id]
         This calculation belongs to {calculation.ownerName ?? "someone else"}, so you can&apos;t change it. Saving here
         makes your own copy with a new link.
       </p>
-      <CalculationEditor initial={{ ...draft, title: `${draft.title} (copy)` }} heading={`Copy ${draft.title}`} />
+      <CalculationEditor
+        initial={{ ...draft, title: `${draft.title} (copy)` }}
+        heading={`Copy ${draft.title}`}
+        availableBoards={availableBoards}
+        initialIncluded={resolved.included}
+      />
     </div>
   );
 }

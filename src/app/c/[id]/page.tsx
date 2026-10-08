@@ -6,6 +6,7 @@ import { SharedCalculator } from "@/components/SharedCalculator";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { getCurrentUser } from "@/lib/auth";
 import { getCalculation } from "@/lib/db";
+import { resolveForView } from "@/lib/resolve-boards";
 
 async function load(id: string) {
   // better-sqlite3 is synchronous, so opt out of prerendering explicitly.
@@ -21,7 +22,10 @@ export async function generateMetadata({ params }: PageProps<"/c/[id]">): Promis
 }
 
 export default async function CalculationPage({ params }: PageProps<"/c/[id]">) {
-  const { ownerId, ...calculation } = await load((await params).id);
+  const full = await load((await params).id);
+  const { ownerId, ...calculation } = full;
+  // The board together with the boards it uses.
+  const resolved = resolveForView(full);
   const user = await getCurrentUser();
   const isOwner = user !== null && user.id === ownerId;
 
@@ -42,7 +46,13 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
           <CopyLinkButton />
         </div>
       </div>
-      <SharedCalculator calculation={calculation} />
+      {"error" in resolved ? (
+        <p className="sketch-box px-4 py-3 text-danger">
+          This board uses another board that can&apos;t be loaded: {resolved.error}
+        </p>
+      ) : (
+        <SharedCalculator flat={resolved.bundle} />
+      )}
     </>
   );
 }

@@ -48,8 +48,15 @@ export type Analysis = {
   variables: Variable[]; // in order of first appearance
 };
 
+// A variable that comes from an included board has the board's alias in front of its name,
+// joined with a dollar sign because mathjs allows that in a name: "weapon$inc_dmg". People
+// write and read it with a dot, as weapon.inc_dmg.
+export const PATH_SEPARATOR = "$";
+export const displayName = (name: string) => name.replaceAll(PATH_SEPARATOR, ".");
+
 // "monthly_payment" -> "Monthly payment", "loanAmount" -> "Loan amount"
-export function humanize(name: string): string {
+export function humanize(fullName: string): string {
+  const name = fullName.slice(fullName.lastIndexOf(PATH_SEPARATOR) + 1);
   const words = name
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/_+/g, " ")
@@ -94,7 +101,7 @@ function removeThousandsSeparators(text: string): string {
 }
 
 const TOKEN_PATTERN =
-  /(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+)|([A-Za-z_][A-Za-z0-9_]*)|([-+*/^%=<>!&|~?:]+|\.[*/^])|([()[\]{},;])|(\s+|[^])/y;
+  /(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+)|([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*)|([-+*/^%=<>!&|~?:]+|\.[*/^])|([()[\]{},;])|(\s+|[^])/y;
 
 // Splits formula text into pieces for syntax highlighting. It doesn't validate anything; it only
 // tells names that are variables apart from reserved ones (constants like pi, functions like sqrt).

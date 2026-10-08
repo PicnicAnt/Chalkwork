@@ -2,10 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { createCalculation, updateCalculation } from "@/app/actions";
+import { createCalculation, loadBoardToUse, updateCalculation } from "@/app/actions";
+import {
+  defaultAlias,
+  flatten,
+  renameAliasInText,
+  renameAliasKeys,
+  type IncludedBundle,
+} from "@/lib/boards";
 import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
-import { analyzeFormulas, formulaProblems } from "@/lib/formulas";
+import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
 import { renameKey, renameVariableInText } from "@/lib/rename";
+import { BoardsSection, type BoardChoice } from "./BoardsSection";
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
@@ -99,10 +107,16 @@ export function CalculationEditor({
   initial,
   editing,
   heading = "New calculation",
+  availableBoards = [],
+  initialIncluded = [],
 }: {
   initial?: CalculationDraft;
   editing?: { id: string };
   heading?: string;
+  /** Boards that can be added to this one. */
+  availableBoards?: BoardChoice[];
+  /** The boards `initial` already uses, loaded by the server. */
+  initialIncluded?: IncludedBundle[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -126,18 +140,77 @@ export function CalculationEditor({
       ),
     [decimalText],
   );
+  // The boards this one uses, each loaded together with the boards it uses in turn.
+  const [included, setIncluded] = useState<IncludedBundle[]>(initialIncluded);
+  const [boardError, setBoardError] = useState<string | null>(null);
+  const [loadingBoard, startLoadingBoard] = useTransition();
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
   const formulas = useMemo(() => splitFormulas(formulaText), [formulaText]);
-  const analysis = useMemo(() => analyzeFormulas(formulas), [formulas]);
-  const problems = useMemo(() => formulaProblems(analysis), [analysis]);
-  // Problems are numbered among the non-empty formulas; the box also has blank lines.
+  // This board and the boards it uses make up one system. What is set here wins over what a used
+  // board says about its own variables.
+  const flat = useMemo(
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, included],
+  );
+  const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas), [flat]);
+  // Problems are numbered among this board's formulas (line 0 is about a board that is used).
+  const problems = useMemo(
+    () => [
+      ...flat.ownErrors.map((e) => ({ line: e.index + 1, message: e.message })),
+      ...formulaProblems(analysis).map((p) =>
+        p.line <= formulas.length ? p : { line: 0, message: `A formula from a board that is used: ${p.message}` },
+      ),
+    ],
+    [flat, analysis, formulas],
+  );
+  // The box also has blank lines, so problems are matched to the text lines that have something in them.
   const badLines = useMemo(() => {
     const textLines = formulaText.split("\n");
     const filled = textLines.flatMap((text, i) => (text.trim() ? [i] : []));
-    return new Set(problems.map((p) => filled[p.line - 1]));
+    return new Set(problems.filter((p) => p.line > 0).map((p) => filled[p.line - 1]));
   }, [formulaText, problems]);
+  // board.variable names to suggest while typing a formula.
+  const boardVariables = useMemo(
+    () => analysis.variables.filter((v) => v.name.includes("$")).map((v) => displayName(v.name)),
+    [analysis],
+  );
+
+  function addBoard(boardId: string) {
+    setBoardError(null);
+    startLoadingBoard(async () => {
+      const result = await loadBoardToUse(boardId, editing?.id);
+      if (!result.ok) {
+        setBoardError(result.error);
+        return;
+      }
+      setIncluded((list) => [
+        ...list,
+        {
+          alias: defaultAlias(
+            result.title,
+            list.map((i) => i.alias),
+          ),
+          board: result.board,
+          title: result.title,
+          bundle: result.bundle,
+        },
+      ]);
+    });
+  }
+
+  // A board goes by a new alias: formulas that mention it and the settings kept for its variables follow.
+  function renameAlias(from: string, to: string) {
+    setIncluded((list) => list.map((i) => (i.alias === from ? { ...i, alias: to } : i)));
+    setFormulaText((text) => renameAliasInText(text, from, to));
+    setValues((v) => renameAliasKeys(v, from, to));
+    setDescriptions((d) => renameAliasKeys(d, from, to));
+    setUnits((u) => renameAliasKeys(u, from, to));
+    setLabels((l) => renameAliasKeys(l, from, to));
+    setHidden((h) => renameAliasKeys(h, from, to));
+    setDecimalText((d) => renameAliasKeys(d, from, to));
+  }
 
   function loadExample() {
     setTitle(EXAMPLE.title);
@@ -149,6 +222,8 @@ export function CalculationEditor({
     setLabels(EXAMPLE.labels);
     setHidden({});
     setDecimalText(EXAMPLE.decimals);
+    setIncluded([]);
+    setBoardError(null);
     setErrors([]);
   }
 
@@ -165,7 +240,8 @@ export function CalculationEditor({
 
   function save() {
     startTransition(async () => {
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals };
+      const includes = included.map((i) => ({ board: i.board, alias: i.alias }));
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes };
       const result = editing
         ? await updateCalculation(editing.id, draft)
         : await createCalculation(draft);
@@ -227,25 +303,39 @@ export function CalculationEditor({
           onChange={setFormulaText}
           placeholder={"area = width * height\nprice = area * price_per_m2"}
           badLines={badLines}
+          extraNames={boardVariables}
         />
         {problems.length > 0 && (
           <ul className="flex flex-col gap-1 text-base text-danger">
             {problems.map((p) => (
               <li key={`${p.line}-${p.message}`}>
-                <span className="text-xl">{formulas[p.line - 1]}</span> — {p.message}
+                {p.line > 0 && <span className="text-xl">{formulas[p.line - 1]} — </span>}
+                {p.message}
               </li>
             ))}
           </ul>
         )}
       </section>
 
+      <BoardsSection
+        includes={included.map((i) => ({ board: i.board, alias: i.alias }))}
+        included={included}
+        available={availableBoards.filter((b) => b.id !== editing?.id)}
+        busy={loadingBoard}
+        error={boardError}
+        onAdd={addBoard}
+        onAlias={renameAlias}
+        onRemove={(alias) => setIncluded((list) => list.filter((i) => i.alias !== alias))}
+      />
+
       <VariableEditor
         analysis={analysis}
-        descriptions={descriptions}
-        units={units}
-        labels={labels}
-        hidden={hidden}
-        decimals={decimalText}
+        groups={flat.bundle.groups}
+        descriptions={flat.bundle.descriptions}
+        units={flat.bundle.units}
+        labels={flat.bundle.labels}
+        hidden={flat.bundle.hidden}
+        decimals={Object.fromEntries(Object.entries(flat.bundle.decimals).map(([k, v]) => [k, String(v)]))}
         onRename={renameVariable}
         onDescribe={(name, text) => setDescriptions((d) => ({ ...d, [name]: text }))}
         onUnit={(name, unit) => setUnits((u) => ({ ...u, [name]: unit }))}
@@ -262,7 +352,18 @@ export function CalculationEditor({
             unlocked is recalculated. Tap a lock to release it. These values are saved as what people see first.
           </p>
         </div>
-        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} labels={labels} hidden={hidden} revealHidden decimals={decimals} />
+        <CalculatorPanel
+          analysis={analysis}
+          values={flat.bundle.values}
+          onChange={setValues}
+          descriptions={flat.bundle.descriptions}
+          units={flat.bundle.units}
+          labels={flat.bundle.labels}
+          hidden={flat.bundle.hidden}
+          revealHidden
+          decimals={flat.bundle.decimals}
+          groups={flat.bundle.groups}
+        />
       </section>
 
       {errors.length > 0 && (

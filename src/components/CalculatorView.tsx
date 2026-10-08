@@ -5,12 +5,14 @@ import {
   brokenFormulas,
   decidedBy,
   formatDecimals,
+  displayName,
   formatNumber,
   parseValue,
   planSolve,
   solve,
   type Analysis,
 } from "@/lib/formulas";
+import { groupOf } from "@/lib/boards";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
   const plan = planSolve(analysis, locked);
@@ -38,6 +40,7 @@ export function CalculatorPanel({
   labels,
   hidden,
   revealHidden = false,
+  groups,
   decimals,
 }: {
   analysis: Analysis;
@@ -53,6 +56,8 @@ export function CalculatorPanel({
   hidden?: Record<string, boolean>;
   /** Show hidden variables anyway, marked as hidden. The editor does this so its creator can see them. */
   revealHidden?: boolean;
+  /** The boards behind variables that come from boards in use, by alias, for the headings. */
+  groups?: Record<string, { title: string; board: string }>;
   /** Decimals to show per variable name for calculated values. Display only. */
   decimals?: Record<string, number>;
 }) {
@@ -120,7 +125,7 @@ export function CalculatorPanel({
       const next = compute(analysis, nextValues, lockedNow);
       if (edited && !unspecified && !next.plan.held.includes(edited.name)) {
         const constant = analysis.formulas.some((f) => !f.error && f.name === edited.name && f.vars.length === 1);
-        const others = nextLocked.filter((n) => n !== edited.name).map((n) => labels?.[n] || n);
+        const others = nextLocked.filter((n) => n !== edited.name).map((n) => labels?.[n] || displayName(n));
         const reason = constant
           ? "Fixed by its formula, can't be changed"
           : `Already decided by locked ${others.join(", ")}. Unlock one to change this.`;
@@ -173,35 +178,63 @@ export function CalculatorPanel({
     return <p className="text-ink-muted">Every variable on this board is hidden.</p>;
   }
 
+  // This board's own variables first, then the variables of each board in use under its title.
+  const topGroups = Object.keys(groups ?? {}).filter((key) => !key.includes("$"));
+  const sections = [
+    { key: null as string | null, variables: analysis.variables.filter((v) => !topGroups.includes(groupOf(v.name) ?? "")) },
+    ...topGroups.map((key) => ({ key, variables: analysis.variables.filter((v) => groupOf(v.name) === key) })),
+  ].filter((section) => section.variables.length > 0);
+
+  function row(v: { name: string }, group: string | null) {
+    const isHidden = hidden?.[v.name] === true;
+    if (isHidden && !revealHidden) return null;
+    const problem = rejected?.name === v.name ? rejected : null;
+    return (
+      <VariableRow
+        key={v.name}
+        name={v.name}
+        description={descriptions?.[v.name]}
+        unit={units?.[v.name]}
+        // A variable from a board in use is shown without the board''s alias, under that board''s heading.
+        label={labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined)}
+        hidden={isHidden}
+        value={problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]}
+        problem={problem?.reason ?? null}
+        canLock={parseValue(display[v.name]) !== undefined}
+        readOnly={decided.has(v.name) && !problem}
+        locked={locked.includes(v.name)}
+        onEdit={edit}
+        onToggleLock={toggleLock}
+        onBlur={endDraft}
+        register={register}
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">
-        {analysis.variables.map((v) => {
-          const isHidden = hidden?.[v.name] === true;
-          if (isHidden && !revealHidden) return null;
-          const problem = rejected?.name === v.name ? rejected : null;
-          return (
-            <VariableRow
-              key={v.name}
-              name={v.name}
-              description={descriptions?.[v.name]}
-              unit={units?.[v.name]}
-              label={labels?.[v.name]}
-              hidden={isHidden}
-              value={problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]}
-              problem={problem?.reason ?? null}
-              canLock={parseValue(display[v.name]) !== undefined}
-              readOnly={decided.has(v.name) && !problem}
-              locked={locked.includes(v.name)}
-              onEdit={edit}
-              onToggleLock={toggleLock}
-              onBlur={endDraft}
-              register={register}
-            />
-          );
-        })}
-      </div>
-      {broken.length > 0 && (
+    <div className="flex flex-col gap-6">
+      {sections.map((section) => {
+        const rows = section.variables.map((v) => row(v, section.key)).filter(Boolean);
+        if (rows.length === 0) return null;
+        return (
+          <div key={section.key ?? "own"} className="flex flex-col gap-4">
+            {section.key && groups?.[section.key] && (
+              <h3 className="text-xl text-ink-muted">
+                From{" "}
+                <a
+                  href={`/c/${groups[section.key].board}`}
+                  target={revealHidden ? "_blank" : undefined}
+                  rel="noopener"
+                  className="link"
+                >
+                  {groups[section.key].title}
+                </a>
+              </h3>
+            )}
+            <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>
+          </div>
+        );
+      })}      {broken.length > 0 && (
         <ul className="sketch-box px-4 py-3 text-danger">
           {broken.map((f) => (
             <li key={f.line}>{f.text} doesn&apos;t hold with these values.</li>
@@ -251,7 +284,7 @@ const VariableRow = memo(function VariableRow({
       <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
         <label
           htmlFor={id}
-          title={label && label !== name ? name : undefined}
+          title={label && label !== name ? displayName(name) : undefined}
           className="max-w-[55%] shrink-0 break-words text-xl"
         >
           {label || name}

@@ -2,7 +2,8 @@
 
 import { useId, useState } from "react";
 import { LIMITS } from "@/lib/calculation";
-import type { Analysis } from "@/lib/formulas";
+import { groupOf } from "@/lib/boards";
+import { displayName, type Analysis, type Variable } from "@/lib/formulas";
 import { checkVariableName } from "@/lib/rename";
 
 // Units people commonly want, offered as suggestions while typing a unit.
@@ -13,6 +14,7 @@ const COMMON_UNITS = ["%", "m", "m²", "m³", "cm", "mm", "km", "kg", "g", "s", 
 // on the shared page.
 export function VariableEditor({
   analysis,
+  groups,
   descriptions,
   units,
   labels,
@@ -26,6 +28,8 @@ export function VariableEditor({
   onDecimals,
 }: {
   analysis: Analysis;
+  /** The boards in use, by alias. Their variables are listed under their title. */
+  groups: Record<string, { title: string; board: string }>;
   descriptions: Record<string, string>;
   units: Record<string, string>;
   labels: Record<string, string>;
@@ -45,6 +49,13 @@ export function VariableEditor({
   const [open, setOpen] = useState(true);
   const bodyId = useId();
   if (analysis.variables.length === 0) return null;
+
+  // This board's own variables first, then those of each board in use.
+  const topGroups = Object.keys(groups).filter((key) => !key.includes("$"));
+  const sections: { key: string | null; variables: Variable[] }[] = [
+    { key: null, variables: analysis.variables.filter((v) => !topGroups.includes(groupOf(v.name) ?? "")) },
+    ...topGroups.map((key) => ({ key, variables: analysis.variables.filter((v) => groupOf(v.name) === key) })),
+  ].filter((section) => section.variables.length > 0);
 
   return (
     <section className="flex flex-col gap-3">
@@ -76,24 +87,37 @@ export function VariableEditor({
           <option key={u} value={u} />
         ))}
       </datalist>
-      <div className="flex flex-col gap-4">
-        {analysis.variables.map((v) => (
-          <VariableLine
-            key={v.name}
-            name={v.name}
-            unit={units[v.name] ?? ""}
-            label={labels[v.name] ?? ""}
-            hidden={hidden[v.name] === true}
-            decimals={decimals[v.name] ?? ""}
-            description={descriptions[v.name] ?? ""}
-            validate={(next) => checkVariableName(next, v.name, analysis)}
-            onRename={(next) => onRename(v.name, next)}
-            onDescribe={(text) => onDescribe(v.name, text)}
-            onUnit={(unit) => onUnit(v.name, unit)}
-            onLabel={(text) => onLabel(v.name, text)}
-            onHide={(value) => onHide(v.name, value)}
-            onDecimals={(text) => onDecimals(v.name, text)}
-          />
+      <div className="flex flex-col gap-8">
+        {sections.map((section) => (
+          <div key={section.key ?? "own"} className="flex flex-col gap-4">
+            {section.key && groups[section.key] && (
+              <h3 className="text-xl text-ink-muted">
+                From {groups[section.key].title}{" "}
+                <span className="text-base text-ink-faint">
+                  (used as {section.key}; its names can&apos;t be changed here, but everything else can)
+                </span>
+              </h3>
+            )}
+            {section.variables.map((v) => (
+              <VariableLine
+                key={v.name}
+                name={v.name}
+                fixedName={section.key ? displayName(v.name.slice(section.key.length + 1)) : undefined}
+                unit={units[v.name] ?? ""}
+                label={labels[v.name] ?? ""}
+                hidden={hidden[v.name] === true}
+                decimals={decimals[v.name] ?? ""}
+                description={descriptions[v.name] ?? ""}
+                validate={(next) => checkVariableName(next, v.name, analysis)}
+                onRename={(next) => onRename(v.name, next)}
+                onDescribe={(text) => onDescribe(v.name, text)}
+                onUnit={(unit) => onUnit(v.name, unit)}
+                onLabel={(text) => onLabel(v.name, text)}
+                onHide={(value) => onHide(v.name, value)}
+                onDecimals={(text) => onDecimals(v.name, text)}
+              />
+            ))}
+          </div>
         ))}
       </div>
       </div>
@@ -103,6 +127,7 @@ export function VariableEditor({
 
 function VariableLine({
   name,
+  fixedName,
   unit,
   label,
   hidden,
@@ -117,6 +142,8 @@ function VariableLine({
   onDecimals,
 }: {
   name: string;
+  /** Set for a variable of a board in use: its name is shown but not editable. */
+  fixedName?: string;
   unit: string;
   label: string;
   hidden: boolean;
@@ -160,6 +187,11 @@ function VariableLine({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
+        {fixedName !== undefined ? (
+          <div className="flex items-end pb-1 text-xl text-ink-muted sm:w-[38%]" title={displayName(name)}>
+            {fixedName}
+          </div>
+        ) : (
         <input
           className={`field text-xl sm:w-[38%] ${error ? "!border-danger" : ""}`}
           value={draft ?? name}
@@ -181,6 +213,7 @@ function VariableLine({
           autoCorrect="off"
           aria-label={`Name of ${name}`}
         />
+        )}
         <input
           className="field text-lg sm:flex-1"
           value={label}

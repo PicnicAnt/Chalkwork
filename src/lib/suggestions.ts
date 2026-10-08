@@ -58,19 +58,19 @@ const CONSTANTS: [string, string][] = [
   ["Infinity", ""],
 ];
 
-const WORD = /[A-Za-z0-9_]/;
+// A dot is part of a word so that board.variable can be completed as one name.
+const WORD = /[A-Za-z0-9_.]/;
 const MAX_ITEMS = 6;
 
 // Works out what to offer for the word being typed at `caret`: variables already used in the
 // formulas first, then functions and constants. Returns null when there's nothing to offer.
-export function suggest(text: string, caret: number): SuggestionList | null {
+export function suggest(text: string, caret: number, extraNames: readonly string[] = []): SuggestionList | null {
   if (caret < 1 || caret > text.length) return null;
 
   let start = caret;
   while (start > 0 && WORD.test(text[start - 1])) start--;
   const word = text.slice(start, caret);
   if (!/^[A-Za-z_]/.test(word)) return null; // empty, or a number
-  if (text[start - 1] === ".") return null;
   if (caret < text.length && WORD.test(text[caret])) return null; // editing the middle of a word
 
   // Variables used elsewhere in the text, in order of first appearance, not counting this word.
@@ -83,10 +83,13 @@ export function suggest(text: string, caret: number): SuggestionList | null {
     if (!known.includes(token.text)) known.push(token.text);
   }
 
+  // Variables of the boards in use, written board.variable, as well as the ones already typed.
+  for (const name of extraNames) if (!known.includes(name)) known.push(name);
+
   const lower = word.toLowerCase();
   const candidates: Suggestion[] = [
     ...known.map((name): Suggestion => ({ text: name, kind: "variable" })),
-    ...(word.length >= 2
+    ...(word.length >= 2 && !word.includes(".")
       ? [
           ...FUNCTIONS.map(([name, hint]): Suggestion => ({ text: name, kind: "function", hint })),
           ...CONSTANTS.map(([name, hint]): Suggestion => ({ text: name, kind: "constant", hint })),

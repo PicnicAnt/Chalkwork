@@ -13,12 +13,15 @@ export function FormulaInput({
   onChange,
   placeholder,
   badLines,
+  extraNames,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   /** Zero-based line numbers of the text to underline as errors. */
   badLines?: ReadonlySet<number>;
+  /** More names to suggest, such as the variables of boards in use (board.variable). */
+  extraNames?: readonly string[];
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const [caret, setCaret] = useState<number | null>(null);
@@ -29,7 +32,7 @@ export function FormulaInput({
   // Escape hides the list until the word being typed changes.
   const [dismissed, setDismissed] = useState<{ start: number; word: string } | null>(null);
 
-  const list = useMemo(() => (caret === null ? null : suggest(value, caret)), [value, caret]);
+  const list = useMemo(() => (caret === null ? null : suggest(value, caret, extraNames)), [value, caret, extraNames]);
   const open = list !== null && !(dismissed && dismissed.start === list.start && dismissed.word === list.word);
   const index = open && nav.word === list.word ? Math.min(nav.index, list.items.length - 1) : 0;
   const moved = open && nav.word === list.word && nav.moved;
