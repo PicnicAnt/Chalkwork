@@ -119,6 +119,21 @@ if (version < 12) {
   `);
   db.pragma("user_version = 12");
 }
+if (version < 13) {
+  // Decimals are numbers. Some boards (made by the seed script) held them as text, which made a
+  // suggestion look like it changed a decimal from "2" to 2.
+  const rows = db.prepare("SELECT id, variable_decimals FROM calculations").all() as { id: string; variable_decimals: string }[];
+  const fix = db.prepare("UPDATE calculations SET variable_decimals = ? WHERE id = ?");
+  for (const row of rows) {
+    const parsed = JSON.parse(row.variable_decimals || "{}") as Record<string, unknown>;
+    if (!Object.values(parsed).some((v) => typeof v === "string")) continue;
+    const fixed = Object.fromEntries(
+      Object.entries(parsed).flatMap(([k, v]) => (Number.isFinite(Number(v)) && v !== "" ? [[k, Number(v)]] : [])),
+    );
+    fix.run(JSON.stringify(fixed), row.id);
+  }
+  db.pragma("user_version = 13");
+}
 
 // ---------------------------------------------------------------------------
 // Users and sessions

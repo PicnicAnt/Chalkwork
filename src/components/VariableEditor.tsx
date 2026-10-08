@@ -56,6 +56,8 @@ export function VariableEditor({
   // The section can be folded away once the names, units and notes are as wanted. Its fields stay
   // mounted while hidden, so a half-typed name isn't lost.
   const [open, setOpen] = useState(false);
+  // Which variables are unfolded. Each is folded away by default; the fields stay mounted while folded.
+  const [unfolded, setUnfolded] = useState<Record<string, boolean>>({});
   const bodyId = useId();
   if (analysis.variables.length === 0) return null;
 
@@ -73,6 +75,17 @@ export function VariableEditor({
           <h2 className="text-2xl font-bold">
             Variables <span className="text-lg font-normal text-ink-muted">({analysis.variables.length})</span>
           </h2>
+          <div className="flex items-baseline gap-4">
+          {open && (
+            <>
+              <button type="button" onClick={() => setUnfolded(Object.fromEntries(analysis.variables.map((v) => [v.name, true])))} className="link text-base">
+                Expand all
+              </button>
+              <button type="button" onClick={() => setUnfolded({})} className="link text-base">
+                Collapse all
+              </button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
@@ -82,6 +95,7 @@ export function VariableEditor({
           >
             {open ? "Collapse" : "Expand"}
           </button>
+          </div>
         </div>
         <p className={`text-base text-ink-muted ${open ? "" : "hidden"}`}>
           Rename a variable and every formula that uses it is updated. A display name is shown instead of it on the
@@ -116,6 +130,8 @@ export function VariableEditor({
               <VariableLine
                 key={v.name}
                 name={v.name}
+                expanded={unfolded[v.name] === true}
+                onToggle={() => setUnfolded((u) => ({ ...u, [v.name]: !u[v.name] }))}
                 fixedName={section.key ? displayName(v.name.slice(section.key.length + 1)) : undefined}
                 unit={units[v.name] ?? ""}
                 label={labels[v.name] ?? ""}
@@ -125,7 +141,11 @@ export function VariableEditor({
                 decimals={decimals[v.name] ?? ""}
                 description={descriptions[v.name] ?? ""}
                 validate={(next) => checkVariableName(next, v.name, analysis)}
-                onRename={(next) => onRename(v.name, next)}
+                onRename={(next) => {
+                  onRename(v.name, next);
+                  // The line goes on under its new name; keep it unfolded.
+                  if (unfolded[v.name]) setUnfolded((u) => ({ ...u, [next]: true }));
+                }}
                 onDescribe={(text) => onDescribe(v.name, text)}
                 onUnit={(unit) => onUnit(v.name, unit)}
                 onLabel={(text) => onLabel(v.name, text)}
@@ -156,6 +176,8 @@ export function VariableEditor({
 
 function VariableLine({
   name,
+  expanded,
+  onToggle,
   fixedName,
   unit,
   label,
@@ -174,6 +196,8 @@ function VariableLine({
   onDecimals,
 }: {
   name: string;
+  expanded: boolean;
+  onToggle: () => void;
   /** Set for a variable of a board in use: its name is shown but not editable. */
   fixedName?: string;
   unit: string;
@@ -235,6 +259,23 @@ function VariableLine({
 
   return (
     <div className="variable-box flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-baseline justify-between gap-3 text-left text-xl"
+      >
+        <span className="min-w-0 truncate">
+          {label || fixedName || displayName(name)}
+          <span className="text-base text-ink-muted">
+            {unit ? ` · ${unit}` : ""}
+            {hidden ? " · hidden" : ""}
+            {linkedTo ? ` · linked to ${linkedTo}` : ""}
+          </span>
+        </span>
+        <span className="shrink-0 text-base text-accent">{expanded ? "Collapse" : "Expand"}</span>
+      </button>
+      <div className={expanded ? "flex flex-col gap-1" : "hidden"}>
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
         {fixedName !== undefined ? (
           <div className="flex items-end pb-1 text-xl text-ink-muted sm:w-[38%]" title={displayName(name)}>
@@ -349,6 +390,7 @@ function VariableLine({
       </div>
       {error && <span className="text-sm text-danger">{error}</span>}
       {linkError && <span className="text-sm text-danger">{linkError}</span>}
+      </div>
     </div>
   );
 }

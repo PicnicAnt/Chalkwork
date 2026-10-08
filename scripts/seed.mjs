@@ -53,7 +53,7 @@ const character = add({
   values: { level: "90", strength: "220", dexterity: "180", intelligence: "90" },
   labels: { max_life: "Life", max_mana: "Mana", accuracy: "Accuracy rating", bonus_damage: "Bonus damage" },
   units: { bonus_damage: "%" },
-  decimals: { max_life: "0", max_mana: "0", accuracy: "0", bonus_damage: "1" },
+  decimals: { max_life: 0, max_mana: 0, accuracy: 0, bonus_damage: 1 },
   descriptions: {
     level: "Character level",
     strength: "Gives life, and 1% increased damage per 5",
@@ -87,7 +87,7 @@ const dps = add({
     hit_chance: "%", crit_chance: "%", inc_dmg: "%", more_dmg: "%", inc_aps: "%", inc_crit: "%", crit_multi: "%",
     base_crit: "%", dps: "/s",
   },
-  decimals: { dps: "0", avg_hit: "1", aps: "2", crit_factor: "2", hit_chance: "1", crit_chance: "1" },
+  decimals: { dps: 0, avg_hit: 1, aps: 2, crit_factor: 2, hit_chance: 1, crit_chance: 1 },
 });
 
 add({
@@ -116,7 +116,7 @@ const monster = add({
   ],
   values: { monster_level: "84", life_multiplier: "1" },
   labels: { life: "Life", evasion: "Evasion rating", hit_damage: "Damage per hit", monster_level: "Monster level", life_multiplier: "Life multiplier" },
-  decimals: { life: "0", evasion: "0", hit_damage: "0" },
+  decimals: { life: 0, evasion: 0, hit_damage: 0 },
 });
 
 add({
@@ -135,7 +135,7 @@ add({
   },
   labels: { time_to_kill: "Time to kill the boss", hits_to_die: "Hits the player survives" },
   units: { time_to_kill: "s" },
-  decimals: { time_to_kill: "1", hits_to_die: "1" },
+  decimals: { time_to_kill: 1, hits_to_die: 1 },
 });
 
 console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
@@ -147,7 +147,7 @@ const circle = add({
   formulas: ["diameter = 2 * radius", "circumference = pi * diameter", "area = pi * radius ^ 2"],
   values: { radius: "4" },
   units: { radius: "m", diameter: "m", circumference: "m", area: "m²" },
-  decimals: { diameter: "2", circumference: "2", area: "2" },
+  decimals: { diameter: 2, circumference: 2, area: 2 },
 });
 
 const rectangle = add({
@@ -156,7 +156,7 @@ const rectangle = add({
   formulas: ["area = width * height", "perimeter = 2 * (width + height)", "diagonal = sqrt(width ^ 2 + height ^ 2)"],
   values: { width: "12", height: "8" },
   units: { width: "m", height: "m", area: "m²", perimeter: "m", diagonal: "m" },
-  decimals: { area: "2", perimeter: "2", diagonal: "2" },
+  decimals: { area: 2, perimeter: 2, diagonal: 2 },
 });
 
 const triangle = add({
@@ -165,7 +165,7 @@ const triangle = add({
   formulas: ["area = base * height / 2"],
   values: { base: "12", height: "4" },
   units: { base: "m", height: "m", area: "m²" },
-  decimals: { area: "2" },
+  decimals: { area: 2 },
 });
 
 add({
@@ -175,7 +175,7 @@ add({
   includes: [{ board: circle, alias: "base", name: "Base circle" }],
   values: { height: "10" },
   units: { height: "m", volume: "m³", surface: "m²" },
-  decimals: { volume: "2", surface: "2" },
+  decimals: { volume: 2, surface: 2 },
 });
 
 add({
@@ -190,7 +190,7 @@ add({
   links: { pond$diameter: "lawn$height", bed$base: "lawn$width" },
   labels: { free_area: "Lawn left over" },
   units: { free_area: "m²" },
-  decimals: { free_area: "2" },
+  decimals: { free_area: 2 },
 });
 
 console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));

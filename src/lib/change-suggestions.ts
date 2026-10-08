@@ -5,6 +5,16 @@ import { displayName } from "./formulas";
 
 const show = (v: unknown) => (v === undefined || v === "" ? "none" : `"${String(v)}"`);
 
+// "5" and 5, or 386.9512479 and 386.95124790000003, are the same value, not a change.
+function same(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  const [x, y] = [String(a).trim().replace(/,/g, ""), String(b).trim().replace(/,/g, "")];
+  if (x === y) return true;
+  const [n, m] = [Number(x), Number(y)];
+  return x !== "" && y !== "" && Number.isFinite(n) && Number.isFinite(m) && Math.abs(n - m) <= 1e-9 * Math.max(1, Math.abs(n), Math.abs(m));
+}
+
 function compareMap<T>(
   out: string[],
   what: (name: string) => string,
@@ -13,7 +23,8 @@ function compareMap<T>(
   format: (value: T | undefined) => string = show,
 ) {
   for (const name of new Set([...Object.keys(a), ...Object.keys(b)])) {
-    if (JSON.stringify(a[name]) === JSON.stringify(b[name])) continue;
+    // A missing entry and an empty one say the same thing.
+    if (same(a[name] ?? "", b[name] ?? "")) continue;
     out.push(`${what(displayName(name))}: ${format(a[name])} → ${format(b[name])}`);
   }
 }
@@ -45,7 +56,9 @@ export function diffDrafts(base: CalculationDraft, next: CalculationDraft): stri
   compareMap(out, (n) => `Unit of ${n}`, base.units, next.units);
   compareMap(out, (n) => `Note on ${n}`, base.descriptions, next.descriptions);
   compareMap(out, (n) => `Decimals of ${n}`, base.decimals, next.decimals, (v) => (v === undefined ? "automatic" : String(v)));
-  compareMap(out, (n) => `${n} hidden`, base.hidden, next.hidden, (v) => (v ? "yes" : "no"));
+  // Only what is hidden counts: "not hidden" and no entry are the same.
+  const hiddenOnly = (h: Record<string, boolean>) => Object.fromEntries(Object.entries(h).filter(([, v]) => v));
+  compareMap(out, (n) => `${n} hidden`, hiddenOnly(base.hidden), hiddenOnly(next.hidden), (v) => (v ? "yes" : "no"));
   compareMap(out, (n) => `Link of ${n}`, base.links, next.links, (v) => (v === undefined ? "none" : displayName(v)));
   return out;
 }
