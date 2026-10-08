@@ -105,10 +105,14 @@ export function upsertUser(profile: { provider: string; accountId: string; name:
   return { id, provider: profile.provider, name: profile.name };
 }
 
-export function listUsers(provider: string, limit = 12): UserRow[] {
+export function listUsers(provider: string, limit = 50): (UserRow & { boards: number })[] {
   return db
-    .prepare("SELECT id, provider, name FROM users WHERE provider = ? ORDER BY created_at DESC LIMIT ?")
-    .all(provider, limit) as UserRow[];
+    .prepare(
+      `SELECT u.id, u.provider, u.name,
+         (SELECT COUNT(*) FROM calculations c WHERE c.owner_id = u.id) AS boards
+       FROM users u WHERE u.provider = ? ORDER BY lower(u.name) LIMIT ?`,
+    )
+    .all(provider, limit) as (UserRow & { boards: number })[];
 }
 
 // Sessions are looked up by the SHA-256 of the cookie's token, so the database never holds a value

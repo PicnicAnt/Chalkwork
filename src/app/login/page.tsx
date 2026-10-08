@@ -12,7 +12,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (await getCurrentUser()) redirect(next);
 
   const testLogin = devLoginEnabled();
-  const knownUsers = testLogin ? listUsers(DEV_PROVIDER).map((u) => u.name) : [];
+  const knownUsers = testLogin ? listUsers(DEV_PROVIDER).map((u) => ({ name: u.name, boards: u.boards })) : [];
 
   return (
     <div className="flex flex-col gap-8">
