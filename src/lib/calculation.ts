@@ -11,6 +11,9 @@ export type CalculationDraft = {
   descriptions: Record<string, string>;
   // A unit label for each variable, such as % or m², keyed by variable name. Display only.
   units: Record<string, string>;
+  // Variables the creator has hidden from the board, keyed by variable name. They still take part in
+  // every calculation; they are just not shown to people using the board.
+  hidden: Record<string, boolean>;
   // A friendlier name shown instead of the variable name, keyed by variable name. Display only.
   labels: Record<string, string>;
   // How many decimals to show for each variable's calculated value, keyed by variable name.
@@ -107,6 +110,12 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
     else if (l) labels[variable.name] = l;
   }
 
+  const rawHidden = typeof r.hidden === "object" && r.hidden !== null ? (r.hidden as Record<string, unknown>) : {};
+  const hidden: Record<string, boolean> = {};
+  for (const variable of analysis.variables) {
+    if (rawHidden[variable.name] === true) hidden[variable.name] = true;
+  }
+
   const rawDecimals =
     typeof r.decimals === "object" && r.decimals !== null ? (r.decimals as Record<string, unknown>) : {};
   const decimals: Record<string, number> = {};
@@ -120,5 +129,5 @@ export function validateDraft(raw: unknown): { draft?: CalculationDraft; errors:
 
   return errors.length
     ? { errors }
-    : { draft: { title, description, formulas, values, descriptions, units, labels, decimals }, errors };
+    : { draft: { title, description, formulas, values, descriptions, units, hidden, labels, decimals }, errors };
 }

@@ -112,6 +112,7 @@ export function CalculationEditor({
   const [descriptions, setDescriptions] = useState<Record<string, string>>(initial?.descriptions ?? {});
   const [units, setUnits] = useState<Record<string, string>>(initial?.units ?? {});
   const [labels, setLabels] = useState<Record<string, string>>(initial?.labels ?? {});
+  const [hidden, setHidden] = useState<Record<string, boolean>>(initial?.hidden ?? {});
   // Held as typed so the field can be emptied; turned into numbers when shown and saved.
   const [decimalText, setDecimalText] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(initial?.decimals ?? {}).map(([k, v]) => [k, String(v)])),
@@ -146,6 +147,7 @@ export function CalculationEditor({
     setDescriptions(EXAMPLE.descriptions);
     setUnits(EXAMPLE.units);
     setLabels(EXAMPLE.labels);
+    setHidden({});
     setDecimalText(EXAMPLE.decimals);
     setErrors([]);
   }
@@ -157,12 +159,13 @@ export function CalculationEditor({
     setDescriptions((d) => renameKey(d, from, to));
     setUnits((u) => renameKey(u, from, to));
     setLabels((l) => renameKey(l, from, to));
+    setHidden((h) => renameKey(h, from, to));
     setDecimalText((d) => renameKey(d, from, to));
   }
 
   function save() {
     startTransition(async () => {
-      const draft = { title, description, formulas, values, descriptions, units, labels, decimals };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals };
       const result = editing
         ? await updateCalculation(editing.id, draft)
         : await createCalculation(draft);
@@ -241,11 +244,13 @@ export function CalculationEditor({
         descriptions={descriptions}
         units={units}
         labels={labels}
+        hidden={hidden}
         decimals={decimalText}
         onRename={renameVariable}
         onDescribe={(name, text) => setDescriptions((d) => ({ ...d, [name]: text }))}
         onUnit={(name, unit) => setUnits((u) => ({ ...u, [name]: unit }))}
         onLabel={(name, text) => setLabels((l) => ({ ...l, [name]: text }))}
+        onHide={(name, value) => setHidden((h) => ({ ...h, [name]: value }))}
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
       />
 
@@ -257,7 +262,7 @@ export function CalculationEditor({
             unlocked is recalculated. Tap a lock to release it. These values are saved as what people see first.
           </p>
         </div>
-        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} labels={labels} decimals={decimals} />
+        <CalculatorPanel analysis={analysis} values={values} onChange={setValues} descriptions={descriptions} units={units} labels={labels} hidden={hidden} revealHidden decimals={decimals} />
       </section>
 
       {errors.length > 0 && (

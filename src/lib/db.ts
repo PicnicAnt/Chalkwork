@@ -82,6 +82,11 @@ if (version < 8) {
   `);
   db.pragma("user_version = 8");
 }
+if (version < 9) {
+  // Which variables are hidden from the board, as JSON keyed by variable name.
+  db.exec(`ALTER TABLE calculations ADD COLUMN variable_hidden TEXT NOT NULL DEFAULT '{}';`);
+  db.pragma("user_version = 9");
+}
 
 // ---------------------------------------------------------------------------
 // Users and sessions
@@ -155,6 +160,7 @@ type Row = {
   variable_units: string;
   variable_decimals: string;
   variable_labels: string;
+  variable_hidden: string;
   created_at: string;
   owner_id: string | null;
   owner_name: string | null;
@@ -164,8 +170,8 @@ export function insertCalculation(draft: CalculationDraft, ownerId: string): str
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_labels, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variable_units, variable_decimals, variable_labels, variable_hidden, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     draft.title,
@@ -176,6 +182,7 @@ export function insertCalculation(draft: CalculationDraft, ownerId: string): str
     JSON.stringify(draft.units),
     JSON.stringify(draft.decimals),
     JSON.stringify(draft.labels),
+    JSON.stringify(draft.hidden),
     ownerId,
   );
   return id;
@@ -186,7 +193,7 @@ export function updateCalculation(id: string, ownerId: string, draft: Calculatio
   const result = db
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
-         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_labels = ?,
+         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_labels = ?, variable_hidden = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
@@ -199,6 +206,7 @@ export function updateCalculation(id: string, ownerId: string, draft: Calculatio
       JSON.stringify(draft.units),
       JSON.stringify(draft.decimals),
       JSON.stringify(draft.labels),
+      JSON.stringify(draft.hidden),
       id,
       ownerId,
     );
@@ -215,6 +223,7 @@ const parse = (row: Row): Calculation => ({
   units: JSON.parse(row.variable_units || "{}"),
   labels: JSON.parse(row.variable_labels || "{}"),
   decimals: JSON.parse(row.variable_decimals || "{}"),
+  hidden: JSON.parse(row.variable_hidden || "{}"),
   createdAt: row.created_at,
   ownerId: row.owner_id,
   ownerName: row.owner_name,

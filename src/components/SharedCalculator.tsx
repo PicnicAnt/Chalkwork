@@ -33,6 +33,7 @@ export function SharedCalculator({ calculation }: { calculation: PublicCalculati
         descriptions={calculation.descriptions}
         units={calculation.units}
         labels={calculation.labels}
+        hidden={calculation.hidden}
         decimals={calculation.decimals}
       />
     </div>

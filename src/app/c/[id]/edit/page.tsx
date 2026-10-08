@@ -32,6 +32,7 @@ export default async function EditCalculationPage({ params }: PageProps<"/c/[id]
     descriptions: calculation.descriptions,
     units: calculation.units,
     labels: calculation.labels,
+    hidden: calculation.hidden,
     decimals: calculation.decimals,
   };
 

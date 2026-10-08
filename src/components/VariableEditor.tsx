@@ -16,23 +16,28 @@ export function VariableEditor({
   descriptions,
   units,
   labels,
+  hidden,
   decimals,
   onRename,
   onDescribe,
   onUnit,
   onLabel,
+  onHide,
   onDecimals,
 }: {
   analysis: Analysis;
   descriptions: Record<string, string>;
   units: Record<string, string>;
   labels: Record<string, string>;
+  /** Variables hidden from the board. */
+  hidden: Record<string, boolean>;
   /** Decimals to show per variable, as typed (empty means automatic). */
   decimals: Record<string, string>;
   onRename: (from: string, to: string) => void;
   onDescribe: (name: string, text: string) => void;
   onUnit: (name: string, unit: string) => void;
   onLabel: (name: string, label: string) => void;
+  onHide: (name: string, hidden: boolean) => void;
   onDecimals: (name: string, decimals: string) => void;
 }) {
   // The section can be folded away once the names, units and notes are as wanted. Its fields stay
@@ -60,7 +65,7 @@ export function VariableEditor({
         </div>
         <p className={`text-base text-ink-muted ${open ? "" : "hidden"}`}>
           Rename a variable and every formula that uses it is updated. A display name is shown instead of it on the
-          rows (the formulas still use the real name). A unit (like % or m²) is shown next to the
+          rows (the formulas still use the real name). Hide a variable to keep it off the board while it still takes part in the maths. A unit (like % or m²) is shown next to the
           value, decimals set how many digits a calculated value shows, and a note is shown under the variable.
           Units and decimals only change what is displayed, never the maths.
         </p>
@@ -78,6 +83,7 @@ export function VariableEditor({
             name={v.name}
             unit={units[v.name] ?? ""}
             label={labels[v.name] ?? ""}
+            hidden={hidden[v.name] === true}
             decimals={decimals[v.name] ?? ""}
             description={descriptions[v.name] ?? ""}
             validate={(next) => checkVariableName(next, v.name, analysis)}
@@ -85,6 +91,7 @@ export function VariableEditor({
             onDescribe={(text) => onDescribe(v.name, text)}
             onUnit={(unit) => onUnit(v.name, unit)}
             onLabel={(text) => onLabel(v.name, text)}
+            onHide={(value) => onHide(v.name, value)}
             onDecimals={(text) => onDecimals(v.name, text)}
           />
         ))}
@@ -98,6 +105,7 @@ function VariableLine({
   name,
   unit,
   label,
+  hidden,
   decimals,
   description,
   validate,
@@ -105,11 +113,13 @@ function VariableLine({
   onDescribe,
   onUnit,
   onLabel,
+  onHide,
   onDecimals,
 }: {
   name: string;
   unit: string;
   label: string;
+  hidden: boolean;
   decimals: string;
   description: string;
   validate: (name: string) => string | null;
@@ -117,6 +127,7 @@ function VariableLine({
   onDescribe: (text: string) => void;
   onUnit: (unit: string) => void;
   onLabel: (label: string) => void;
+  onHide: (hidden: boolean) => void;
   onDecimals: (decimals: string) => void;
 }) {
   // The new name is applied when the field is left or Enter is pressed, so half-typed names
@@ -205,6 +216,16 @@ function VariableLine({
           aria-label={`Decimals of ${name}`}
           title="How many decimals to show for the calculated value. Empty shows it automatically."
         />
+        <label className="flex shrink-0 items-center gap-2 pb-1 text-lg" title="Hidden variables still take part in the calculation, but are not shown on the board.">
+          <input
+            type="checkbox"
+            checked={hidden}
+            onChange={(e) => onHide(e.target.checked)}
+            className="h-5 w-5 accent-[var(--accent)]"
+            aria-label={`Hide ${name} from the board`}
+          />
+          Hide
+        </label>
         <input
           className="field min-w-[10rem] w-full text-lg sm:w-auto sm:flex-1"
           value={description}

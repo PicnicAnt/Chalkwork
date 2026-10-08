@@ -36,6 +36,8 @@ export function CalculatorPanel({
   descriptions,
   units,
   labels,
+  hidden,
+  revealHidden = false,
   decimals,
 }: {
   analysis: Analysis;
@@ -47,6 +49,10 @@ export function CalculatorPanel({
   units?: Record<string, string>;
   /** A display name per variable name, shown instead of the variable name. */
   labels?: Record<string, string>;
+  /** Variables the creator hid. They still take part in every calculation but are not shown. */
+  hidden?: Record<string, boolean>;
+  /** Show hidden variables anyway, marked as hidden. The editor does this so its creator can see them. */
+  revealHidden?: boolean;
   /** Decimals to show per variable name for calculated values. Display only. */
   decimals?: Record<string, number>;
 }) {
@@ -163,11 +169,16 @@ export function CalculatorPanel({
   if (analysis.variables.length === 0) {
     return <p className="text-ink-muted">Variables from your formulas show up here.</p>;
   }
+  if (!revealHidden && analysis.variables.every((v) => hidden?.[v.name] === true)) {
+    return <p className="text-ink-muted">Every variable on this board is hidden.</p>;
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">
         {analysis.variables.map((v) => {
+          const isHidden = hidden?.[v.name] === true;
+          if (isHidden && !revealHidden) return null;
           const problem = rejected?.name === v.name ? rejected : null;
           return (
             <VariableRow
@@ -176,6 +187,7 @@ export function CalculatorPanel({
               description={descriptions?.[v.name]}
               unit={units?.[v.name]}
               label={labels?.[v.name]}
+              hidden={isHidden}
               value={problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]}
               problem={problem?.reason ?? null}
               canLock={parseValue(display[v.name]) !== undefined}
@@ -206,6 +218,7 @@ const VariableRow = memo(function VariableRow({
   description,
   unit,
   label,
+  hidden,
   value,
   problem,
   readOnly,
@@ -220,6 +233,7 @@ const VariableRow = memo(function VariableRow({
   description?: string;
   unit?: string;
   label?: string;
+  hidden?: boolean;
   value: string;
   problem: string | null;
   readOnly: boolean;
@@ -233,7 +247,7 @@ const VariableRow = memo(function VariableRow({
 }) {
   const id = `var-${name}`;
   return (
-    <div className="row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1">
+    <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
       <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
         <label
           htmlFor={id}
@@ -258,6 +272,7 @@ const VariableRow = memo(function VariableRow({
           onBlur={() => onBlur(name)}
         />
         {unit && <span className="shrink-0 text-lg text-ink-muted">{unit}</span>}
+        {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
         {readOnly ? (
           <span className="w-[30px] shrink-0" aria-hidden />
         ) : (
