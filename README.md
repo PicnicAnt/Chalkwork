@@ -32,7 +32,7 @@ A board that uses other boards has a **Connections** view: each used board is a 
 
 ## Sample boards
 
-`node scripts/seed.mjs` creates three boards for the test user Martin: **RPG character stats**, **Path of Exile DPS calculator**, and **Melee build: character and damage**, which uses the other two and links the damage calculator's accuracy and increased damage to the character's. Running it again doesn't create duplicates.
+`node scripts/seed.mjs` creates sample boards for the test user Martin: RPG character stats, Path of Exile DPS calculator, Monster stats and the boards that combine them (Melee build, Boss fight), and the shapes Circle, Rectangle and Triangle with Cylinder from a circle and Garden plan, which link them. Running it again doesn't create duplicates.
 
 ## Layout
 

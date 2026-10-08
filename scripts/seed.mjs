@@ -139,3 +139,58 @@ add({
 });
 
 console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+
+// Shapes, and boards that combine them.
+const circle = add({
+  title: "Circle",
+  description: "Radius, diameter, circumference and area of a circle.",
+  formulas: ["diameter = 2 * radius", "circumference = pi * diameter", "area = pi * radius ^ 2"],
+  values: { radius: "4" },
+  units: { radius: "m", diameter: "m", circumference: "m", area: "m²" },
+  decimals: { diameter: "2", circumference: "2", area: "2" },
+});
+
+const rectangle = add({
+  title: "Rectangle",
+  description: "Width, height, area, perimeter and diagonal of a rectangle.",
+  formulas: ["area = width * height", "perimeter = 2 * (width + height)", "diagonal = sqrt(width ^ 2 + height ^ 2)"],
+  values: { width: "12", height: "8" },
+  units: { width: "m", height: "m", area: "m²", perimeter: "m", diagonal: "m" },
+  decimals: { area: "2", perimeter: "2", diagonal: "2" },
+});
+
+const triangle = add({
+  title: "Triangle",
+  description: "Base, height and area of a triangle.",
+  formulas: ["area = base * height / 2"],
+  values: { base: "12", height: "4" },
+  units: { base: "m", height: "m", area: "m²" },
+  decimals: { area: "2" },
+});
+
+add({
+  title: "Cylinder from a circle",
+  description: "A cylinder is a circle with a height: volume and surface come from the circle's area and circumference.",
+  formulas: ["volume = base.area * height", "surface = 2 * base.area + base.circumference * height"],
+  includes: [{ board: circle, alias: "base", name: "Base circle" }],
+  values: { height: "10" },
+  units: { height: "m", volume: "m³", surface: "m²" },
+  decimals: { volume: "2", surface: "2" },
+});
+
+add({
+  title: "Garden plan",
+  description: "A lawn with a round pond and a triangular flowerbed. The pond is as wide as the lawn is deep, and the bed has the lawn's width as its base. What is left of the lawn?",
+  formulas: ["free_area = lawn.area - pond.area - bed.area"],
+  includes: [
+    { board: rectangle, alias: "lawn", name: "Lawn" },
+    { board: circle, alias: "pond", name: "Pond" },
+    { board: triangle, alias: "bed", name: "Flowerbed" },
+  ],
+  links: { pond$diameter: "lawn$height", bed$base: "lawn$width" },
+  labels: { free_area: "Lawn left over" },
+  units: { free_area: "m²" },
+  decimals: { free_area: "2" },
+});
+
+console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
