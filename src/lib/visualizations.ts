@@ -36,6 +36,8 @@ export type VizParam = {
   label: string;
   /** A short name for the drawing, such as r or w. */
   short: string;
+  /** The type works without it. */
+  optional?: boolean;
 };
 
 export type VizList = { key: string; label: string; /** At least one variable is needed. */ required?: boolean };
@@ -129,6 +131,106 @@ export const VIZ_TYPES: VizType[] = [
   },
 ];
 
+// More types: shapes first, then charts.
+VIZ_TYPES.splice(
+  6,
+  0,
+  {
+    id: "ellipse",
+    label: "Ellipse",
+    kind: "shape",
+    params: [
+      { key: "radius_x", label: "Half the width", short: "a" },
+      { key: "radius_y", label: "Half the height", short: "b" },
+    ],
+  },
+  { id: "sphere", label: "Sphere", kind: "shape", params: [{ key: "radius", label: "Radius", short: "r" }] },
+  {
+    id: "cone",
+    label: "Cone",
+    kind: "shape",
+    params: [
+      { key: "radius", label: "Radius of the base", short: "r" },
+      { key: "height", label: "Height", short: "h" },
+    ],
+  },
+  {
+    id: "box",
+    label: "Box",
+    kind: "shape",
+    params: [
+      { key: "width", label: "Width", short: "w" },
+      { key: "depth", label: "Depth", short: "d" },
+      { key: "height", label: "Height", short: "h" },
+    ],
+  },
+  {
+    id: "polygon",
+    label: "Regular polygon",
+    kind: "shape",
+    params: [{ key: "side", label: "Length of a side", short: "s" }],
+    options: [{ key: "sides", label: "Number of sides", placeholder: "6" }],
+  },
+  {
+    id: "annulus",
+    label: "Ring (washer)",
+    kind: "shape",
+    params: [
+      { key: "outer_radius", label: "Outer radius", short: "R" },
+      { key: "inner_radius", label: "Inner radius (the hole)", short: "r" },
+    ],
+  },
+);
+
+VIZ_TYPES.push(
+  {
+    id: "gauge",
+    label: "Gauge",
+    kind: "chart",
+    params: [{ key: "value", label: "Value", short: "v" }],
+    options: [
+      { key: "min", label: "Lowest value", placeholder: "0" },
+      { key: "max", label: "Highest value", placeholder: "100" },
+    ],
+  },
+  {
+    id: "bars",
+    label: "Bars",
+    kind: "chart",
+    params: [],
+    lists: [{ key: "values", label: "Variables to compare", required: true }],
+  },
+  {
+    id: "pie",
+    label: "Pie chart",
+    kind: "chart",
+    params: [{ key: "total", label: "Total (optional: what is left is shown too)", short: "T", optional: true }],
+    lists: [{ key: "parts", label: "Parts", required: true }],
+  },
+  {
+    id: "heatmap",
+    label: "Heat map",
+    kind: "chart",
+    params: [
+      { key: "x", label: "Varied across (horizontal)", short: "x" },
+      { key: "y", label: "Varied up (vertical)", short: "y" },
+      { key: "z", label: "Result (the colour)", short: "z" },
+    ],
+    options: [
+      { key: "x_from", label: "Horizontal from", placeholder: "half of now" },
+      { key: "x_to", label: "Horizontal to", placeholder: "one and a half times now" },
+      { key: "y_from", label: "Vertical from", placeholder: "half of now" },
+      { key: "y_to", label: "Vertical to", placeholder: "one and a half times now" },
+    ],
+  },
+  {
+    id: "dependency",
+    label: "Dependency diagram",
+    kind: "chart",
+    params: [{ key: "result", label: "Result to explain", short: "y" }],
+  },
+);
+
 export const vizType = (id: string): VizType | undefined => VIZ_TYPES.find((t) => t.id === id);
 
 export const MAX_VISUALIZATIONS = 8;
@@ -155,7 +257,7 @@ export function parseVisualizations(
     for (const param of type.params) {
       const variable = rawMap[param.key];
       if (typeof variable === "string" && known.has(variable)) map[param.key] = variable;
-      else if (strict) errors.push(`The ${type.label.toLowerCase()} needs a variable for "${param.label}".`);
+      else if (strict && !param.optional) errors.push(`The ${type.label.toLowerCase()} needs a variable for "${param.label}".`);
     }
 
     const viz: Visualization = { type: type.id, map };

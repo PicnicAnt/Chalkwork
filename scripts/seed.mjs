@@ -272,3 +272,111 @@ add({
 });
 
 console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+
+// More shapes, with the charts that suit them.
+add({
+  title: "Sphere",
+  description: "Diameter, surface and volume of a sphere from its radius.",
+  formulas: ["diameter = 2 * radius", "surface = 4 * pi * radius ^ 2", "volume = 4 / 3 * pi * radius ^ 3"],
+  values: { radius: "5" },
+  units: { radius: "cm", diameter: "cm", surface: "cm²", volume: "cm³" },
+  decimals: { diameter: 2, surface: 2, volume: 2 },
+  visualizations: [
+    { type: "sphere", map: { radius: "radius" } },
+    { type: "sweep", map: { x: "radius", y: "volume" }, options: { from: 1, to: 10 } },
+  ],
+});
+
+add({
+  title: "Cone from a circle",
+  description: "A cone with a circle as its base: slant height, volume and surface from the base's radius and the height.",
+  formulas: [
+    "slant = sqrt(height ^ 2 + base.radius ^ 2)",
+    "volume = base.area * height / 3",
+    "lateral_area = pi * base.radius * slant",
+    "surface = base.area + lateral_area",
+  ],
+  includes: [{ board: circle, alias: "base", name: "Base circle" }],
+  values: { height: "9" },
+  labels: { slant: "Slant height", lateral_area: "Area of the side" },
+  units: { height: "cm", slant: "cm", volume: "cm³", lateral_area: "cm²", surface: "cm²", base$radius: "cm", base$diameter: "cm", base$circumference: "cm", base$area: "cm²" },
+  decimals: { slant: 2, volume: 2, lateral_area: 2, surface: 2 },
+  visualizations: [
+    { type: "cone", map: { radius: "base$radius", height: "height" } },
+    { type: "pie", map: { total: "surface" }, lists: { parts: ["base$area", "lateral_area"] } },
+  ],
+});
+
+add({
+  title: "Box",
+  description: "A box: volume, surface, the longest diagonal and how the surface divides over its faces.",
+  formulas: [
+    "volume = width * depth * height",
+    "top_and_bottom = 2 * width * depth",
+    "front_and_back = 2 * width * height",
+    "left_and_right = 2 * depth * height",
+    "surface = top_and_bottom + front_and_back + left_and_right",
+    "diagonal = sqrt(width ^ 2 + depth ^ 2 + height ^ 2)",
+  ],
+  values: { width: "30", depth: "20", height: "10" },
+  units: { width: "cm", depth: "cm", height: "cm", volume: "cm³", top_and_bottom: "cm²", front_and_back: "cm²", left_and_right: "cm²", surface: "cm²", diagonal: "cm" },
+  decimals: { volume: 0, top_and_bottom: 0, front_and_back: 0, left_and_right: 0, surface: 0, diagonal: 2 },
+  visualizations: [
+    { type: "box", map: { width: "width", depth: "depth", height: "height" } },
+    { type: "pie", map: { total: "surface" }, lists: { parts: ["top_and_bottom", "front_and_back", "left_and_right"] } },
+  ],
+});
+
+add({
+  title: "Hexagon",
+  description: "A regular hexagon: perimeter, area and the distance from the middle to a side.",
+  formulas: ["perimeter = 6 * side", "area = 3 * sqrt(3) / 2 * side ^ 2", "apothem = sqrt(3) / 2 * side"],
+  values: { side: "4" },
+  units: { side: "cm", perimeter: "cm", area: "cm²", apothem: "cm" },
+  decimals: { perimeter: 2, area: 2, apothem: 2 },
+  visualizations: [
+    { type: "polygon", map: { side: "side" }, options: { sides: 6 } },
+    { type: "dependency", map: { result: "area" } },
+  ],
+});
+
+add({
+  title: "Ellipse",
+  description: "An ellipse from its half-width and half-height: area and an approximate perimeter (Ramanujan).",
+  formulas: ["area = pi * a * b", "perimeter = pi * (3 * (a + b) - sqrt((3 * a + b) * (a + 3 * b)))"],
+  values: { a: "6", b: "3" },
+  labels: { a: "Half the width", b: "Half the height" },
+  units: { a: "cm", b: "cm", area: "cm²", perimeter: "cm" },
+  decimals: { area: 2, perimeter: 2 },
+  visualizations: [{ type: "ellipse", map: { radius_x: "a", radius_y: "b" } }],
+});
+
+add({
+  title: "Washer",
+  description: "A flat ring (a washer): its area is the whole disc minus the hole.",
+  formulas: ["outer_area = pi * outer_radius ^ 2", "hole_area = pi * inner_radius ^ 2", "area = outer_area - hole_area"],
+  values: { outer_radius: "10", inner_radius: "4" },
+  labels: { outer_area: "Whole disc", hole_area: "Hole", area: "Metal" },
+  units: { outer_radius: "mm", inner_radius: "mm", outer_area: "mm²", hole_area: "mm²", area: "mm²" },
+  decimals: { outer_area: 1, hole_area: 1, area: 1 },
+  visualizations: [
+    { type: "annulus", map: { outer_radius: "outer_radius", inner_radius: "inner_radius" } },
+    { type: "pie", map: { total: "outer_area" }, lists: { parts: ["area", "hole_area"] } },
+  ],
+});
+
+// Charts on boards that already exist.
+add({
+  title: "Path of Exile DPS calculator",
+  visualizations: [
+    { type: "gauge", map: { value: "hit_chance" }, options: { min: 0, max: 100 } },
+    { type: "heatmap", map: { x: "accuracy", y: "enemy_evasion", z: "hit_chance" }, options: { x_from: 500, x_to: 8000, y_from: 2000, y_to: 30000 } },
+    { type: "dependency", map: { result: "dps" } },
+  ],
+});
+add({
+  title: "RPG character stats",
+  visualizations: [{ type: "bars", lists: { values: ["max_life", "max_mana"] }, map: {} }],
+});
+
+console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));

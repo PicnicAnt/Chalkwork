@@ -237,6 +237,7 @@ export function CalculatorPanel({
         return null;
       }
     },
+    formulas: () => analysis.formulas.filter((f) => !f.error).map((f) => ({ name: f.name, vars: f.vars })),
     // What the charts depend on: the numbers and the locks.
     signature: JSON.stringify([display, locked]),
   };
