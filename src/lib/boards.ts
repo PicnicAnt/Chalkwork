@@ -238,3 +238,16 @@ export function defaultAlias(title: string, taken: readonly string[]): string {
   for (let n = 2; taken.includes(alias); n++) alias = `${base}_${n}`;
   return alias;
 }
+
+// The board's own variables first, then those of each board it uses, in the order the boards are used.
+// Used by every place that lists variables under the board they come from. `groups` is the bundle's.
+export function sectionsByBoard<T extends { name: string }>(
+  variables: readonly T[],
+  groups: Record<string, unknown>,
+): { key: string | null; variables: T[] }[] {
+  const boards = Object.keys(groups).filter((key) => !key.includes(PATH_SEPARATOR));
+  return [
+    { key: null as string | null, variables: variables.filter((v) => !boards.includes(groupOf(v.name) ?? "")) },
+    ...boards.map((key) => ({ key, variables: variables.filter((v) => groupOf(v.name) === key) })),
+  ].filter((section) => section.variables.length > 0);
+}

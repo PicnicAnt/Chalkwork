@@ -231,7 +231,7 @@ h3,
     border-bottom: 2px solid var(--ink-faint);
     padding-bottom: 0.25rem;
   }
-  .variable-box {
+  .fold-box {
     border: 1.5px solid var(--ink-faint);
     border-radius: 18px 6px 16px 6px / 6px 16px 6px 18px;
     padding: 0.75rem 1rem;
