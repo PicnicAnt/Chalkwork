@@ -52,7 +52,7 @@ function resolveWithBudget(
   for (const inc of includes) {
     const found = bundleOf(inc.board, visiting, budget);
     if ("error" in found) return found;
-    included.push({ alias: inc.alias, board: inc.board, title: found.title, bundle: found.bundle });
+    included.push({ alias: inc.alias, board: inc.board, title: found.title, name: inc.name, bundle: found.bundle });
   }
   return { included };
 }

@@ -15,7 +15,8 @@ import { PATH_SEPARATOR, isVariableName, tokenize } from "./formulas";
 // This file is plain logic with no database or browser code: it is used both by the server, when
 // it loads and checks a board, and by the editor, to preview a board while it is being built.
 
-export type Include = { board: string; alias: string };
+/** `name` is what the board is called here (so one board can be used twice, as player and as enemy); empty means its own title. */
+export type Include = { board: string; alias: string; name?: string };
 
 // Everything one board contributes to a bigger system, with all its variables named in its own
 // namespace (before any alias is put in front).
@@ -39,9 +40,9 @@ export type Bundle = {
 
 export type OwnData = Omit<Bundle, "groups">;
 
-export type IncludedBundle = { alias: string; board: string; title: string; bundle: Bundle };
+export type IncludedBundle = { alias: string; board: string; title: string; name?: string; bundle: Bundle };
 
-export const BOARD_LIMITS = { includes: 10, depth: 5, alias: 30 };
+export const BOARD_LIMITS = { includes: 10, depth: 5, alias: 30, name: 60 };
 
 // Why this can't be used as an alias, or null.
 export function checkAlias(alias: string): string | null {
@@ -67,7 +68,8 @@ export function parseIncludes(raw: unknown): { includes: Include[]; errors: stri
     else if (seen.has(alias)) errors.push(`Two used boards are both called "${alias}".`);
     else {
       seen.add(alias);
-      includes.push({ board, alias });
+      const name = typeof item?.name === "string" ? item.name.trim().slice(0, BOARD_LIMITS.name) : "";
+      includes.push(name ? { board, alias, name } : { board, alias });
     }
   }
   return { includes, errors };
@@ -154,7 +156,7 @@ export function flatten(
       decimals: merge((b) => b.decimals, own.decimals),
       groups: Object.assign(
         {},
-        ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.title, board: p.i.board } })),
+        ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.name || p.i.title, board: p.i.board } })),
       ),
     },
   };

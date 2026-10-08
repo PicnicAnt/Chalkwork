@@ -180,7 +180,7 @@ export function validateDraft(
           hidden,
           labels,
           decimals,
-          includes: included.map((i) => ({ board: i.board, alias: i.alias })),
+          includes: included.map((i) => (i.name ? { board: i.board, alias: i.alias, name: i.name } : { board: i.board, alias: i.alias })),
           links,
         },
         errors,

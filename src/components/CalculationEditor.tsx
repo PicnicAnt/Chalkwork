@@ -255,7 +255,7 @@ export function CalculationEditor({
 
   function save() {
     startTransition(async () => {
-      const includes = included.map((i) => ({ board: i.board, alias: i.alias }));
+      const includes = included.map((i) => (i.name ? { board: i.board, alias: i.alias, name: i.name } : { board: i.board, alias: i.alias }));
       const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes, links };
       const result = editing
         ? await updateCalculation(editing.id, draft)
@@ -333,13 +333,14 @@ export function CalculationEditor({
       </section>
 
       <BoardsSection
-        includes={included.map((i) => ({ board: i.board, alias: i.alias }))}
+        includes={included.map((i) => ({ board: i.board, alias: i.alias, name: i.name }))}
         included={included}
         available={availableBoards.filter((b) => b.id !== editing?.id)}
         busy={loadingBoard}
         error={boardError}
         onAdd={addBoard}
         onAlias={renameAlias}
+        onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
         onRemove={(alias) => {
           setIncluded((list) => list.filter((i) => i.alias !== alias));
           setLinks((l) => dropAliasLinks(l, alias));

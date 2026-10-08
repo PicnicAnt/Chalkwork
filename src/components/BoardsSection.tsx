@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { matchesWords, wordsOf } from "@/lib/board-search";
-import { checkAlias, type Include, type IncludedBundle } from "@/lib/boards";
+import { BOARD_LIMITS, checkAlias, type Include, type IncludedBundle } from "@/lib/boards";
 
 export type BoardChoice = { id: string; title: string; description: string; ownerName: string | null };
 
@@ -17,6 +17,7 @@ export function BoardsSection({
   error,
   onAdd,
   onAlias,
+  onName,
   onRemove,
 }: {
   includes: Include[];
@@ -28,6 +29,7 @@ export function BoardsSection({
   error: string | null;
   onAdd: (boardId: string) => void;
   onAlias: (from: string, to: string) => void;
+  onName: (alias: string, name: string) => void;
   onRemove: (alias: string) => void;
 }) {
   const [picking, setPicking] = useState(false);
@@ -76,6 +78,7 @@ export function BoardsSection({
                 title={loaded?.title ?? "Board"}
                 otherAliases={includes.filter((i) => i.alias !== inc.alias).map((i) => i.alias)}
                 onAlias={(to) => onAlias(inc.alias, to)}
+                onName={(name) => onName(inc.alias, name)}
                 onRemove={() => onRemove(inc.alias)}
               />
             );
@@ -139,12 +142,14 @@ function UsedBoard({
   title,
   otherAliases,
   onAlias,
+  onName,
   onRemove,
 }: {
   inc: Include;
   title: string;
   otherAliases: string[];
   onAlias: (to: string) => void;
+  onName: (name: string) => void;
   onRemove: () => void;
 }) {
   // The alias is applied when the field is left or Enter is pressed, so half-typed names never
@@ -180,6 +185,15 @@ function UsedBoard({
         >
           {title}
         </a>
+        <input
+          className="field w-48 text-lg"
+          value={inc.name ?? ""}
+          maxLength={BOARD_LIMITS.name}
+          placeholder="Name on the board"
+          onChange={(e) => onName(e.target.value)}
+          aria-label={`Name shown for ${title}`}
+          title="What this board is called here, for example Player or Enemy"
+        />
         <label className="flex items-baseline gap-2 text-lg text-ink-muted">
           used as
           <input
