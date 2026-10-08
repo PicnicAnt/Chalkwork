@@ -194,3 +194,30 @@ add({
 });
 
 console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+
+// A pyramid on a rectangle: the base is a Rectangle and each pair of side faces is a Triangle whose
+// base is an edge of the rectangle and whose height is the slant height.
+add({
+  title: "Pyramid",
+  description: "A rectangular pyramid built from a rectangle (the base) and two triangles (the side faces): volume and surface from the base and the height.",
+  formulas: [
+    "volume = base.area * height / 3",
+    "slant_w = sqrt(height ^ 2 + (base.height / 2) ^ 2)",
+    "slant_d = sqrt(height ^ 2 + (base.width / 2) ^ 2)",
+    "lateral_area = 2 * front.area + 2 * side.area",
+    "surface = base.area + lateral_area",
+  ],
+  includes: [
+    { board: rectangle, alias: "base", name: "Base" },
+    { board: triangle, alias: "front", name: "Front and back faces" },
+    { board: triangle, alias: "side", name: "Left and right faces" },
+  ],
+  // The faces rest on the edges of the base and lean up to the top, along the slant height.
+  links: { front$base: "base$width", front$height: "slant_w", side$base: "base$height", side$height: "slant_d" },
+  values: { height: "6" },
+  labels: { volume: "Volume", slant_w: "Slant height, front", slant_d: "Slant height, side", lateral_area: "Area of the sides", surface: "Total surface" },
+  units: { height: "m", volume: "m³", slant_w: "m", slant_d: "m", lateral_area: "m²", surface: "m²" },
+  decimals: { volume: 2, slant_w: 2, slant_d: 2, lateral_area: 2, surface: 2 },
+});
+
+console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
