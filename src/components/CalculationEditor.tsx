@@ -106,6 +106,24 @@ const EXAMPLE = {
   },
 };
 
+// A variable is renamed: the drawings that read it follow.
+function renameInVisualizations(vs: Visualization[], rename: (name: string) => string): Visualization[] {
+  return vs.map((v) => ({
+    ...v,
+    map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, rename(name)])),
+    lists: v.lists && Object.fromEntries(Object.entries(v.lists).map(([slot, names]) => [slot, names.map(rename)])),
+  }));
+}
+
+// Variables are gone (a used board was removed): the drawings stop reading them.
+function dropFromVisualizations(vs: Visualization[], gone: (name: string) => boolean): Visualization[] {
+  return vs.map((v) => ({
+    ...v,
+    map: Object.fromEntries(Object.entries(v.map).filter(([, name]) => !gone(name))),
+    lists: v.lists && Object.fromEntries(Object.entries(v.lists).map(([slot, names]) => [slot, names.filter((n) => !gone(n))])),
+  }));
+}
+
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
 // existing one (which the signed-in user owns); with `initial` but no `editing`, it saves a new copy.
 export function CalculationEditor({
@@ -233,9 +251,7 @@ export function CalculationEditor({
     setDecimalText((d) => renameAliasKeys(d, from, to));
     setLinks((l) => renameAliasLinks(l, from, to));
     // Drawings that read a variable of that board follow it.
-    setVisualizations((vs) =>
-      vs.map((v) => ({ ...v, map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, name.startsWith(from + "$") ? to + name.slice(from.length) : name])) })),
-    );
+    setVisualizations((vs) => renameInVisualizations(vs, (name) => (name.startsWith(from + "$") ? to + name.slice(from.length) : name)));
   }
 
   function loadExample() {
@@ -265,9 +281,7 @@ export function CalculationEditor({
     setHidden((h) => renameKey(h, from, to));
     setDecimalText((d) => renameKey(d, from, to));
     setLinks((l) => renameLinks(l, from, to));
-    setVisualizations((vs) =>
-      vs.map((v) => ({ ...v, map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, name === from ? to : name])) })),
-    );
+    setVisualizations((vs) => renameInVisualizations(vs, (name) => (name === from ? to : name)));
   }
 
   function save() {
@@ -371,9 +385,7 @@ export function CalculationEditor({
           setIncluded((list) => list.filter((i) => i.alias !== alias));
           setLinks((l) => dropAliasLinks(l, alias));
           // A drawing can't read a variable of a board that is no longer used.
-          setVisualizations((vs) =>
-            vs.map((v) => ({ ...v, map: Object.fromEntries(Object.entries(v.map).filter(([, name]) => !name.startsWith(alias + "$"))) })),
-          );
+          setVisualizations((vs) => dropFromVisualizations(vs, (name) => name.startsWith(alias + "$")));
         }}
       />
 

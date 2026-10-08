@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { vizType, type Visualization } from "@/lib/visualizations";
+import { BreakdownBar, SensitivityBars, SweepChart } from "./Charts";
+import type { VizValues } from "./viz-values";
 
 // The drawings. Each type is a function from its parameter values to SVG shapes; the board only says
 // which variable feeds which parameter (see lib/visualizations.ts). Shapes keep their proportions,
@@ -12,12 +14,6 @@ const W = 320;
 const H = 210;
 const PAD = 30;
 
-export type VizValues = {
-  /** The number a variable currently has, or undefined if it has none yet. */
-  number: (name: string) => number | undefined;
-  /** How to write it, with decimals and unit, as shown on the board. */
-  text: (name: string) => string;
-};
 
 const INK = "var(--ink)";
 const MUTED = "var(--ink-muted)";
@@ -224,8 +220,15 @@ const DRAWINGS: Record<string, (v: Record<string, number>, t: (param: string) =>
 // One drawing, from the values the board has right now. It follows them as they change.
 export function VisualizationView({ viz, values }: { viz: Visualization; values: VizValues }) {
   const type = vizType(viz.type);
+  if (!type) return null;
+  if (type.kind === "chart") {
+    if (viz.type === "sweep") return <SweepChart viz={viz} values={values} />;
+    if (viz.type === "sensitivity") return <SensitivityBars viz={viz} values={values} />;
+    if (viz.type === "breakdown") return <BreakdownBar viz={viz} values={values} />;
+    return null;
+  }
   const draw = DRAWINGS[viz.type];
-  if (!type || !draw) return null;
+  if (!draw) return null;
 
   const numbers: Record<string, number> = {};
   for (const param of type.params) {

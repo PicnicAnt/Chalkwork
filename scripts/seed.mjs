@@ -18,9 +18,14 @@ const find = (title) => db.prepare("SELECT id FROM calculations WHERE owner_id =
 function add(b) {
   const existing = find(b.title);
   if (existing) {
-    // Drawings are added to a board that has none yet; what someone set up there is left alone.
+    // A drawing or chart of a type the board doesn't have yet is added; what someone set up is left alone.
     if (b.visualizations) {
-      db.prepare("UPDATE calculations SET visualizations = ? WHERE id = ? AND visualizations = '[]'").run(JSON.stringify(b.visualizations), existing);
+      const row = db.prepare("SELECT visualizations FROM calculations WHERE id = ?").get(existing);
+      const have = JSON.parse(row.visualizations || "[]");
+      const added = b.visualizations.filter((v) => !have.some((h) => h.type === v.type));
+      if (added.length > 0) {
+        db.prepare("UPDATE calculations SET visualizations = ? WHERE id = ?").run(JSON.stringify([...have, ...added]), existing);
+      }
     }
     return existing;
   }
@@ -71,6 +76,10 @@ const character = add({
 
 const dps = add({
   title: "Path of Exile DPS calculator",
+  visualizations: [
+    { type: "sweep", map: { x: "accuracy", y: "dps" }, options: { from: 500, to: 8000 } },
+    { type: "sensitivity", map: { y: "dps" } },
+  ],
   description: "Damage per second of an attack: damage, speed, crits and enemy evasion.",
   formulas: [
     "dps = avg_hit * aps * crit_factor * hit_chance / 100",
@@ -128,6 +137,7 @@ const monster = add({
 
 add({
   title: "Boss fight: player against boss",
+  visualizations: [{ type: "sweep", map: { x: "boss$monster_level", y: "time_to_kill" }, options: { from: 40, to: 100 } }],
   description: "Connects the character, the damage calculator and a monster: how long the boss lives and how many hits the player survives.",
   formulas: ["time_to_kill = boss.life / dps.dps", "hits_to_die = player.max_life / boss.hit_damage"],
   includes: [
@@ -191,6 +201,7 @@ add({
 
 add({
   title: "Garden plan",
+  visualizations: [{ type: "breakdown", map: { total: "lawn$area" }, lists: { parts: ["pond$area", "bed$area"] } }],
   description: "A lawn with a round pond and a triangular flowerbed. The pond is as wide as the lawn is deep, and the bed has the lawn's width as its base. What is left of the lawn?",
   formulas: ["free_area = lawn.area - pond.area - bed.area"],
   includes: [
@@ -210,7 +221,10 @@ console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id
 // base is an edge of the rectangle and whose height is the slant height.
 add({
   title: "Pyramid",
-  visualizations: [{ type: "pyramid", map: { width: "base$width", depth: "base$height", height: "height" } }],
+  visualizations: [
+    { type: "pyramid", map: { width: "base$width", depth: "base$height", height: "height" } },
+    { type: "breakdown", map: { total: "surface" }, lists: { parts: ["base$area", "lateral_area"] } },
+  ],
   description: "A rectangular pyramid built from a rectangle (the base) and two triangles (the side faces): volume and surface from the base and the height.",
   formulas: [
     "volume = base.area * height / 3",

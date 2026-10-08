@@ -120,8 +120,9 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
     groups: keys(bundle.groups),
     // A drawing of a used board follows that board's variables, and is shown with that board.
     visualizations: bundle.visualizations.map((v) => ({
-      type: v.type,
+      ...v,
       map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, withAlias(alias, name)])),
+      lists: v.lists && Object.fromEntries(Object.entries(v.lists).map(([slot, names]) => [slot, names.map((name) => withAlias(alias, name))])),
       group: alias,
     })),
   };

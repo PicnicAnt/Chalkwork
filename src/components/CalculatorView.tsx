@@ -14,7 +14,8 @@ import {
 } from "@/lib/formulas";
 import { groupOf } from "@/lib/boards";
 import type { BundleVisualization } from "@/lib/visualizations";
-import { VisualizationView, type VizValues } from "./Visualization";
+import { VisualizationView } from "./Visualization";
+import type { VizValues } from "./viz-values";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
   const plan = planSolve(analysis, locked);
@@ -211,6 +212,33 @@ export function CalculatorPanel({
       const unit = units?.[name];
       return `${shown[name] ?? ""}${unit ? " " + unit : ""}`;
     },
+    name: (name) => labels?.[name] || displayName(groupOf(name) ? name.slice(name.indexOf("$") + 1) : name),
+    fullName: (name) => {
+      const group = groupOf(name);
+      const local = labels?.[name] || displayName(group ? name.slice(name.indexOf("$") + 1) : name);
+      return group && groups?.[group] ? `${groups[group].title}: ${local}` : local;
+    },
+    unit: (name) => units?.[name] ?? "",
+    isLocked: (name) => locked.includes(name),
+    inputs: () => locked.filter((n) => parseValue(display[n]) !== undefined),
+    // The board solved again with some variables held at other numbers, as if they had been typed.
+    evaluate: (overrides) => {
+      const names = Object.keys(overrides);
+      try {
+      const next = compute(
+        analysis,
+        { ...display, ...Object.fromEntries(names.map((n) => [n, String(overrides[n])])) },
+        [...names, ...locked.filter((n) => !names.includes(n))],
+      );
+      const out: Record<string, number> = {};
+      for (const [name, value] of Object.entries(next.result.values)) if (value !== undefined && Number.isFinite(value)) out[name] = value;
+      return out;
+      } catch {
+        return null;
+      }
+    },
+    // What the charts depend on: the numbers and the locks.
+    signature: JSON.stringify([display, locked]),
   };
   const drawingsOf = (group: string | null) =>
     (visualizations ?? [])
