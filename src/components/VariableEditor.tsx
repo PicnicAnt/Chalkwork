@@ -103,7 +103,7 @@ export function VariableEditor({
       </datalist>
       <div className="flex flex-col gap-8">
         {sections.map((section) => (
-          <div key={section.key ?? "own"} className="flex flex-col gap-4">
+          <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
             {section.key && groups[section.key] && (
               <h3 className="text-xl text-ink-muted">
                 From {groups[section.key].title}{" "}
@@ -234,7 +234,7 @@ function VariableLine({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="variable-box flex flex-col gap-1">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
         {fixedName !== undefined ? (
           <div className="flex items-end pb-1 text-xl text-ink-muted sm:w-[38%]" title={displayName(name)}>

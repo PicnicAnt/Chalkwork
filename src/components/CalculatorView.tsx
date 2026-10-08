@@ -221,7 +221,7 @@ export function CalculatorPanel({
         const rows = section.variables.map((v) => row(v, section.key)).filter(Boolean);
         if (rows.length === 0) return null;
         return (
-          <div key={section.key ?? "own"} className="flex flex-col gap-4">
+          <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
             {section.key && groups?.[section.key] && (
               <h3 className="text-xl text-ink-muted">
                 From{" "}
