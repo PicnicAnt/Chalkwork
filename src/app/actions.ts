@@ -55,3 +55,19 @@ export async function loadBoardToUse(boardId: string, selfId?: string): Promise<
     ? { ok: false, error: found.error }
     : { ok: true, board: boardId, title: found.title, bundle: found.bundle };
 }
+
+// Changes only the links of a board, which is what the Connections view edits. Everything else on
+// the board is saved again as it is, through the same checks as a normal save.
+export async function setBoardLinks(id: string, links: unknown): Promise<SaveResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, errors: ["Sign in to save changes."] };
+  const stored = typeof id === "string" ? getCalculation(id) : null;
+  if (!stored || stored.ownerId !== user.id) return { ok: false, errors: ["Only the owner can change this board."] };
+  if (typeof links !== "object" || links === null || Array.isArray(links)) return { ok: false, errors: ["Invalid links."] };
+  const own: Record<string, unknown> = { ...stored, links };
+  for (const key of ["id", "createdAt", "ownerId", "ownerName"]) delete own[key];
+  const prepared = prepare(own, id);
+  if ("errors" in prepared) return { ok: false, errors: prepared.errors };
+  if (!saveUpdate(id, user.id, prepared.draft)) return { ok: false, errors: ["Only the owner can change this board."] };
+  return { ok: true, id };
+}

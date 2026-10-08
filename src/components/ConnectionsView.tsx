@@ -1,23 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { setBoardLinks } from "@/app/actions";
 import { groupOf, type Bundle } from "@/lib/boards";
 import { displayName, type Analysis } from "@/lib/formulas";
 
-type Edge = { a: string; b: string; kind: "link" | "formula" | "shared" };
+type Edge = { a: string; b: string; kind: "link" | "formula" | "shared"; /** A link made on this board, which can be removed here. */ own?: boolean };
 
 const NAME = "[A-Za-z_][A-Za-z0-9_]*(?:\\$[A-Za-z_][A-Za-z0-9_]*)*";
 const PLAIN_EQUATION = new RegExp(`^\\s*(${NAME})\\s*=\\s*(${NAME})\\s*$`);
 
 // The strings between boards: every link, and every formula that is just one variable equal to another.
-function edgesOf(flat: Bundle, analysis: Analysis, groupOfVar: (name: string) => string, shared: boolean): Edge[] {
+function edgesOf(
+  flat: Bundle,
+  analysis: Analysis,
+  groupOfVar: (name: string) => string,
+  shared: boolean,
+  ownLinks: Record<string, string>,
+): Edge[] {
   const found = new Map<string, Edge>();
-  const add = (a: string, b: string, kind: Edge["kind"]) => {
+  const add = (a: string, b: string, kind: Edge["kind"], own = false) => {
     if (a === b || groupOfVar(a) === groupOfVar(b)) return;
     const key = [a, b].sort().join("|");
-    if (!found.has(key)) found.set(key, { a, b, kind });
+    if (!found.has(key)) found.set(key, { a, b, kind, own });
   };
-  for (const [a, b] of Object.entries(flat.links)) add(a, b, "link");
+  for (const [a, b] of Object.entries(flat.links)) add(a, b, "link", ownLinks[a] === b);
   for (const formula of flat.formulas) {
     const m = PLAIN_EQUATION.exec(formula);
     if (m) add(m[1], m[2], "formula");
@@ -36,7 +44,22 @@ function edgesOf(flat: Bundle, analysis: Analysis, groupOfVar: (name: string) =>
 // A detective's board: each board is a note pinned up, and a red string runs between every pair of
 // variables that are linked across boards. The strings are SVG paths positioned from the real
 // positions of the rows, so they follow the layout at any width.
-export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: Bundle }) {
+export function ConnectionsView({
+  analysis,
+  flat,
+  editable,
+}: {
+  analysis: Analysis;
+  flat: Bundle;
+  /** Set for the owner of the board: the strings can then be edited. `ownLinks` are the links made on this board. */
+  editable?: { boardId: string; ownLinks: Record<string, string> };
+}) {
+  const router = useRouter();
+  const [saving, startSaving] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const ownLinks = editable?.ownLinks;
   const topGroups = Object.keys(flat.groups).filter((key) => !key.includes("$"));
   const groupOfVar = (name: string) => {
     const g = groupOf(name);
@@ -45,9 +68,9 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
 
   const [shared, setShared] = useState(false);
   const edges = useMemo(
-    () => edgesOf(flat, analysis, groupOfVar, shared),
+    () => edgesOf(flat, analysis, groupOfVar, shared, ownLinks ?? {}),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [flat, analysis, shared],
+    [flat, analysis, shared, ownLinks],
   );
   const linked = useMemo(() => new Set(edges.flatMap((e) => [e.a, e.b])), [edges]);
 
@@ -59,14 +82,53 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
       ...card,
       all: analysis.variables.filter((v) => groupOfVar(v.name) === card.key && flat.hidden[v.name] !== true),
     }))
-    // Only boards with something linked are pinned up.
-    .filter((card) => card.all.some((v) => linked.has(v.name)));
+    // Only boards with something linked are pinned up, unless the links are being edited.
+    .filter((card) => editing || card.all.some((v) => linked.has(v.name)));
 
   const boardRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const rowRefs = useRef(new Map<string, HTMLElement>());
   const pathRefs = useRef<(SVGPathElement | null)[]>([]);
   const pinRefs = useRef<(SVGGElement | null)[]>([]);
+  const hitRefs = useRef<(SVGPathElement | null)[]>([]);
+
+  // Saves the new set of this board's own links; the page is then reloaded with the result.
+  function save(next: Record<string, string>) {
+    if (!editable) return;
+    setProblem(null);
+    startSaving(async () => {
+      const result = await setBoardLinks(editable.boardId, next);
+      if (result.ok) router.refresh();
+      else setProblem(result.errors.join(" "));
+    });
+  }
+
+  function pick(name: string) {
+    if (!editing || !ownLinks || saving) return;
+    if (picked === null || picked === name) {
+      setPicked(picked === name ? null : name);
+      return;
+    }
+    const [a, b] = [picked, name];
+    setPicked(null);
+    if (groupOfVar(a) === groupOfVar(b)) {
+      setProblem("Pick two variables on different boards.");
+      return;
+    }
+    if (ownLinks[a] === b || ownLinks[b] === a) return;
+    // A variable can have one link of its own; the other end may take it if the first is busy.
+    if (!(a in ownLinks)) save({ ...ownLinks, [a]: b });
+    else if (!(b in ownLinks)) save({ ...ownLinks, [b]: a });
+    else setProblem(`${displayName(a)} and ${displayName(b)} each have a link already. Remove one first.`);
+  }
+
+  function cut(edge: Edge) {
+    if (!editing || !ownLinks || saving || !edge.own) return;
+    const next = { ...ownLinks };
+    if (next[edge.a] === edge.b) delete next[edge.a];
+    else delete next[edge.b];
+    save(next);
+  }
 
   useEffect(() => {
     const board = boardRef.current;
@@ -111,7 +173,9 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
         }
         // The string sags a little, as a real one would.
         const sag = 14;
-        path.setAttribute("d", `M ${ax} ${ay} C ${c1} ${ay + sag}, ${c2} ${by + sag}, ${bx} ${by}`);
+        const d = `M ${ax} ${ay} C ${c1} ${ay + sag}, ${c2} ${by + sag}, ${bx} ${by}`;
+        path.setAttribute("d", d);
+        hitRefs.current[i]?.setAttribute("d", d);
         const [pa, pb] = [pins.children[0], pins.children[1]];
         pa.setAttribute("cx", String(ax));
         pa.setAttribute("cy", String(ay));
@@ -126,7 +190,7 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
     // Fonts change the row heights once they arrive.
     void document.fonts?.ready.then(layout);
     return () => observer.disconnect();
-  }, [edges]);
+  }, [edges, editing]);
 
   const option = (
     <label className="mb-3 flex items-center gap-2 text-lg">
@@ -140,9 +204,34 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
     </label>
   );
 
-  if (cards.length < 2 || edges.length === 0) {
+  const editBar = editable ? (
+    <div className="mb-3 flex flex-col gap-1">
+      <button
+        type="button"
+        aria-pressed={editing}
+        onClick={() => {
+          setEditing((e) => !e);
+          setPicked(null);
+          setProblem(null);
+        }}
+        className={`self-start text-lg ${editing ? "text-accent underline decoration-wavy underline-offset-4" : "link"}`}
+      >
+        {editing ? "Done editing" : "Edit connections"}
+      </button>
+      {editing && (
+        <p className="text-base text-ink-muted">
+          Click a variable, then a variable on another board, to connect them with a string. Click one of the solid
+          strings to cut it. {saving && "Saving…"}
+        </p>
+      )}
+      {problem && <p className="text-danger">{problem}</p>}
+    </div>
+  ) : null;
+
+  if (!editing && (cards.length < 2 || edges.length === 0)) {
     return (
       <div>
+        {editBar}
         {option}
       <p className="text-ink-muted">
         Nothing is linked between boards yet. Use <em>linked to</em> on a variable (or a formula such as{" "}
@@ -154,12 +243,13 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
 
   return (
     <div>
+    {editBar}
     {option}
     <div ref={boardRef} className="relative">
       <div className="relative z-0 grid grid-cols-1 gap-x-24 gap-y-10 pr-12 md:grid-cols-2 md:pr-0">
         {cards.map((card, i) => {
-          const rows = card.all.filter((v) => linked.has(v.name));
-          const rest = card.all.length - rows.length;
+          const rows = editing ? card.all : card.all.filter((v) => linked.has(v.name));
+          const rest = editing ? 0 : card.all.length - rows.length;
           return (
             <section
               key={card.key || "own"}
@@ -183,7 +273,9 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
                       if (el) rowRefs.current.set(v.name, el);
                       else rowRefs.current.delete(v.name);
                     }}
-                    className="note-row"
+                    className={`note-row ${editing ? "cursor-pointer hover:bg-black/5" : ""}`}
+                    style={picked === v.name ? { outline: "2px solid #c0281f", outlineOffset: 1, background: "rgb(192 40 31 / 0.12)" } : undefined}
+                    onClick={() => pick(v.name)}
                   >
                     {flat.labels[v.name] || displayName(card.key ? v.name.slice(card.key.length + 1) : v.name)}
                   </li>
@@ -209,6 +301,20 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
               opacity={edge.kind === "shared" ? 0.85 : 1}
               style={{ filter: "drop-shadow(1px 2px 1.5px rgb(0 0 0 / 0.55))" }}
             />
+            {editing && edge.own && (
+              <path
+                ref={(el) => {
+                  hitRefs.current[i] = el;
+                }}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={16}
+                style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                onClick={() => cut(edge)}
+              >
+                <title>Cut this string</title>
+              </path>
+            )}
             <g
               ref={(el) => {
                 pinRefs.current[i] = el;

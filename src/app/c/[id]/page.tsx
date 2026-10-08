@@ -51,7 +51,10 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
           This board uses another board that can&apos;t be loaded: {resolved.error}
         </p>
       ) : (
-        <SharedCalculator flat={resolved.bundle} />
+        <SharedCalculator
+          flat={resolved.bundle}
+          editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}
+        />
       )}
     </>
   );

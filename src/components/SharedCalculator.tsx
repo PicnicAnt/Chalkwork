@@ -7,7 +7,14 @@ import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
 
 // `flat` is the board together with the boards it uses, as one set of formulas and settings.
-export function SharedCalculator({ flat }: { flat: Bundle }) {
+export function SharedCalculator({
+  flat,
+  editable,
+}: {
+  flat: Bundle;
+  /** Set when the signed-in user owns the board: the Connections view can then change its links. */
+  editable?: { boardId: string; ownLinks: Record<string, string> };
+}) {
   const analysis = useMemo(() => analyzeFormulas(flat.formulas), [flat.formulas]);
   const [values, setValues] = useState(flat.values);
   // Bumping the key remounts the panel, which also forgets the edit history.
@@ -42,7 +49,7 @@ export function SharedCalculator({ flat }: { flat: Bundle }) {
         ) : (
           <span />
         )}
-        {values !== flat.values && view === "board" && (
+        {!sameValues(values, flat.values) && view === "board" && (
           <button
             type="button"
             onClick={() => {
@@ -56,7 +63,7 @@ export function SharedCalculator({ flat }: { flat: Bundle }) {
         )}
       </div>
       {view === "strings" && usesBoards ? (
-        <ConnectionsView analysis={analysis} flat={flat} />
+        <ConnectionsView analysis={analysis} flat={flat} editable={editable} />
       ) : (
         <CalculatorPanel
           key={resets}
@@ -75,3 +82,6 @@ export function SharedCalculator({ flat }: { flat: Bundle }) {
     </div>
   );
 }
+
+// The page is reloaded after links change, which hands over a new copy of the same values.
+const sameValues = (a: Record<string, string>, b: Record<string, string>) => JSON.stringify(a) === JSON.stringify(b);
