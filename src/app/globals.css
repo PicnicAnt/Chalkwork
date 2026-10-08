@@ -191,12 +191,18 @@ h3,
   .field:focus {
     border-bottom-color: var(--accent);
   }
-  /* Values you can change are written without a line under them; it shows up while you type. */
-  .field-bare {
+  /* Values you can change are written without a line under them. While one has focus, the whole
+     row is highlighted instead, in the same style as the active typeahead suggestion. */
+  .field-bare,
+  .field-bare:focus {
     border-bottom-color: transparent;
   }
-  .field-bare:focus {
-    border-bottom-color: var(--accent);
+  .row-focus {
+    transition: background-color 0.15s;
+  }
+  .row-focus:focus-within {
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+    box-shadow: inset 3px 0 0 var(--accent);
   }
   /* Read-only: fully decided by the locked values or formulas. The whole line is underlined
      twice, like a final answer, and the field's own underline is hidden. */
