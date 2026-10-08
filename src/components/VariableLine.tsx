@@ -1,6 +1,6 @@
 "use client";
 
-import { LIMITS } from "@/lib/calculation";
+import { LIMITS } from "@/lib/board-draft";
 import { displayName } from "@/lib/formulas";
 import { Foldable } from "./ui/Foldable";
 import { useCommitField } from "./ui/useCommitField";
@@ -139,7 +139,7 @@ export function VariableLine({
         />
         <label
           className="flex shrink-0 items-center gap-2 pb-1 text-lg"
-          title="Hidden variables still take part in the calculation, but are not shown on the board."
+          title="Hidden variables still take part in the maths, but are not shown on the board."
         >
           <input
             type="checkbox"

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { Calculation, CalculationDraft } from "../calculation";
+import type { Board, BoardDraft } from "../board-draft";
 import { db } from "./client";
 
 // ---------------------------------------------------------------------------
@@ -24,7 +24,7 @@ type Row = {
   owner_name: string | null;
 };
 
-export function insertCalculation(draft: CalculationDraft, ownerId: string): string {
+export function insertBoard(draft: BoardDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
@@ -50,7 +50,7 @@ export function insertCalculation(draft: CalculationDraft, ownerId: string): str
 }
 
 // Only the owner's own calculation is changed: the ownership check is part of the statement.
-export function updateCalculation(id: string, ownerId: string, draft: CalculationDraft): boolean {
+export function saveBoard(id: string, ownerId: string, draft: BoardDraft): boolean {
   const result = db
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
@@ -77,7 +77,7 @@ export function updateCalculation(id: string, ownerId: string, draft: Calculatio
   return result.changes > 0;
 }
 
-const parse = (row: Row): Calculation => ({
+const parse = (row: Row): Board => ({
   id: row.id,
   title: row.title,
   description: row.description,
@@ -96,7 +96,7 @@ const parse = (row: Row): Calculation => ({
   ownerName: row.owner_name,
 });
 
-export function getCalculation(id: string): Calculation | null {
+export function getBoard(id: string): Board | null {
   const row = db
     .prepare(
       `SELECT c.*, u.name AS owner_name FROM calculations c LEFT JOIN users u ON u.id = c.owner_id
@@ -106,7 +106,7 @@ export function getCalculation(id: string): Calculation | null {
   return row ? parse(row) : null;
 }
 
-export function listCalculationsByOwner(ownerId: string): { id: string; title: string; createdAt: string }[] {
+export function listBoardsByOwner(ownerId: string): { id: string; title: string; createdAt: string }[] {
   return (
     db
       .prepare("SELECT id, title, created_at FROM calculations WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100")
@@ -124,7 +124,7 @@ export type BoardSummary = {
 };
 
 // Every calculation by every user, newest first, for the browse page.
-export function listAllCalculations(limit = 1000): BoardSummary[] {
+export function listAllBoards(limit = 1000): BoardSummary[] {
   return (
     db
       .prepare(
@@ -167,6 +167,6 @@ export function boardsUsing(id: string): { id: string; title: string }[] {
 }
 
 // Only the owner's own board is deleted: the ownership check is part of the statement.
-export function deleteCalculation(id: string, ownerId: string): boolean {
+export function removeBoard(id: string, ownerId: string): boolean {
   return db.prepare("DELETE FROM calculations WHERE id = ? AND owner_id = ?").run(id, ownerId).changes > 0;
 }

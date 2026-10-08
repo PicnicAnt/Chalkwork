@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { CalculationDraft } from "../calculation";
+import type { BoardDraft } from "../board-draft";
 import { db } from "./client";
 
 // ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ export type Suggestion = {
   authorId: string;
   authorName: string;
   message: string;
-  draft: CalculationDraft;
+  draft: BoardDraft;
   baseStamp: string;
   status: SuggestionStatus;
   decisionNote: string;
@@ -75,7 +75,7 @@ export function insertSuggestion(input: {
   boardId: string;
   authorId: string;
   message: string;
-  draft: CalculationDraft;
+  draft: BoardDraft;
   baseStamp: string;
 }): string {
   const id = randomBytes(9).toString("base64url");

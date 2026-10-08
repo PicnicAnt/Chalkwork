@@ -6,13 +6,13 @@ import { SharedCalculator } from "@/components/SharedCalculator";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { getCalculation, listSuggestionsForBoard } from "@/lib/db";
+import { getBoard, listSuggestionsForBoard } from "@/lib/db";
 import { resolveForView } from "@/lib/resolve-boards";
 
 async function load(id: string) {
   // better-sqlite3 is synchronous, so opt out of prerendering explicitly.
   await connection();
-  const calculation = getCalculation(id);
+  const calculation = getBoard(id);
   if (!calculation) notFound();
   return calculation;
 }
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps<"/c/[id]">): Promis
   return { title: `${calculation.title} · Chalkwork`, description: calculation.description || undefined };
 }
 
-export default async function CalculationPage({ params }: PageProps<"/c/[id]">) {
+export default async function BoardPage({ params }: PageProps<"/c/[id]">) {
   const full = await load((await params).id);
   const { ownerId, ...calculation } = full;
   // The board together with the boards it uses.

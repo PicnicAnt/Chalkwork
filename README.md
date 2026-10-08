@@ -44,13 +44,16 @@ A board that uses other boards has a **Connections** view: each used board is a 
 
 ## Layout
 
-- `src/app/page.tsx`: home page
-- `src/app/new/page.tsx`: create a calculation
-- `src/app/c/[id]/page.tsx`: shared calculation page
-- `src/app/c/[id]/edit/page.tsx`: edit (or copy) a calculation
-- `src/app/actions.ts`: server actions that validate and save (they check who is signed in)
-- `src/app/login/`: the sign-in page and its server actions
-- `src/lib/auth.ts`: current user, sessions, and the provider-neutral sign-in
-- `src/lib/calculation.ts`: types and validation shared by client and server
-- `src/lib/formulas.ts`: formula parsing, input detection, and evaluation
-- `src/lib/db.ts`: SQLite access (calculations, users, sessions)
+A **board** is what the code calls a calculation people write and share (the database table is still called `calculations`).
+
+- `src/app/`: the pages. `page.tsx` (home), `new/` (a new board), `c/[id]/` (a board, with `edit/`, `suggest/` and `suggestions/`), `boards/` (the list), `suggestions/` (the inbox), `login/`.
+- `src/app/actions/`: server actions, which check who is asking. `boards.ts` (create, update, links, delete, load a board to use), `suggestions.ts` (suggest, approve, reject, withdraw), and `prepare.ts` (checks a draft together with the boards it uses).
+- `src/lib/`: logic with no screen in it.
+  - `formulas.ts` parsing, solving and checking equations; `calculator.ts` what a board shows for typed values and locks; `rename.ts` renaming variables.
+  - `board-draft.ts` the shape of a board and its validation; `boards.ts` boards that use boards; `resolve-boards.ts` loading them (server); `visualizations.ts` the drawing and chart types; `change-suggestions.ts` the list of what a suggestion changes; `example-board.ts` the example on a new board.
+  - `auth.ts`, `dev-login.ts` sign-in; `suggestions.ts` and `board-search.ts` typeahead and board search.
+  - `db/`: the SQLite connection (`client.ts`), the versioned schema (`migrations.ts`) and one file each for `users`, `boards` and `suggestions`, all reached through `@/lib/db`.
+- `src/components/`: the screens' parts.
+  - `ui/`: small shared pieces: `CollapsibleSection`, `Foldable` rows with `useFold` and `ExpandAllBar`, and `useCommitField` (a field applied when it is left).
+  - `BoardEditor.tsx` with its sections `BoardsSection` (`BoardPicker`, `UsedBoard`), `VariableEditor` (`VariableLine`) and `VisualizationEditor` (`VisualizationItem`); `CalculatorView.tsx` the board as people use it (`VariableRow`); `ConnectionsView.tsx` the red-string view.
+  - `Visualization.tsx` with `shapes/` (flat and solid shapes) and `charts/` (one file per chart), fed by `viz-values.ts`.

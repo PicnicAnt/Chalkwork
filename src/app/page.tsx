@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { YourCalculations } from "@/components/YourCalculations";
+import { YourBoards } from "@/components/YourBoards";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function Home() {
@@ -21,10 +21,10 @@ export default async function Home() {
           dps = avg_hit * aps * crit_factor * hit_chance / 100
         </p>
         <Link href="/new" className="btn btn-primary mt-8">
-          {user ? "Start a calculation" : "Sign in to start"}
+          {user ? "Start a new board" : "Sign in to start"}
         </Link>
       </section>
-      {user && <YourCalculations user={user} />}
+      {user && <YourBoards user={user} />}
     </>
   );
 }

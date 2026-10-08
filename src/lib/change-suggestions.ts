@@ -1,6 +1,6 @@
 // What a suggested change would do to a board, in words. Pure, so it can be used on the server and
 // in the browser.
-import type { CalculationDraft } from "./calculation";
+import type { BoardDraft } from "./board-draft";
 import { displayName } from "./formulas";
 
 const show = (v: unknown) => (v === undefined || v === "" ? "none" : `"${String(v)}"`);
@@ -29,7 +29,7 @@ function compareMap<T>(
   }
 }
 
-export function diffDrafts(base: CalculationDraft, next: CalculationDraft): string[] {
+export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
   const out: string[] = [];
   if (base.title !== next.title) out.push(`Title: ${show(base.title)} → ${show(next.title)}`);
   if (base.description !== next.description) out.push("Description changed");
@@ -65,7 +65,7 @@ export function diffDrafts(base: CalculationDraft, next: CalculationDraft): stri
 }
 
 // Just the parts of a board that can be changed, without who owns it or when it was made.
-export function draftOf(c: CalculationDraft): CalculationDraft {
+export function draftOf(c: BoardDraft): BoardDraft {
   return {
     title: c.title,
     description: c.description,

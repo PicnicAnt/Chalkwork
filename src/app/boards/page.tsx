@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { BoardList } from "@/components/BoardList";
 import { requireUser } from "@/lib/auth";
-import { listAllCalculations } from "@/lib/db";
+import { listAllBoards } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Boards · Chalkwork" };
 
@@ -15,7 +15,7 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
   if (wantsMine) params.set("mine", "1");
   if (query) params.set("q", query);
   const user = await requireUser(params.size ? `/boards?${params}` : "/boards");
-  const boards = listAllCalculations().map((b) => ({
+  const boards = listAllBoards().map((b) => ({
     id: b.id,
     title: b.title,
     description: b.description,

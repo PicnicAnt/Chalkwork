@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
-import { CalculationEditor } from "@/components/CalculationEditor";
+import { BoardEditor } from "@/components/BoardEditor";
 import { requireUser } from "@/lib/auth";
-import { getCalculation, listAllCalculations } from "@/lib/db";
+import { getBoard, listAllBoards } from "@/lib/db";
 import { resolveIncludes } from "@/lib/resolve-boards";
 import { draftOf } from "@/lib/change-suggestions";
 
@@ -14,7 +14,7 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
   const { id } = await params;
   const user = await requireUser(`/c/${id}/suggest`);
   await connection();
-  const board = getCalculation(id);
+  const board = getBoard(id);
   if (!board) notFound();
   if (board.ownerId === user.id) redirect(`/c/${id}/edit`);
 
@@ -34,7 +34,7 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
       </p>
     );
   }
-  const availableBoards = listAllCalculations().map((b) => ({
+  const availableBoards = listAllBoards().map((b) => ({
     id: b.id,
     title: b.title,
     description: b.description,
@@ -47,7 +47,7 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
         This board belongs to {board.ownerName ?? "someone else"}. Change it here and send it as a suggestion: nothing
         changes on the board until {board.ownerName ?? "the owner"} approves it.
       </p>
-      <CalculationEditor
+      <BoardEditor
         initial={draftOf(board)}
         suggesting={{ boardId: id }}
         heading={`Suggest a change to ${board.title}`}

@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { ReviewActions } from "@/components/ReviewActions";
 import { StatusBadge } from "@/components/SuggestionList";
 import { requireUser } from "@/lib/auth";
-import { boardStamp, getCalculation, getSuggestion } from "@/lib/db";
+import { boardStamp, getBoard, getSuggestion } from "@/lib/db";
 import { diffDrafts, draftOf } from "@/lib/change-suggestions";
 
 export const metadata: Metadata = { title: "Suggestion · Chalkwork" };
@@ -22,7 +22,7 @@ export default async function SuggestionPage({ params }: PageProps<"/c/[id]/sugg
   // Only the two people involved can read it.
   if (!isOwner && !isAuthor) notFound();
 
-  const board = getCalculation(id);
+  const board = getBoard(id);
   if (!board) notFound();
   const changes = diffDrafts(draftOf(board), s.draft);
   const changedSince = s.status === "open" && boardStamp(id) !== s.baseStamp;

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { createCalculation, loadBoardToUse, updateCalculation } from "@/app/actions/boards";
+import { createBoard, loadBoardToUse, updateBoard } from "@/app/actions/boards";
 import { createSuggestion } from "@/app/actions/suggestions";
 import {
   defaultAlias,
@@ -14,7 +14,7 @@ import {
   renameLinks,
   type IncludedBundle,
 } from "@/lib/boards";
-import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
+import { LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
 import { EXAMPLE } from "@/lib/example-board";
 import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
 import { renameKey, renameVariableInText } from "@/lib/rename";
@@ -27,15 +27,15 @@ import { VariableEditor } from "./VariableEditor";
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
 // existing one (which the signed-in user owns); with `initial` but no `editing`, it saves a new copy.
-export function CalculationEditor({
+export function BoardEditor({
   initial,
   editing,
   suggesting,
-  heading = "New calculation",
+  heading = "New board",
   availableBoards = [],
   initialIncluded = [],
 }: {
-  initial?: CalculationDraft;
+  initial?: BoardDraft;
   editing?: { id: string };
   /** Set when the board is someone else's: saving sends the owner a suggestion instead of saving. */
   suggesting?: { boardId: string };
@@ -199,8 +199,8 @@ export function CalculationEditor({
         return;
       }
       const result = editing
-        ? await updateCalculation(editing.id, draft)
-        : await createCalculation(draft);
+        ? await updateBoard(editing.id, draft)
+        : await createBoard(draft);
       if (!result.ok) {
         setErrors(result.errors);
         return;

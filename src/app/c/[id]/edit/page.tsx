@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { CalculationEditor } from "@/components/CalculationEditor";
+import { BoardEditor } from "@/components/BoardEditor";
 import { requireUser } from "@/lib/auth";
-import { getCalculation, listAllCalculations } from "@/lib/db";
+import { getBoard, listAllBoards } from "@/lib/db";
 import { resolveIncludes } from "@/lib/resolve-boards";
 
 async function load(id: string) {
   // better-sqlite3 is synchronous, so opt out of prerendering explicitly.
   await connection();
-  const calculation = getCalculation(id);
+  const calculation = getBoard(id);
   if (!calculation) notFound();
   return calculation;
 }
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps<"/c/[id]/edit">): P
 
 // The owner edits their calculation in place. Anyone else who is signed in gets a copy of their
 // own to change; saving makes a new calculation that they own.
-export default async function EditCalculationPage({ params }: PageProps<"/c/[id]/edit">) {
+export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit">) {
   const { id } = await params;
   const user = await requireUser(`/c/${id}/edit`);
   const calculation = await load(id);
@@ -51,7 +51,7 @@ export default async function EditCalculationPage({ params }: PageProps<"/c/[id]
       </p>
     );
   }
-  const availableBoards = listAllCalculations().map((b) => ({
+  const availableBoards = listAllBoards().map((b) => ({
     id: b.id,
     title: b.title,
     description: b.description,
@@ -60,7 +60,7 @@ export default async function EditCalculationPage({ params }: PageProps<"/c/[id]
 
   if (isOwner) {
     return (
-      <CalculationEditor
+      <BoardEditor
         initial={draft}
         editing={{ id }}
         heading={`Edit ${draft.title}`}
@@ -73,10 +73,10 @@ export default async function EditCalculationPage({ params }: PageProps<"/c/[id]
   return (
     <div className="flex flex-col gap-6">
       <p className="sketch-box px-4 py-3 text-ink-muted">
-        This calculation belongs to {calculation.ownerName ?? "someone else"}, so you can&apos;t change it. Saving here
+        This board belongs to {calculation.ownerName ?? "someone else"}, so you can&apos;t change it. Saving here
         makes your own copy with a new link.
       </p>
-      <CalculationEditor
+      <BoardEditor
         initial={{ ...draft, title: `${draft.title} (copy)` }}
         heading={`Copy ${draft.title}`}
         availableBoards={availableBoards}

@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import type { Bundle } from "@/lib/boards";
-import { boardsUsing, deleteCalculation, getCalculation, insertCalculation, updateCalculation as saveUpdate } from "@/lib/db";
+import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard } from "@/lib/db";
 import { resolveBoard } from "@/lib/resolve-boards";
 import { prepare } from "./prepare";
 
@@ -10,25 +10,25 @@ import { prepare } from "./prepare";
 
 export type SaveResult = { ok: true; id: string } | { ok: false; errors: string[] };
 
-export async function createCalculation(payload: unknown): Promise<SaveResult> {
+export async function createBoard(payload: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false, errors: ["Sign in to save a calculation."] };
+  if (!user) return { ok: false, errors: ["Sign in to save a board."] };
   const prepared = prepare(payload);
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
-  return { ok: true, id: insertCalculation(prepared.draft, user.id) };
+  return { ok: true, id: insertBoard(prepared.draft, user.id) };
 }
 
 // Only the owner can change a calculation.
-export async function updateCalculation(id: string, payload: unknown): Promise<SaveResult> {
+export async function updateBoard(id: string, payload: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to save changes."] };
-  if (typeof id !== "string" || getCalculation(id)?.ownerId !== user.id) {
-    return { ok: false, errors: ["Only the owner can change this calculation."] };
+  if (typeof id !== "string" || getBoard(id)?.ownerId !== user.id) {
+    return { ok: false, errors: ["Only the owner can change this board."] };
   }
   const prepared = prepare(payload, id);
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
-  if (!saveUpdate(id, user.id, prepared.draft)) {
-    return { ok: false, errors: ["Only the owner can change this calculation."] };
+  if (!saveBoard(id, user.id, prepared.draft)) {
+    return { ok: false, errors: ["Only the owner can change this board."] };
   }
   return { ok: true, id };
 }
@@ -51,14 +51,14 @@ export async function loadBoardToUse(boardId: string, selfId?: string): Promise<
 export async function setBoardLinks(id: string, links: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to save changes."] };
-  const stored = typeof id === "string" ? getCalculation(id) : null;
+  const stored = typeof id === "string" ? getBoard(id) : null;
   if (!stored || stored.ownerId !== user.id) return { ok: false, errors: ["Only the owner can change this board."] };
   if (typeof links !== "object" || links === null || Array.isArray(links)) return { ok: false, errors: ["Invalid links."] };
   const own: Record<string, unknown> = { ...stored, links };
   for (const key of ["id", "createdAt", "ownerId", "ownerName"]) delete own[key];
   const prepared = prepare(own, id);
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
-  if (!saveUpdate(id, user.id, prepared.draft)) return { ok: false, errors: ["Only the owner can change this board."] };
+  if (!saveBoard(id, user.id, prepared.draft)) return { ok: false, errors: ["Only the owner can change this board."] };
   return { ok: true, id };
 }
 
@@ -68,7 +68,7 @@ export type DeleteResult = { ok: true } | { ok: false; error: string };
 export async function deleteBoard(id: string): Promise<DeleteResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in to delete a board." };
-  const stored = typeof id === "string" ? getCalculation(id) : null;
+  const stored = typeof id === "string" ? getBoard(id) : null;
   if (!stored || stored.ownerId !== user.id) return { ok: false, error: "Only the owner can delete this board." };
   const users = boardsUsing(id);
   if (users.length > 0) {
@@ -78,6 +78,6 @@ export async function deleteBoard(id: string): Promise<DeleteResult> {
       error: `Other boards use this one: ${names}${users.length > 5 ? ` and ${users.length - 5} more` : ""}. Stop using it there first.`,
     };
   }
-  if (!deleteCalculation(id, user.id)) return { ok: false, error: "Only the owner can delete this board." };
+  if (!removeBoard(id, user.id)) return { ok: false, error: "Only the owner can delete this board." };
   return { ok: true };
 }

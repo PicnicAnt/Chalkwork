@@ -3,7 +3,7 @@ import { flatten, type Include, type IncludedBundle } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems } from "./formulas";
 import { parseVisualizations, type Visualization } from "./visualizations";
 
-export type CalculationDraft = {
+export type BoardDraft = {
   title: string;
   description: string;
   formulas: string[];
@@ -29,7 +29,7 @@ export type CalculationDraft = {
   visualizations: Visualization[];
 };
 
-export type Calculation = CalculationDraft & {
+export type Board = BoardDraft & {
   id: string;
   createdAt: string;
   /** The user who owns it, or null for calculations made before there were users. */
@@ -38,7 +38,7 @@ export type Calculation = CalculationDraft & {
 };
 
 /** What the browser gets: everything except the owner's id. */
-export type PublicCalculation = Omit<Calculation, "ownerId">;
+export type PublicBoard = Omit<Board, "ownerId">;
 
 export const LIMITS = {
   title: 120,
@@ -65,7 +65,7 @@ export function splitFormulas(text: string): string[] {
 export function validateDraft(
   raw: unknown,
   included: readonly IncludedBundle[] = [],
-): { draft?: CalculationDraft; errors: string[] } {
+): { draft?: BoardDraft; errors: string[] } {
   const errors: string[] = [];
   if (typeof raw !== "object" || raw === null) return { errors: ["Invalid data."] };
   const r = raw as Record<string, unknown>;
@@ -75,7 +75,7 @@ export function validateDraft(
   const title = str(r.title);
   const description = str(r.description);
 
-  if (!title) errors.push("Give the calculation a title.");
+  if (!title) errors.push("Give the board a title.");
   if (title.length > LIMITS.title) errors.push(`Title must be at most ${LIMITS.title} characters.`);
   if (description.length > LIMITS.description)
     errors.push(`Description must be at most ${LIMITS.description} characters.`);

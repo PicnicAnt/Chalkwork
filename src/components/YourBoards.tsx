@@ -1,15 +1,15 @@
 import Link from "next/link";
 import type { User } from "@/lib/auth";
-import { listCalculationsByOwner } from "@/lib/db";
+import { listBoardsByOwner } from "@/lib/db";
 
 // The signed-in user's own calculations, newest first.
-export function YourCalculations({ user }: { user: User }) {
-  const calculations = listCalculationsByOwner(user.id);
+export function YourBoards({ user }: { user: User }) {
+  const calculations = listBoardsByOwner(user.id);
   if (calculations.length === 0) return null;
 
   return (
     <section className="mt-12">
-      <h2 className="mb-3 text-2xl font-bold">Your calculations</h2>
+      <h2 className="mb-3 text-2xl font-bold">Your boards</h2>
       <ul className="flex flex-col gap-1">
         {calculations.map((calc) => (
           <li key={calc.id}>

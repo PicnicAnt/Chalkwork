@@ -19,7 +19,7 @@ const sketch = Cabin_Sketch({
 
 export const metadata: Metadata = {
   title: "Chalkwork",
-  description: "Create calculations and share them with a link.",
+  description: "Write formulas, build boards and share them with a link.",
 };
 
 export const viewport: Viewport = {

@@ -1,7 +1,7 @@
 import "server-only";
 import { BOARD_LIMITS, flatten, type Bundle, type Include, type IncludedBundle, type OwnData } from "./boards";
-import type { Calculation } from "./calculation";
-import { getCalculation } from "./db";
+import type { Board } from "./board-draft";
+import { getBoard } from "./db";
 
 // Loading the boards a board uses. Boards use boards by id and are read when needed, so a change to
 // a used board shows up in every board that uses it. The two things that can go wrong are boards
@@ -12,7 +12,7 @@ const MAX_BOARDS_LOADED = 60;
 type Budget = { left: number };
 type Failure = { error: string };
 
-const ownData = (calc: Calculation): OwnData => ({
+const ownData = (calc: Board): OwnData => ({
   formulas: calc.formulas,
   values: calc.values,
   descriptions: calc.descriptions,
@@ -36,7 +36,7 @@ function bundleOf(
     return { error: `Boards can only use other boards ${BOARD_LIMITS.depth} levels deep.` };
   }
   if (--budget.left < 0) return { error: "That is too many boards to load at once." };
-  const calc = getCalculation(boardId);
+  const calc = getBoard(boardId);
   if (!calc) return { error: "A board that is used no longer exists." };
 
   const resolved = resolveWithBudget(calc.includes, [...visiting, boardId], budget);
@@ -75,7 +75,7 @@ export function resolveBoard(boardId: string, selfId?: string): { title: string;
 }
 
 // A board together with the boards it uses, as the one system of formulas to show.
-export function resolveForView(calc: Calculation): { bundle: Bundle } | Failure {
+export function resolveForView(calc: Board): { bundle: Bundle } | Failure {
   const resolved = resolveIncludes(calc.includes, calc.id);
   if ("error" in resolved) return resolved;
   return { bundle: flatten(ownData(calc), resolved.included).bundle };

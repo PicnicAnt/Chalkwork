@@ -6,10 +6,10 @@ import {
   boardStamp,
   countOpenSuggestionsByAuthorOnBoard,
   decideSuggestion,
-  getCalculation,
+  getBoard,
   getSuggestion,
   insertSuggestion,
-  updateCalculation as saveUpdate,
+  saveBoard,
 } from "@/lib/db";
 import { prepare } from "./prepare";
 
@@ -27,7 +27,7 @@ const clean = (v: unknown) => (typeof v === "string" ? v.trim().slice(0, MAX_TEX
 export async function createSuggestion(boardId: string, payload: unknown, message: unknown): Promise<SuggestionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to suggest a change."] };
-  const board = typeof boardId === "string" ? getCalculation(boardId) : null;
+  const board = typeof boardId === "string" ? getBoard(boardId) : null;
   if (!board) return { ok: false, errors: ["That board doesn't exist."] };
   if (board.ownerId === user.id) return { ok: false, errors: ["This is your own board: change it directly."] };
   if (board.ownerId === null) return { ok: false, errors: ["This board has no owner to approve a change."] };
@@ -56,7 +56,7 @@ export async function approveSuggestion(id: string, force = false): Promise<Deci
   }
   const prepared = prepare(s.draft, s.boardId);
   if ("errors" in prepared) return { ok: false, error: `It no longer fits the board: ${prepared.errors.join(" ")}` };
-  if (!saveUpdate(s.boardId, user.id, prepared.draft)) return { ok: false, error: "Only the owner of the board can approve this." };
+  if (!saveBoard(s.boardId, user.id, prepared.draft)) return { ok: false, error: "Only the owner of the board can approve this." };
   decideSuggestion(id, "approved", "");
   return { ok: true };
 }
