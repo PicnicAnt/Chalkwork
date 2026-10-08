@@ -305,3 +305,11 @@ h3,
     text-underline-offset: 4px;
   }
 }
+
+/* The list of a dropdown is drawn by the browser from the options' own colours. Without these it came
+   out white with light text on the blackboard. */
+select option,
+select optgroup {
+  background-color: var(--board);
+  color: var(--ink);
+}
