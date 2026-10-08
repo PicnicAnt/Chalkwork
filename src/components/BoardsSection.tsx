@@ -32,6 +32,9 @@ export function BoardsSection({
   onName: (alias: string, name: string) => void;
   onRemove: (alias: string) => void;
 }) {
+  // Folded away by default; the fields stay mounted while folded so nothing typed is lost.
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
   const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState("");
   const pickerId = useId();
@@ -49,6 +52,18 @@ export function BoardsSection({
         <h2 className="text-2xl font-bold">
           Boards used <span className="text-lg font-normal text-ink-muted">({includes.length})</span>
         </h2>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          className="link text-base"
+        >
+          {open ? "Collapse" : "Expand"}
+        </button>
+      </div>
+      <div id={bodyId} className={open ? "flex flex-col gap-3" : "hidden"}>
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={() => setPicking((p) => !p)}
@@ -132,6 +147,7 @@ export function BoardsSection({
           <p className="text-sm text-ink-muted">{matching.length - shown.length} more. Type to narrow the list.</p>
         )}
         {busy && <p className="text-ink-muted">Loading the board…</p>}
+      </div>
       </div>
     </section>
   );

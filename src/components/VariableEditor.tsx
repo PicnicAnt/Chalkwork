@@ -55,7 +55,7 @@ export function VariableEditor({
 }) {
   // The section can be folded away once the names, units and notes are as wanted. Its fields stay
   // mounted while hidden, so a half-typed name isn't lost.
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const bodyId = useId();
   if (analysis.variables.length === 0) return null;
 
@@ -80,7 +80,7 @@ export function VariableEditor({
             aria-controls={bodyId}
             className="link text-base"
           >
-            {open ? "Hide" : "Show"}
+            {open ? "Collapse" : "Expand"}
           </button>
         </div>
         <p className={`text-base text-ink-muted ${open ? "" : "hidden"}`}>
