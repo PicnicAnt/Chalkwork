@@ -97,6 +97,28 @@ if (version < 11) {
   db.exec(`ALTER TABLE calculations ADD COLUMN variable_links TEXT NOT NULL DEFAULT '{}';`);
   db.pragma("user_version = 11");
 }
+if (version < 12) {
+  // Suggested changes: another user proposes a new version of a board (the draft, as JSON) that the
+  // owner approves or rejects. base_stamp is when the board was last changed at the time, to notice
+  // that it has changed since.
+  db.exec(`
+    CREATE TABLE suggestions (
+      id TEXT PRIMARY KEY,
+      board_id TEXT NOT NULL REFERENCES calculations(id) ON DELETE CASCADE,
+      author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message TEXT NOT NULL,
+      draft TEXT NOT NULL,
+      base_stamp TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open',
+      decision_note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      decided_at TEXT
+    );
+    CREATE INDEX suggestions_board ON suggestions(board_id);
+    CREATE INDEX suggestions_author ON suggestions(author_id);
+  `);
+  db.pragma("user_version = 12");
+}
 
 // ---------------------------------------------------------------------------
 // Users and sessions
@@ -320,4 +342,140 @@ export function boardsUsing(id: string): { id: string; title: string }[] {
 // Only the owner's own board is deleted: the ownership check is part of the statement.
 export function deleteCalculation(id: string, ownerId: string): boolean {
   return db.prepare("DELETE FROM calculations WHERE id = ? AND owner_id = ?").run(id, ownerId).changes > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Suggested changes
+
+export type SuggestionStatus = "open" | "approved" | "rejected" | "withdrawn";
+
+export type Suggestion = {
+  id: string;
+  boardId: string;
+  boardTitle: string;
+  boardOwnerId: string | null;
+  authorId: string;
+  authorName: string;
+  message: string;
+  draft: CalculationDraft;
+  baseStamp: string;
+  status: SuggestionStatus;
+  decisionNote: string;
+  createdAt: string;
+  decidedAt: string | null;
+};
+
+type SuggestionRow = {
+  id: string;
+  board_id: string;
+  board_title: string;
+  board_owner_id: string | null;
+  author_id: string;
+  author_name: string;
+  message: string;
+  draft: string;
+  base_stamp: string;
+  status: SuggestionStatus;
+  decision_note: string;
+  created_at: string;
+  decided_at: string | null;
+};
+
+const SUGGESTION_SELECT = `
+  SELECT s.id, s.board_id, c.title AS board_title, c.owner_id AS board_owner_id, s.author_id,
+         u.name AS author_name, s.message, s.draft, s.base_stamp, s.status, s.decision_note,
+         s.created_at, s.decided_at
+  FROM suggestions s
+  JOIN calculations c ON c.id = s.board_id
+  JOIN users u ON u.id = s.author_id`;
+
+const toSuggestion = (r: SuggestionRow): Suggestion => ({
+  id: r.id,
+  boardId: r.board_id,
+  boardTitle: r.board_title,
+  boardOwnerId: r.board_owner_id,
+  authorId: r.author_id,
+  authorName: r.author_name,
+  message: r.message,
+  draft: JSON.parse(r.draft),
+  baseStamp: r.base_stamp,
+  status: r.status,
+  decisionNote: r.decision_note,
+  createdAt: r.created_at,
+  decidedAt: r.decided_at,
+});
+
+// When the board was last changed; a suggestion remembers it to notice later changes.
+export function boardStamp(id: string): string | null {
+  const row = db.prepare("SELECT COALESCE(updated_at, created_at) AS stamp FROM calculations WHERE id = ?").get(id) as
+    | { stamp: string }
+    | undefined;
+  return row?.stamp ?? null;
+}
+
+export function insertSuggestion(input: {
+  boardId: string;
+  authorId: string;
+  message: string;
+  draft: CalculationDraft;
+  baseStamp: string;
+}): string {
+  const id = randomBytes(9).toString("base64url");
+  db.prepare(
+    "INSERT INTO suggestions (id, board_id, author_id, message, draft, base_stamp) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(id, input.boardId, input.authorId, input.message, JSON.stringify(input.draft), input.baseStamp);
+  return id;
+}
+
+export function getSuggestion(id: string): Suggestion | null {
+  const row = db.prepare(`${SUGGESTION_SELECT} WHERE s.id = ?`).get(id) as SuggestionRow | undefined;
+  return row ? toSuggestion(row) : null;
+}
+
+const ORDER = "ORDER BY (s.status = 'open') DESC, s.created_at DESC";
+
+export function listSuggestionsForBoard(boardId: string): Suggestion[] {
+  return (db.prepare(`${SUGGESTION_SELECT} WHERE s.board_id = ? ${ORDER}`).all(boardId) as SuggestionRow[]).map(
+    toSuggestion,
+  );
+}
+
+export function listSuggestionsByAuthor(authorId: string, limit = 100): Suggestion[] {
+  return (
+    db.prepare(`${SUGGESTION_SELECT} WHERE s.author_id = ? ${ORDER} LIMIT ?`).all(authorId, limit) as SuggestionRow[]
+  ).map(toSuggestion);
+}
+
+// Suggestions on the boards a user owns, open ones first.
+export function listSuggestionsForOwner(ownerId: string, limit = 100): Suggestion[] {
+  return (
+    db.prepare(`${SUGGESTION_SELECT} WHERE c.owner_id = ? ${ORDER} LIMIT ?`).all(ownerId, limit) as SuggestionRow[]
+  ).map(toSuggestion);
+}
+
+export function countOpenSuggestionsForOwner(ownerId: string): number {
+  const row = db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM suggestions s JOIN calculations c ON c.id = s.board_id WHERE c.owner_id = ? AND s.status = 'open'",
+    )
+    .get(ownerId) as { n: number };
+  return row.n;
+}
+
+export function countOpenSuggestionsByAuthorOnBoard(authorId: string, boardId: string): number {
+  const row = db
+    .prepare("SELECT COUNT(*) AS n FROM suggestions WHERE author_id = ? AND board_id = ? AND status = 'open'")
+    .get(authorId, boardId) as { n: number };
+  return row.n;
+}
+
+// Only an open suggestion can be decided, and only once.
+export function decideSuggestion(id: string, status: Exclude<SuggestionStatus, "open">, note: string): boolean {
+  return (
+    db
+      .prepare(
+        "UPDATE suggestions SET status = ?, decision_note = ?, decided_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'open'",
+      )
+      .run(status, note, id).changes > 0
+  );
 }

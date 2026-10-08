@@ -6,7 +6,7 @@ import { SharedCalculator } from "@/components/SharedCalculator";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { getCalculation } from "@/lib/db";
+import { getCalculation, listSuggestionsForBoard } from "@/lib/db";
 import { resolveForView } from "@/lib/resolve-boards";
 
 async function load(id: string) {
@@ -29,6 +29,9 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
   const resolved = resolveForView(full);
   const user = await getCurrentUser();
   const isOwner = user !== null && user.id === ownerId;
+  // The owner sees how many suggestions wait; anyone else signed in can make one (if there is an owner).
+  const openSuggestions = isOwner ? listSuggestionsForBoard(calculation.id).filter((s) => s.status === "open").length : 0;
+  const canSuggest = user !== null && !isOwner && ownerId !== null;
 
   return (
     <>
@@ -41,6 +44,16 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
           )}
         </div>
         <div className="flex shrink-0 items-center gap-4">
+          {isOwner && (
+            <Link href={`/suggestions`} className="link text-lg">
+              Suggestions{openSuggestions > 0 ? ` (${openSuggestions})` : ""}
+            </Link>
+          )}
+          {canSuggest && (
+            <Link href={`/c/${calculation.id}/suggest`} className="link text-lg">
+              Suggest a change
+            </Link>
+          )}
           <Link href={`/c/${calculation.id}/edit`} className="link text-lg">
             {isOwner ? "Edit" : "Make a copy"}
           </Link>

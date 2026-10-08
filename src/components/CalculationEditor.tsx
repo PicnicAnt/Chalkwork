@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { createCalculation, loadBoardToUse, updateCalculation } from "@/app/actions";
+import { createCalculation, createSuggestion, loadBoardToUse, updateCalculation } from "@/app/actions";
 import {
   defaultAlias,
   dropAliasLinks,
@@ -109,12 +109,15 @@ const EXAMPLE = {
 export function CalculationEditor({
   initial,
   editing,
+  suggesting,
   heading = "New calculation",
   availableBoards = [],
   initialIncluded = [],
 }: {
   initial?: CalculationDraft;
   editing?: { id: string };
+  /** Set when the board is someone else's: saving sends the owner a suggestion instead of saving. */
+  suggesting?: { boardId: string };
   heading?: string;
   /** Boards that can be added to this one. */
   availableBoards?: BoardChoice[];
@@ -150,6 +153,8 @@ export function CalculationEditor({
   const [boardError, setBoardError] = useState<string | null>(null);
   const [loadingBoard, startLoadingBoard] = useTransition();
   const [errors, setErrors] = useState<string[]>([]);
+  // What a suggestion is about, shown to the owner with it.
+  const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
 
   const formulas = useMemo(() => splitFormulas(formulaText), [formulaText]);
@@ -192,7 +197,7 @@ export function CalculationEditor({
   function addBoard(boardId: string) {
     setBoardError(null);
     startLoadingBoard(async () => {
-      const result = await loadBoardToUse(boardId, editing?.id);
+      const result = await loadBoardToUse(boardId, editing?.id ?? suggesting?.boardId);
       if (!result.ok) {
         setBoardError(result.error);
         return;
@@ -257,6 +262,15 @@ export function CalculationEditor({
     startTransition(async () => {
       const includes = included.map((i) => (i.name ? { board: i.board, alias: i.alias, name: i.name } : { board: i.board, alias: i.alias }));
       const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes, links };
+      if (suggesting) {
+        const sent = await createSuggestion(suggesting.boardId, draft, message);
+        if (!sent.ok) {
+          setErrors(sent.errors);
+          return;
+        }
+        router.push(`/c/${suggesting.boardId}/suggestions/${sent.id}`);
+        return;
+      }
       const result = editing
         ? await updateCalculation(editing.id, draft)
         : await createCalculation(draft);
@@ -335,7 +349,7 @@ export function CalculationEditor({
       <BoardsSection
         includes={included.map((i) => ({ board: i.board, alias: i.alias, name: i.name }))}
         included={included}
-        available={availableBoards.filter((b) => b.id !== editing?.id)}
+        available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
         busy={loadingBoard}
         error={boardError}
         onAdd={addBoard}
@@ -403,9 +417,24 @@ export function CalculationEditor({
         </ul>
       )}
 
+      {suggesting && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">Your suggestion</h2>
+          <textarea
+            className="field resize-none"
+            placeholder="What did you change, and why? (optional)"
+            rows={3}
+            value={message}
+            maxLength={500}
+            onChange={(e) => setMessage(e.target.value)}
+            aria-label="What the suggestion is about"
+          />
+        </section>
+      )}
+
       <div>
         <button type="submit" disabled={pending || problems.length > 0} className="btn btn-primary">
-          {pending ? "Saving…" : editing ? "Save changes" : "Save and get share link"}
+          {pending ? "Saving…" : suggesting ? "Send suggestion" : editing ? "Save changes" : "Save and get share link"}
         </button>
       </div>
     </form>
