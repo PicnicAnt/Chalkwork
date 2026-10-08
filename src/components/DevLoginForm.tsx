@@ -7,7 +7,16 @@ export type KnownUser = { name: string; boards: number };
 
 // The test login. The people who have signed in before come first, one tap each; below that,
 // a new name can be typed, which creates that user.
-export function DevLoginForm({ next, knownUsers }: { next: string; knownUsers: KnownUser[] }) {
+export function DevLoginForm({
+  next,
+  knownUsers,
+  needsCode = false,
+}: {
+  next: string;
+  knownUsers: KnownUser[];
+  /** True when the site asks for an access code before anyone can sign in. */
+  needsCode?: boolean;
+}) {
   const [state, action, pending] = useActionState<LoginState, FormData>(devSignIn, {});
 
   return (
@@ -54,6 +63,17 @@ export function DevLoginForm({ next, knownUsers }: { next: string; knownUsers: K
             maxLength={30}
             required
           />
+          {needsCode && (
+            <input
+              name="code"
+              type="password"
+              className="field text-2xl"
+              placeholder="Access code"
+              autoComplete="off"
+              aria-label="Access code"
+              required
+            />
+          )}
           {state.error && <p className="text-danger">{state.error}</p>}
           <div>
             <button type="submit" disabled={pending} className="btn btn-primary">
