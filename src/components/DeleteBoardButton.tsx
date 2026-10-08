@@ -38,22 +38,31 @@ export function DeleteBoardButton({ id, title }: { id: string; title: string }) 
         >
           Delete
         </button>
-        {error && <p className="max-w-xs text-right text-sm text-danger">{error}</p>}
+        {error && <p className="max-w-[min(20rem,calc(100vw-4rem))] text-right text-sm text-danger">{error}</p>}
       </div>
     );
   }
+  // The question is a dialog over the page, so it fits any screen width instead of hanging off the
+  // edge of the header it was opened from.
   return (
-    <div className="sketch-box flex max-w-xs flex-col gap-2 px-3 py-2" role="alertdialog" aria-label={`Delete ${title}?`}>
-      <p>
-        Delete &ldquo;{title}&rdquo; for good? This can&apos;t be undone.
-      </p>
-      <div className="flex gap-4">
-        <button type="button" disabled={pending} onClick={confirmDelete} className="btn text-danger">
-          {pending ? "Deleting…" : "Yes, delete it"}
-        </button>
-        <button type="button" disabled={pending} onClick={() => setAsking(false)} className="link">
-          Keep it
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="presentation">
+      <div
+        className="sketch-box flex w-full max-w-sm flex-col gap-3 bg-[var(--board)] px-5 py-4"
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={`Delete ${title}?`}
+      >
+        <p className="text-xl">
+          Delete &ldquo;{title}&rdquo; for good? This can&apos;t be undone.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <button type="button" disabled={pending} onClick={confirmDelete} className="btn text-danger">
+            {pending ? "Deleting…" : "Yes, delete it"}
+          </button>
+          <button type="button" disabled={pending} onClick={() => setAsking(false)} className="link">
+            Keep it
+          </button>
+        </div>
       </div>
     </div>
   );
