@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { groupOf, type Bundle } from "@/lib/boards";
 import { displayName, type Analysis } from "@/lib/formulas";
 
-type Edge = { a: string; b: string; kind: "link" | "formula" };
+type Edge = { a: string; b: string; kind: "link" | "formula" | "shared" };
 
 const NAME = "[A-Za-z_][A-Za-z0-9_]*(?:\\$[A-Za-z_][A-Za-z0-9_]*)*";
 const PLAIN_EQUATION = new RegExp(`^\\s*(${NAME})\\s*=\\s*(${NAME})\\s*$`);
 
 // The strings between boards: every link, and every formula that is just one variable equal to another.
-function edgesOf(flat: Bundle, groupOfVar: (name: string) => string): Edge[] {
+function edgesOf(flat: Bundle, analysis: Analysis, groupOfVar: (name: string) => string, shared: boolean): Edge[] {
   const found = new Map<string, Edge>();
   const add = (a: string, b: string, kind: Edge["kind"]) => {
     if (a === b || groupOfVar(a) === groupOfVar(b)) return;
@@ -21,6 +21,14 @@ function edgesOf(flat: Bundle, groupOfVar: (name: string) => string): Edge[] {
   for (const formula of flat.formulas) {
     const m = PLAIN_EQUATION.exec(formula);
     if (m) add(m[1], m[2], "formula");
+  }
+  // Optionally, every pair of variables from different boards that appear in one formula.
+  if (shared) {
+    for (const formula of analysis.formulas) {
+      if (formula.error) continue;
+      const vars = [...new Set(formula.vars)];
+      for (let i = 0; i < vars.length; i++) for (let j = i + 1; j < vars.length; j++) add(vars[i], vars[j], "shared");
+    }
   }
   return [...found.values()];
 }
@@ -35,10 +43,11 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
     return g && topGroups.includes(g) ? g : "";
   };
 
+  const [shared, setShared] = useState(false);
   const edges = useMemo(
-    () => edgesOf(flat, groupOfVar),
+    () => edgesOf(flat, analysis, groupOfVar, shared),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [flat],
+    [flat, analysis, shared],
   );
   const linked = useMemo(() => new Set(edges.flatMap((e) => [e.a, e.b])), [edges]);
 
@@ -119,16 +128,33 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
     return () => observer.disconnect();
   }, [edges]);
 
+  const option = (
+    <label className="mb-3 flex items-center gap-2 text-lg">
+      <input
+        type="checkbox"
+        checked={shared}
+        onChange={(e) => setShared(e.target.checked)}
+        className="h-5 w-5 accent-[var(--accent)]"
+      />
+      Also connect variables used in the same formula
+    </label>
+  );
+
   if (cards.length < 2 || edges.length === 0) {
     return (
+      <div>
+        {option}
       <p className="text-ink-muted">
         Nothing is linked between boards yet. Use <em>linked to</em> on a variable (or a formula such as{" "}
         <span className="text-accent-2">a = board.b</span>) and the string shows up here.
       </p>
+      </div>
     );
   }
 
   return (
+    <div>
+    {option}
     <div ref={boardRef} className="relative">
       <div className="relative z-0 grid grid-cols-1 gap-x-24 gap-y-10 pr-12 md:grid-cols-2 md:pr-0">
         {cards.map((card, i) => {
@@ -179,7 +205,8 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
               stroke="#c0281f"
               strokeWidth={2.5}
               strokeLinecap="round"
-              strokeDasharray={edge.kind === "formula" ? "7 5" : undefined}
+              strokeDasharray={edge.kind === "formula" ? "7 5" : edge.kind === "shared" ? "2 6" : undefined}
+              opacity={edge.kind === "shared" ? 0.85 : 1}
               style={{ filter: "drop-shadow(1px 2px 1.5px rgb(0 0 0 / 0.55))" }}
             />
             <g
@@ -194,8 +221,9 @@ export function ConnectionsView({ analysis, flat }: { analysis: Analysis; flat: 
         ))}
       </svg>
       <p className="mt-4 text-sm text-ink-muted">
-        Solid string: linked with <em>linked to</em>. Dashed: a formula that sets one variable equal to another.
+        Solid string: linked with <em>linked to</em>. Dashed: a formula that sets one variable equal to another. Dotted: used in the same formula.
       </p>
+    </div>
     </div>
   );
 }
