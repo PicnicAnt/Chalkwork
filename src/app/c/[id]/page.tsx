@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
 import { getCalculation } from "@/lib/db";
 import { resolveForView } from "@/lib/resolve-boards";
@@ -43,6 +44,7 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
           <Link href={`/c/${calculation.id}/edit`} className="link text-lg">
             {isOwner ? "Edit" : "Make a copy"}
           </Link>
+          {isOwner && <DeleteBoardButton id={calculation.id} title={calculation.title} />}
           <CopyLinkButton />
         </div>
       </div>

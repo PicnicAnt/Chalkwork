@@ -3,7 +3,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { parseIncludes, type Bundle } from "@/lib/boards";
 import { validateDraft, type CalculationDraft } from "@/lib/calculation";
-import { getCalculation, insertCalculation, updateCalculation as saveUpdate } from "@/lib/db";
+import { boardsUsing, deleteCalculation, getCalculation, insertCalculation, updateCalculation as saveUpdate } from "@/lib/db";
 import { resolveBoard, resolveIncludes } from "@/lib/resolve-boards";
 
 export type SaveResult = { ok: true; id: string } | { ok: false; errors: string[] };
@@ -70,4 +70,24 @@ export async function setBoardLinks(id: string, links: unknown): Promise<SaveRes
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
   if (!saveUpdate(id, user.id, prepared.draft)) return { ok: false, errors: ["Only the owner can change this board."] };
   return { ok: true, id };
+}
+
+export type DeleteResult = { ok: true } | { ok: false; error: string };
+
+// Deletes a board for good. A board that other boards use is kept, since they would break.
+export async function deleteBoard(id: string): Promise<DeleteResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in to delete a board." };
+  const stored = typeof id === "string" ? getCalculation(id) : null;
+  if (!stored || stored.ownerId !== user.id) return { ok: false, error: "Only the owner can delete this board." };
+  const users = boardsUsing(id);
+  if (users.length > 0) {
+    const names = users.slice(0, 5).map((b) => `"${b.title}"`).join(", ");
+    return {
+      ok: false,
+      error: `Other boards use this one: ${names}${users.length > 5 ? ` and ${users.length - 5} more` : ""}. Stop using it there first.`,
+    };
+  }
+  if (!deleteCalculation(id, user.id)) return { ok: false, error: "Only the owner can delete this board." };
+  return { ok: true };
 }

@@ -300,3 +300,24 @@ export function listAllCalculations(limit = 1000): BoardSummary[] {
     ownerName: r.owner_name,
   }));
 }
+
+// The boards that use this one, by title, so it is not deleted from under them.
+export function boardsUsing(id: string): { id: string; title: string }[] {
+  const rows = db
+    .prepare("SELECT id, title, board_includes FROM calculations WHERE id != ? AND board_includes LIKE ?")
+    .all(id, `%${id}%`) as { id: string; title: string; board_includes: string }[];
+  return rows
+    .filter((row) => {
+      try {
+        return (JSON.parse(row.board_includes) as { board?: string }[]).some((inc) => inc.board === id);
+      } catch {
+        return false;
+      }
+    })
+    .map(({ id, title }) => ({ id, title }));
+}
+
+// Only the owner's own board is deleted: the ownership check is part of the statement.
+export function deleteCalculation(id: string, ownerId: string): boolean {
+  return db.prepare("DELETE FROM calculations WHERE id = ? AND owner_id = ?").run(id, ownerId).changes > 0;
+}
