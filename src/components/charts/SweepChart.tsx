@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useMemo } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import type { Visualization } from "@/lib/visualizations";
 import type { VizValues } from "../viz-values";
 import { Text, Note, Figure, short, withUnit, finite, W, INK, MUTED, FAINT, FONT } from "./common";
@@ -15,12 +15,17 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
   const y0 = values.number(yName);
   const { from: optFrom, to: optTo } = viz.options ?? {};
   // Solving the board again is the slow part; it waits until typing has paused.
-  const sig = useDeferredValue(values.signature);
+  const deferred = useDeferredValue(values.signature);
+  // While the dot is being moved the chart stands still: the axes, the range and the curve are kept as they
+  // were when the move began, and are drawn again for the new value when it ends.
+  const [moving, setMoving] = useState<{ signature: string; x: number } | null>(null);
+  const sig = moving?.signature ?? deferred;
+  const anchor = moving?.x ?? x0;
 
   const line = useMemo(() => {
-    if (!finite(x0)) return null;
-    const from = optFrom ?? (x0 > 0 ? x0 * 0.5 : x0 < 0 ? x0 * 1.5 : 0);
-    const to = optTo ?? (x0 > 0 ? x0 * 1.5 : x0 < 0 ? x0 * 0.5 : 1);
+    if (!finite(anchor)) return null;
+    const from = optFrom ?? (anchor > 0 ? anchor * 0.5 : anchor < 0 ? anchor * 1.5 : 0);
+    const to = optTo ?? (anchor > 0 ? anchor * 1.5 : anchor < 0 ? anchor * 0.5 : 1);
     if (!(to > from)) return null;
     const points = Array.from({ length: POINTS }, (_, i) => {
       const x = from + ((to - from) * i) / (POINTS - 1);
@@ -30,7 +35,7 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
     return { from, to, points };
     // The values object is new on every render; what it was built from is in the signature.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sig, xName, yName, x0, optFrom, optTo]);
+  }, [sig, xName, yName, anchor, optFrom, optTo]);
 
   if (!xName || !yName) return <Note>Choose both axes to draw the chart.</Note>;
   if (xName === yName) return <Note>Choose two different variables.</Note>;
@@ -43,7 +48,7 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
   const H = 250;
   const m = { l: 76, r: 18, t: 16, b: 52 };
   let [lo, hi] = [Math.min(...ys), Math.max(...ys)];
-  if (finite(y0)) [lo, hi] = [Math.min(lo, y0), Math.max(hi, y0)];
+  if (finite(y0) && !moving) [lo, hi] = [Math.min(lo, y0), Math.max(hi, y0)];
   if (hi === lo) [lo, hi] = [lo - 1, hi + 1];
   const pad = (hi - lo) * 0.08;
   [lo, hi] = [lo - pad, hi + pad];
@@ -110,12 +115,17 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
               style={{ cursor: "ew-resize", touchAction: "none", outline: "none" }}
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture(e.pointerId);
+                setMoving({ signature: sig, x: x0 });
                 dragTo(e);
               }}
               onPointerMove={(e) => e.currentTarget.hasPointerCapture(e.pointerId) && dragTo(e)}
               onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
+              onLostPointerCapture={() => setMoving(null)}
+              onKeyUp={() => setMoving(null)}
               onKeyDown={(e) => {
                 const step = (line.to - line.from) / (POINTS - 1);
+                if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+                setMoving((m) => m ?? { signature: sig, x: x0 });
                 if (e.key === "ArrowLeft" || e.key === "ArrowDown") values.setValue(xName, Math.max(line.from, x0 - step));
                 else if (e.key === "ArrowRight" || e.key === "ArrowUp") values.setValue(xName, Math.min(line.to, x0 + step));
                 else return;
