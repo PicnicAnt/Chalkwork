@@ -111,7 +111,7 @@ function LockButton({
             : "Tap to lock this value"
       }
       className={`shrink-0 p-1 transition-colors ${
-        locked ? "text-accent" : disabled ? "cursor-not-allowed text-ink-faint opacity-40" : "text-ink-faint hover:text-ink-muted"
+        locked ? "text-locked" : disabled ? "cursor-not-allowed text-ink-faint opacity-40" : "text-ink-faint hover:text-ink-muted"
       }`}
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

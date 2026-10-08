@@ -53,6 +53,7 @@
   --color-ink-faint: var(--ink-faint);
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
+  --color-locked: var(--locked);
   --color-op: var(--op);
   --color-note: var(--note);
   --color-danger: var(--danger);
