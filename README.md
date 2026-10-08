@@ -26,6 +26,10 @@ Open http://localhost:3000.
 - **Users and ownership:** every calculation belongs to the user who created it (`owner_id`). Anyone with the link can view and use a shared calculation; only its owner can edit it (`/c/<id>/edit` saves in place for the owner, and gives everyone else a copy of their own). Creating or copying needs a signed-in user. The home page lists the signed-in user's calculations, and **Browse** (`/boards`, signed-in users only) lists every board by every user with a live search over titles and descriptions (all words must match, case-insensitive; the query is kept in the address as `?q=`). Calculations made before users existed have no owner: they can be viewed and copied but not edited.
 - **Sign-in:** `src/lib/auth.ts` is the whole sign-in layer. A *provider* proves who someone is and produces a profile (`{ provider, accountId, name }`); `signInWithProfile()` turns it into a user (created on first sight) and starts a database-backed session in an httpOnly cookie (only a hash of the token is stored). The rest of the app only asks `getCurrentUser()` and never mentions providers. The only provider today is the **test login** (`src/lib/dev-login.ts`, page `/login`): people who have signed in before are listed first (one tap each, with their board count) and a new name can be typed to create a user; there is no password, so it is **not safe on the internet**. Set `CHALKWORK_DEV_LOGIN=0` to turn it off. To add Google, write a route that completes Google's OAuth flow, builds a profile from Google's id and name, and calls `signInWithProfile()`; set `COOKIE_SECURE=1` once the site is served over https.
 
+## Sample boards
+
+`node scripts/seed.mjs` creates three boards for the test user Martin: **RPG character stats**, **Path of Exile DPS calculator**, and **Melee build: character and damage**, which uses the other two and links the damage calculator's accuracy and increased damage to the character's. Running it again doesn't create duplicates.
+
 ## Layout
 
 - `src/app/page.tsx`: home page
