@@ -104,3 +104,38 @@ add({
 });
 
 console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+
+// A fight that connects three boards: the character, the damage calculator and a monster.
+const monster = add({
+  title: "Monster stats",
+  description: "A monster's life, evasion and hit damage from its level.",
+  formulas: [
+    "life = 20 * monster_level ^ 1.5 * life_multiplier",
+    "evasion = 140 * monster_level",
+    "hit_damage = 6 * monster_level",
+  ],
+  values: { monster_level: "84", life_multiplier: "1" },
+  labels: { life: "Life", evasion: "Evasion rating", hit_damage: "Damage per hit", monster_level: "Monster level", life_multiplier: "Life multiplier" },
+  decimals: { life: "0", evasion: "0", hit_damage: "0" },
+});
+
+add({
+  title: "Boss fight: player against boss",
+  description: "Connects the character, the damage calculator and a monster: how long the boss lives and how many hits the player survives.",
+  formulas: ["time_to_kill = boss.life / dps.dps", "hits_to_die = player.max_life / boss.hit_damage"],
+  includes: [
+    { board: character, alias: "player", name: "Player" },
+    { board: dps, alias: "dps", name: "Player damage" },
+    { board: monster, alias: "boss", name: "Boss" },
+  ],
+  links: {
+    dps$accuracy: "player$accuracy",
+    dps$inc_dmg: "player$bonus_damage",
+    dps$enemy_evasion: "boss$evasion",
+  },
+  labels: { time_to_kill: "Time to kill the boss", hits_to_die: "Hits the player survives" },
+  units: { time_to_kill: "s" },
+  decimals: { time_to_kill: "1", hits_to_die: "1" },
+});
+
+console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
