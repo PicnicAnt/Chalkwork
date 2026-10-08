@@ -221,3 +221,27 @@ add({
 });
 
 console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+
+// A donut (a torus) from two circles, by Pappus's theorem: the tube is a circle that is swept once
+// around a second circle, the path of its centre. Volume = tube area x ring circumference, and
+// surface = tube circumference x ring circumference.
+add({
+  title: "Donut",
+  description: "A donut from two circles: the cross-section of the dough and the ring it is swept around. Volume and surface follow from their areas and circumferences.",
+  formulas: [
+    "volume = tube.area * ring.circumference",
+    "surface = tube.circumference * ring.circumference",
+    "outer_diameter = 2 * (ring.radius + tube.radius)",
+    "hole_diameter = 2 * (ring.radius - tube.radius)",
+  ],
+  includes: [
+    { board: circle, alias: "tube", name: "Dough (cross-section)" },
+    { board: circle, alias: "ring", name: "Ring (path of the dough's centre)" },
+  ],
+  values: { tube$radius: "1.5", ring$radius: "4" },
+  labels: { volume: "Volume", surface: "Surface", outer_diameter: "Outer diameter", hole_diameter: "Hole diameter" },
+  units: { volume: "cm³", surface: "cm²", outer_diameter: "cm", hole_diameter: "cm", tube$radius: "cm", tube$diameter: "cm", tube$circumference: "cm", tube$area: "cm²", ring$radius: "cm", ring$diameter: "cm", ring$circumference: "cm", ring$area: "cm²" },
+  decimals: { volume: 2, surface: 2, outer_diameter: 2, hole_diameter: 2 },
+});
+
+console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
