@@ -13,6 +13,7 @@
   --ink-muted: rgb(30 37 51 / 0.6);
   --ink-faint: rgb(30 37 51 / 0.22);
   --accent: #1f5fbf;
+  --locked: #a8760a;
   --accent-2: #1e8a4c;
   --op: #b4540a;
   --note: #2a6fa6;
@@ -32,6 +33,7 @@
   --ink-muted: rgb(238 240 230 / 0.6);
   --ink-faint: rgb(238 240 230 / 0.25);
   --accent: #f5e58c;
+  --locked: #f5e58c;
   --accent-2: #9fd6f2;
   --op: #f2b985;
   --note: #9fd6f2;
@@ -268,6 +270,11 @@ h3,
   }
   /* Read-only: fully decided by the locked values or formulas. The value alone is written in blue,
      the colour of constants, and underlined twice like a final answer. */
+  /* A value you typed, and which is therefore kept as it is: yellow on the blackboard, a dark gold on the
+     whiteboard. */
+  .field-locked {
+    color: var(--locked);
+  }
   .field-decided,
   .field-decided:focus {
     cursor: default;

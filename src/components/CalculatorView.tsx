@@ -369,7 +369,7 @@ const VariableRow = memo(function VariableRow({
           ref={(el) => register(name, el)}
           style={{ width: `${Math.max(value.length, readOnly ? 1 : 3) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
           className={`field min-w-0 flex-none rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
-            readOnly ? "field-decided" : "field-bare"
+            readOnly ? "field-decided" : locked ? "field-bare field-locked" : "field-bare"
           }`}
           inputMode="decimal"
           placeholder="?"
