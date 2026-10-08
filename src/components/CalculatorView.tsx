@@ -260,7 +260,7 @@ const VariableRow = memo(function VariableRow({
         )}
       </span>
       {problem && <span className="text-sm text-danger">{problem}</span>}
-      {description && !problem && <span className="pt-0.5 text-base leading-snug text-ink-muted">{description}</span>}
+      {description && !problem && <span className="pt-0.5 text-base leading-snug text-note">{description}</span>}
     </div>
   );
 });

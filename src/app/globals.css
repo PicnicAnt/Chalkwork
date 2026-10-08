@@ -15,6 +15,7 @@
   --accent: #1f5fbf;
   --accent-2: #1e8a4c;
   --op: #b4540a;
+  --note: #2a6fa6;
   --danger: #c8312b;
   --frame: #c3c8ce;
   --frame-dark: #8f969e;
@@ -33,6 +34,7 @@
   --accent: #f5e58c;
   --accent-2: #9fd6f2;
   --op: #f2b985;
+  --note: #9fd6f2;
   --danger: #f6a5ae;
   --frame: #7a532e;
   --frame-dark: #4e3319;
@@ -50,6 +52,7 @@
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
   --color-op: var(--op);
+  --color-note: var(--note);
   --color-danger: var(--danger);
   --font-sans: var(--font-hand);
   --font-mono: var(--font-hand);
