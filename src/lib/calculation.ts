@@ -21,7 +21,13 @@ export type CalculationDraft = {
 export type Calculation = CalculationDraft & {
   id: string;
   createdAt: string;
+  /** The user who owns it, or null for calculations made before there were users. */
+  ownerId: string | null;
+  ownerName: string | null;
 };
+
+/** What the browser gets: everything except the owner's id. */
+export type PublicCalculation = Omit<Calculation, "ownerId">;
 
 export const LIMITS = {
   title: 120,

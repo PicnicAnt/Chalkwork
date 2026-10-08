@@ -1,6 +1,6 @@
 import "server-only";
 import Database from "better-sqlite3";
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import type { Calculation, CalculationDraft } from "./calculation";
@@ -10,6 +10,7 @@ mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(path.join(dataDir, "chalkwork.db"));
 db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 
 const version = db.pragma("user_version", { simple: true }) as number;
 if (version < 2) {
@@ -27,8 +28,8 @@ if (version < 2) {
   `);
 }
 if (version < 3) {
-  // Editing: the creator gets a secret edit key; only its hash is stored.
-  // Calculations made before this have no key and can only be copied.
+  // Editing used to be done with a secret edit key (edit_key_hash). Ownership by user replaced it
+  // in version 8; the column is left in place, unused.
   db.exec(`
     ALTER TABLE calculations ADD COLUMN edit_key_hash TEXT;
     ALTER TABLE calculations ADD COLUMN updated_at TEXT;
@@ -55,6 +56,90 @@ if (version < 7) {
   db.exec(`ALTER TABLE calculations ADD COLUMN variable_labels TEXT NOT NULL DEFAULT '{}';`);
   db.pragma("user_version = 7");
 }
+if (version < 8) {
+  // Users, their login sessions, and the owner of each calculation. A user is identified by the
+  // sign-in provider that vouched for them ("dev" for the test login, later "google") and that
+  // provider's own id for them. Calculations made before this have no owner (owner_id is NULL):
+  // anyone can view them, nobody can edit them, and anyone signed in can copy them.
+  db.exec(`
+    CREATE TABLE users (
+      id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      UNIQUE (provider, account_id)
+    );
+    CREATE TABLE sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      expires_at TEXT NOT NULL
+    );
+    CREATE INDEX sessions_user ON sessions(user_id);
+    ALTER TABLE calculations ADD COLUMN owner_id TEXT REFERENCES users(id);
+    CREATE INDEX calculations_owner ON calculations(owner_id);
+  `);
+  db.pragma("user_version = 8");
+}
+
+// ---------------------------------------------------------------------------
+// Users and sessions
+
+export type UserRow = { id: string; provider: string; name: string };
+
+// Finds the user for this provider account, or creates one. The name is only set on creation, so
+// a provider can't rename someone later by sending a different name.
+export function upsertUser(profile: { provider: string; accountId: string; name: string }): UserRow {
+  const existing = db
+    .prepare("SELECT id, provider, name FROM users WHERE provider = ? AND account_id = ?")
+    .get(profile.provider, profile.accountId) as UserRow | undefined;
+  if (existing) return existing;
+  const id = randomBytes(9).toString("base64url");
+  db.prepare("INSERT INTO users (id, provider, account_id, name) VALUES (?, ?, ?, ?)").run(
+    id,
+    profile.provider,
+    profile.accountId,
+    profile.name,
+  );
+  return { id, provider: profile.provider, name: profile.name };
+}
+
+export function listUsers(provider: string, limit = 12): UserRow[] {
+  return db
+    .prepare("SELECT id, provider, name FROM users WHERE provider = ? ORDER BY created_at DESC LIMIT ?")
+    .all(provider, limit) as UserRow[];
+}
+
+// Sessions are looked up by the SHA-256 of the cookie's token, so the database never holds a value
+// that could be used to sign in.
+export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
+export function createSession(tokenHash: string, userId: string, expiresAt: Date) {
+  db.prepare("DELETE FROM sessions WHERE expires_at < ?").run(new Date().toISOString());
+  db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)").run(
+    tokenHash,
+    userId,
+    expiresAt.toISOString(),
+  );
+}
+
+export function getSessionUser(tokenHash: string): UserRow | null {
+  const row = db
+    .prepare(
+      `SELECT u.id, u.provider, u.name FROM sessions s JOIN users u ON u.id = s.user_id
+       WHERE s.token_hash = ? AND s.expires_at > ?`,
+    )
+    .get(tokenHash, new Date().toISOString()) as UserRow | undefined;
+  return row ?? null;
+}
+
+export function deleteSession(tokenHash: string) {
+  db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash);
+}
+
+// ---------------------------------------------------------------------------
+// Calculations
 
 type Row = {
   id: string;
@@ -67,16 +152,16 @@ type Row = {
   variable_decimals: string;
   variable_labels: string;
   created_at: string;
-  edit_key_hash: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
 };
 
-const hashKey = (key: string) => createHash("sha256").update(key).digest();
-
-export function insertCalculation(draft: CalculationDraft): { id: string; editKey: string } {
+export function insertCalculation(draft: CalculationDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
-  const editKey = randomBytes(18).toString("base64url");
   db.prepare(
-    "INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions, variable_units, variable_decimals, variable_labels, edit_key_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
+       variable_units, variable_decimals, variable_labels, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     draft.title,
@@ -87,49 +172,64 @@ export function insertCalculation(draft: CalculationDraft): { id: string; editKe
     JSON.stringify(draft.units),
     JSON.stringify(draft.decimals),
     JSON.stringify(draft.labels),
-    hashKey(editKey).toString("hex"),
+    ownerId,
   );
-  return { id, editKey };
+  return id;
 }
 
-export function canEdit(id: string, editKey: string): boolean {
-  const row = db.prepare("SELECT edit_key_hash FROM calculations WHERE id = ?").get(id) as
-    | Pick<Row, "edit_key_hash">
-    | undefined;
-  if (!row?.edit_key_hash) return false;
-  return timingSafeEqual(Buffer.from(row.edit_key_hash, "hex"), hashKey(editKey));
+// Only the owner's own calculation is changed: the ownership check is part of the statement.
+export function updateCalculation(id: string, ownerId: string, draft: CalculationDraft): boolean {
+  const result = db
+    .prepare(
+      `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
+         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_labels = ?,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE id = ? AND owner_id = ?`,
+    )
+    .run(
+      draft.title,
+      draft.description,
+      JSON.stringify(draft.formulas),
+      JSON.stringify(draft.values),
+      JSON.stringify(draft.descriptions),
+      JSON.stringify(draft.units),
+      JSON.stringify(draft.decimals),
+      JSON.stringify(draft.labels),
+      id,
+      ownerId,
+    );
+  return result.changes > 0;
 }
 
-export function updateCalculation(id: string, draft: CalculationDraft) {
-  db.prepare(
-    `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?, variable_descriptions = ?,
-       variable_units = ?, variable_decimals = ?, variable_labels = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
-  ).run(
-    draft.title,
-    draft.description,
-    JSON.stringify(draft.formulas),
-    JSON.stringify(draft.values),
-    JSON.stringify(draft.descriptions),
-    JSON.stringify(draft.units),
-    JSON.stringify(draft.decimals),
-    JSON.stringify(draft.labels),
-    id,
-  );
-}
+const parse = (row: Row): Calculation => ({
+  id: row.id,
+  title: row.title,
+  description: row.description,
+  formulas: JSON.parse(row.formulas),
+  values: JSON.parse(row.input_values),
+  descriptions: JSON.parse(row.variable_descriptions || "{}"),
+  units: JSON.parse(row.variable_units || "{}"),
+  labels: JSON.parse(row.variable_labels || "{}"),
+  decimals: JSON.parse(row.variable_decimals || "{}"),
+  createdAt: row.created_at,
+  ownerId: row.owner_id,
+  ownerName: row.owner_name,
+});
 
 export function getCalculation(id: string): Calculation | null {
-  const row = db.prepare("SELECT * FROM calculations WHERE id = ?").get(id) as Row | undefined;
-  if (!row) return null;
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    formulas: JSON.parse(row.formulas),
-    values: JSON.parse(row.input_values),
-    descriptions: JSON.parse(row.variable_descriptions || "{}"),
-    units: JSON.parse(row.variable_units || "{}"),
-    decimals: JSON.parse(row.variable_decimals || "{}"),
-    labels: JSON.parse(row.variable_labels || "{}"),
-    createdAt: row.created_at,
-  };
+  const row = db
+    .prepare(
+      `SELECT c.*, u.name AS owner_name FROM calculations c LEFT JOIN users u ON u.id = c.owner_id
+       WHERE c.id = ?`,
+    )
+    .get(id) as Row | undefined;
+  return row ? parse(row) : null;
+}
+
+export function listCalculationsByOwner(ownerId: string): { id: string; title: string; createdAt: string }[] {
+  return (
+    db
+      .prepare("SELECT id, title, created_at FROM calculations WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100")
+      .all(ownerId) as { id: string; title: string; created_at: string }[]
+  ).map((r) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
 }

@@ -5,7 +5,6 @@ import { useMemo, useState, useTransition } from "react";
 import { createCalculation, updateCalculation } from "@/app/actions";
 import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation";
 import { analyzeFormulas, formulaProblems } from "@/lib/formulas";
-import { rememberCalculation } from "@/lib/my-calculations";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
@@ -95,14 +94,14 @@ const EXAMPLE = {
 };
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
-// existing one; with `initial` but no `editing`, it saves a new copy.
+// existing one (which the signed-in user owns); with `initial` but no `editing`, it saves a new copy.
 export function CalculationEditor({
   initial,
   editing,
   heading = "New calculation",
 }: {
   initial?: CalculationDraft;
-  editing?: { id: string; editKey: string };
+  editing?: { id: string };
   heading?: string;
 }) {
   const router = useRouter();
@@ -165,13 +164,12 @@ export function CalculationEditor({
     startTransition(async () => {
       const draft = { title, description, formulas, values, descriptions, units, labels, decimals };
       const result = editing
-        ? await updateCalculation(editing.id, editing.editKey, draft)
+        ? await updateCalculation(editing.id, draft)
         : await createCalculation(draft);
       if (!result.ok) {
         setErrors(result.errors);
         return;
       }
-      rememberCalculation({ id: result.id, title: result.title, createdAt: result.createdAt, editKey: result.editKey });
       router.push(`/c/${result.id}`);
     });
   }

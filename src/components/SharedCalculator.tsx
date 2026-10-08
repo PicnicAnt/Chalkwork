@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Calculation } from "@/lib/calculation";
+import type { PublicCalculation } from "@/lib/calculation";
 import { analyzeFormulas } from "@/lib/formulas";
 import { CalculatorPanel } from "./CalculatorView";
 
-export function SharedCalculator({ calculation }: { calculation: Calculation }) {
+export function SharedCalculator({ calculation }: { calculation: PublicCalculation }) {
   const analysis = useMemo(() => analyzeFormulas(calculation.formulas), [calculation.formulas]);
   const [values, setValues] = useState(calculation.values);
   // Bumping the key remounts the panel, which also forgets the edit history.

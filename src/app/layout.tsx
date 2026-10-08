@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cabin_Sketch, Patrick_Hand } from "next/font/google";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserMenu } from "@/components/UserMenu";
 import "./globals.css";
 
 const hand = Patrick_Hand({
@@ -45,14 +46,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-2 py-3 sm:px-4 sm:py-6">
           <div className="board flex flex-1 flex-col">
-            <header className="relative flex items-center justify-between gap-3 px-4 pt-4 sm:px-8 sm:pt-6">
+            <header className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 pt-4 sm:px-8 sm:pt-6">
               <Link href="/" className="sketch text-2xl font-bold sm:text-3xl">
                 Chalkwork
               </Link>
-              <nav className="flex items-center gap-3">
+              <nav className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Link href="/new" className="link text-lg">
                   New
                 </Link>
+                <UserMenu />
                 <ThemeToggle />
               </nav>
             </header>

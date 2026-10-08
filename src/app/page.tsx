@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { MyCalculations } from "@/components/MyCalculations";
+import { YourCalculations } from "@/components/YourCalculations";
+import { getCurrentUser } from "@/lib/auth";
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUser();
+
   return (
     <>
       <section className="py-6 sm:py-10">
@@ -18,10 +21,10 @@ export default function Home() {
           dps = avg_hit * aps * crit_factor * hit_chance / 100
         </p>
         <Link href="/new" className="btn btn-primary mt-8">
-          Start a calculation
+          {user ? "Start a calculation" : "Sign in to start"}
         </Link>
       </section>
-      <MyCalculations />
+      {user && <YourCalculations user={user} />}
     </>
   );
 }
