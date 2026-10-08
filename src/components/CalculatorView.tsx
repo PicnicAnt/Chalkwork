@@ -26,6 +26,16 @@ function compute(analysis: Analysis, values: Record<string, string>, locked: str
   return { plan, result, display, broken: brokenFormulas(analysis, plan, result.values) };
 }
 
+// The variables that start out locked: those with a starting value, inputs before results, as far as
+// the formulas allow every one of them to be kept at once.
+function initialLocks(analysis: Analysis, values: Record<string, string>): string[] {
+  const defined = new Set(analysis.formulas.filter((f) => !f.error).map((f) => f.name));
+  const valued = analysis.variables.map((v) => v.name).filter((name) => parseValue(values[name] ?? "") !== undefined);
+  const ordered = [...valued.filter((n) => !defined.has(n)), ...valued.filter((n) => defined.has(n))];
+  const held = planSolve(analysis, ordered).held;
+  return ordered.filter((n) => held.includes(n));
+}
+
 type Computed = ReturnType<typeof compute>;
 type Rejected = { name: string; text: string; reason: string };
 
@@ -64,8 +74,9 @@ export function CalculatorPanel({
   /** Decimals to show per variable name for calculated values. Display only. */
   decimals?: Record<string, number>;
 }) {
-  // Locked variables, in the order they were locked.
-  const [locked, setLocked] = useState<string[]>([]);
+  // Locked variables, in the order they were locked. A variable that has a value when the board
+  // loads starts locked, so it is kept; values the formulas leave no room for are left unlocked.
+  const [locked, setLocked] = useState<string[]>(() => initialLocks(analysis, values));
   const inputs = useRef(new Map<string, HTMLInputElement>());
   // A value that couldn't be applied stays visible in its field with the reason.
   const [rejected, setRejected] = useState<Rejected | null>(null);
