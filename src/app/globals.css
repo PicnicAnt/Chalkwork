@@ -275,6 +275,9 @@ h3,
   .field-decided:focus {
     cursor: default;
     border-bottom-color: transparent;
+    /* A value that is fixed (decided by the locked values or a formula) is written in blue, the colour
+       of constants, as well as being doubly underlined. */
+    color: var(--note);
   }
 
   .btn {
