@@ -9,9 +9,12 @@ import { ConnectionsView } from "./ConnectionsView";
 // `flat` is the board together with the boards it uses, as one set of formulas and settings.
 export function SharedCalculator({
   flat,
+  equations = [],
   editable,
 }: {
   flat: Bundle;
+  /** The board's own formulas as written, shown read-only below the variables. */
+  equations?: string[];
   /** Set when the signed-in user owns the board: the Connections view can then change its links. */
   editable?: { boardId: string; ownLinks: Record<string, string> };
 }) {
@@ -78,6 +81,18 @@ export function SharedCalculator({
           links={flat.links}
           groups={flat.groups}
         />
+      )}
+      {view === "board" && equations.length > 0 && (
+        <section className="mt-6 flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">Equations</h2>
+          <ul className="sketch-box flex flex-col gap-1 px-4 py-3 text-xl text-accent-2" aria-label="The equations of this board, read only">
+            {equations.map((text, i) => (
+              <li key={i} className="break-words">
+                {text}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );
