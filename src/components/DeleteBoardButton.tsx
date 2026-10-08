@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { deleteBoard } from "@/app/actions";
 
 // Deleting is permanent, so it takes two steps: the button, then a question to confirm.
-export function DeleteBoardButton({ id, title }: { id: string; title: string }) {
+export function DeleteBoardButton({ id, title, canDelete }: { id: string; title: string; canDelete: boolean }) {
   const router = useRouter();
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +32,11 @@ export function DeleteBoardButton({ id, title }: { id: string; title: string }) 
           type="button"
           onClick={() => {
             setError(null);
-            setAsking(true);
+            // Everyone sees the button; only the owner gets as far as the question.
+            if (canDelete) setAsking(true);
+            else setError("Only the owner can delete this board.");
           }}
-          className="link text-lg text-danger"
+          className={`link text-lg text-danger ${canDelete ? "" : "opacity-60"}`}
         >
           Delete
         </button>

@@ -57,7 +57,7 @@ export default async function CalculationPage({ params }: PageProps<"/c/[id]">) 
           <Link href={`/c/${calculation.id}/edit`} className="link text-lg">
             {isOwner ? "Edit" : "Make a copy"}
           </Link>
-          {isOwner && <DeleteBoardButton id={calculation.id} title={calculation.title} />}
+          <DeleteBoardButton id={calculation.id} title={calculation.title} canDelete={isOwner} />
           <CopyLinkButton />
         </div>
       </div>
