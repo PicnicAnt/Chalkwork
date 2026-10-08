@@ -361,13 +361,14 @@ const VariableRow = memo(function VariableRow({
           {label || name}
         </label>
         <span className="text-xl text-ink-muted">=</span>
-        {/* A fixed value is only as wide as its text, so the double line sits under the value alone. */}
-        <span className="flex min-w-0 flex-1">
+        {/* The field is only as wide as its text, so the unit follows the value directly and the double line of a
+            fixed value sits under the value alone. */}
+        <span className="flex min-w-0 flex-1 items-baseline">
         <input
           id={id}
           ref={(el) => register(name, el)}
-          style={readOnly ? { width: `${Math.max(value.length, 1) + 1}ch`, maxWidth: "100%" } : undefined}
-          className={`field min-w-0 rounded-sm text-2xl ${readOnly ? "flex-none" : "flex-1"} ${problem ? "!border-danger" : ""} ${
+          style={{ width: `${Math.max(value.length, readOnly ? 1 : 3) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
+          className={`field min-w-0 flex-none rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
             readOnly ? "field-decided" : "field-bare"
           }`}
           inputMode="decimal"
@@ -378,8 +379,8 @@ const VariableRow = memo(function VariableRow({
           onChange={(e) => onEdit(name, e.target.value)}
           onBlur={() => onBlur(name)}
         />
-        </span>
         {unit && <span className="shrink-0 text-lg text-ink-muted">{unit}</span>}
+        </span>
         {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
         {readOnly ? (
           <span className="w-[30px] shrink-0" aria-hidden />
