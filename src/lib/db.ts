@@ -134,6 +134,11 @@ if (version < 13) {
   }
   db.pragma("user_version = 13");
 }
+if (version < 14) {
+  // Drawings that follow a board's variables, as JSON: [{ "type": "rectangle", "map": { "width": "w" } }].
+  db.exec(`ALTER TABLE calculations ADD COLUMN visualizations TEXT NOT NULL DEFAULT '[]';`);
+  db.pragma("user_version = 14");
+}
 
 // ---------------------------------------------------------------------------
 // Users and sessions
@@ -210,6 +215,7 @@ type Row = {
   variable_hidden: string;
   board_includes: string;
   variable_links: string;
+  visualizations: string;
   created_at: string;
   owner_id: string | null;
   owner_name: string | null;
@@ -219,8 +225,8 @@ export function insertCalculation(draft: CalculationDraft, ownerId: string): str
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, variable_links, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     draft.title,
@@ -234,6 +240,7 @@ export function insertCalculation(draft: CalculationDraft, ownerId: string): str
     JSON.stringify(draft.hidden),
     JSON.stringify(draft.includes),
     JSON.stringify(draft.links),
+    JSON.stringify(draft.visualizations),
     ownerId,
   );
   return id;
@@ -245,7 +252,7 @@ export function updateCalculation(id: string, ownerId: string, draft: Calculatio
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
          variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_labels = ?, variable_hidden = ?,
-         board_includes = ?, variable_links = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         board_includes = ?, variable_links = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
     .run(
@@ -260,6 +267,7 @@ export function updateCalculation(id: string, ownerId: string, draft: Calculatio
       JSON.stringify(draft.hidden),
       JSON.stringify(draft.includes),
       JSON.stringify(draft.links),
+      JSON.stringify(draft.visualizations),
       id,
       ownerId,
     );
@@ -279,6 +287,7 @@ const parse = (row: Row): Calculation => ({
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
   links: JSON.parse(row.variable_links || "{}"),
+  visualizations: JSON.parse(row.visualizations || "[]"),
   createdAt: row.created_at,
   ownerId: row.owner_id,
   ownerName: row.owner_name,

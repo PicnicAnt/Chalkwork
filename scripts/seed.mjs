@@ -17,12 +17,18 @@ const find = (title) => db.prepare("SELECT id FROM calculations WHERE owner_id =
 
 function add(b) {
   const existing = find(b.title);
-  if (existing) return existing;
+  if (existing) {
+    // Drawings are added to a board that has none yet; what someone set up there is left alone.
+    if (b.visualizations) {
+      db.prepare("UPDATE calculations SET visualizations = ? WHERE id = ? AND visualizations = '[]'").run(JSON.stringify(b.visualizations), existing);
+    }
+    return existing;
+  }
   const id = newId();
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, variable_links, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     b.title,
@@ -36,6 +42,7 @@ function add(b) {
     JSON.stringify(b.hidden ?? {}),
     JSON.stringify(b.includes ?? []),
     JSON.stringify(b.links ?? {}),
+    JSON.stringify(b.visualizations ?? []),
     owner.id,
   );
   return id;
@@ -143,6 +150,7 @@ console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id
 // Shapes, and boards that combine them.
 const circle = add({
   title: "Circle",
+  visualizations: [{ type: "circle", map: { radius: "radius" } }],
   description: "Radius, diameter, circumference and area of a circle.",
   formulas: ["diameter = 2 * radius", "circumference = pi * diameter", "area = pi * radius ^ 2"],
   values: { radius: "4" },
@@ -152,6 +160,7 @@ const circle = add({
 
 const rectangle = add({
   title: "Rectangle",
+  visualizations: [{ type: "rectangle", map: { width: "width", height: "height" } }],
   description: "Width, height, area, perimeter and diagonal of a rectangle.",
   formulas: ["area = width * height", "perimeter = 2 * (width + height)", "diagonal = sqrt(width ^ 2 + height ^ 2)"],
   values: { width: "12", height: "8" },
@@ -161,6 +170,7 @@ const rectangle = add({
 
 const triangle = add({
   title: "Triangle",
+  visualizations: [{ type: "triangle", map: { base: "base", height: "height" } }],
   description: "Base, height and area of a triangle.",
   formulas: ["area = base * height / 2"],
   values: { base: "12", height: "4" },
@@ -170,6 +180,7 @@ const triangle = add({
 
 add({
   title: "Cylinder from a circle",
+  visualizations: [{ type: "cylinder", map: { radius: "base$radius", height: "height" } }],
   description: "A cylinder is a circle with a height: volume and surface come from the circle's area and circumference.",
   formulas: ["volume = base.area * height", "surface = 2 * base.area + base.circumference * height"],
   includes: [{ board: circle, alias: "base", name: "Base circle" }],
@@ -199,6 +210,7 @@ console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id
 // base is an edge of the rectangle and whose height is the slant height.
 add({
   title: "Pyramid",
+  visualizations: [{ type: "pyramid", map: { width: "base$width", depth: "base$height", height: "height" } }],
   description: "A rectangular pyramid built from a rectangle (the base) and two triangles (the side faces): volume and surface from the base and the height.",
   formulas: [
     "volume = base.area * height / 3",
@@ -227,6 +239,7 @@ console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id
 // surface = tube circumference x ring circumference.
 add({
   title: "Donut",
+  visualizations: [{ type: "donut", map: { ring_radius: "ring$radius", tube_radius: "tube$radius" } }],
   description: "A donut from two circles: the cross-section of the dough and the ring it is swept around. Volume and surface follow from their areas and circumferences.",
   formulas: [
     "volume = tube.area * ring.circumference",

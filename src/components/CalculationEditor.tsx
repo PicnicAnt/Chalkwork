@@ -17,6 +17,8 @@ import { LIMITS, splitFormulas, type CalculationDraft } from "@/lib/calculation"
 import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardsSection, type BoardChoice } from "./BoardsSection";
+import { VisualizationEditor } from "./VisualizationEditor";
+import type { Visualization } from "@/lib/visualizations";
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
@@ -135,6 +137,8 @@ export function CalculationEditor({
   const [hidden, setHidden] = useState<Record<string, boolean>>(initial?.hidden ?? {});
   // Variables linked to another variable (this board's own links), by variable name.
   const [links, setLinks] = useState<Record<string, string>>(initial?.links ?? {});
+  // Drawings of this board that follow its variables (those of used boards come with them).
+  const [visualizations, setVisualizations] = useState<Visualization[]>(initial?.visualizations ?? []);
   // Held as typed so the field can be emptied; turned into numbers when shown and saved.
   const [decimalText, setDecimalText] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(initial?.decimals ?? {}).map(([k, v]) => [k, String(v)])),
@@ -161,8 +165,8 @@ export function CalculationEditor({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, links }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, links, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, links, visualizations }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, links, visualizations, included],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
@@ -228,6 +232,10 @@ export function CalculationEditor({
     setHidden((h) => renameAliasKeys(h, from, to));
     setDecimalText((d) => renameAliasKeys(d, from, to));
     setLinks((l) => renameAliasLinks(l, from, to));
+    // Drawings that read a variable of that board follow it.
+    setVisualizations((vs) =>
+      vs.map((v) => ({ ...v, map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, name.startsWith(from + "$") ? to + name.slice(from.length) : name])) })),
+    );
   }
 
   function loadExample() {
@@ -242,6 +250,7 @@ export function CalculationEditor({
     setDecimalText(EXAMPLE.decimals);
     setIncluded([]);
     setLinks({});
+    setVisualizations([]);
     setBoardError(null);
     setErrors([]);
   }
@@ -256,12 +265,15 @@ export function CalculationEditor({
     setHidden((h) => renameKey(h, from, to));
     setDecimalText((d) => renameKey(d, from, to));
     setLinks((l) => renameLinks(l, from, to));
+    setVisualizations((vs) =>
+      vs.map((v) => ({ ...v, map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, name === from ? to : name])) })),
+    );
   }
 
   function save() {
     startTransition(async () => {
       const includes = included.map((i) => (i.name ? { board: i.board, alias: i.alias, name: i.name } : { board: i.board, alias: i.alias }));
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes, links };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -358,6 +370,10 @@ export function CalculationEditor({
         onRemove={(alias) => {
           setIncluded((list) => list.filter((i) => i.alias !== alias));
           setLinks((l) => dropAliasLinks(l, alias));
+          // A drawing can't read a variable of a board that is no longer used.
+          setVisualizations((vs) =>
+            vs.map((v) => ({ ...v, map: Object.fromEntries(Object.entries(v.map).filter(([, name]) => !name.startsWith(alias + "$"))) })),
+          );
         }}
       />
 
@@ -386,6 +402,13 @@ export function CalculationEditor({
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
       />
 
+      <VisualizationEditor
+        analysis={analysis}
+        labels={flat.bundle.labels}
+        visualizations={visualizations}
+        onChange={setVisualizations}
+      />
+
       <section className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold">Try it</h2>
@@ -406,6 +429,7 @@ export function CalculationEditor({
           revealHidden
           decimals={flat.bundle.decimals}
           groups={flat.bundle.groups}
+          visualizations={flat.bundle.visualizations}
         />
       </section>
 

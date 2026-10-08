@@ -80,6 +80,7 @@ export function SharedCalculator({
           decimals={flat.decimals}
           links={flat.links}
           groups={flat.groups}
+          visualizations={flat.visualizations}
         />
       )}
       {view === "board" && equations.length > 0 && (

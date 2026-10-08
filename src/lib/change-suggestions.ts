@@ -60,6 +60,7 @@ export function diffDrafts(base: CalculationDraft, next: CalculationDraft): stri
   const hiddenOnly = (h: Record<string, boolean>) => Object.fromEntries(Object.entries(h).filter(([, v]) => v));
   compareMap(out, (n) => `${n} hidden`, hiddenOnly(base.hidden), hiddenOnly(next.hidden), (v) => (v ? "yes" : "no"));
   compareMap(out, (n) => `Link of ${n}`, base.links, next.links, (v) => (v === undefined ? "none" : displayName(v)));
+  if (JSON.stringify(base.visualizations ?? []) !== JSON.stringify(next.visualizations ?? [])) out.push("Drawings changed");
   return out;
 }
 
@@ -77,5 +78,6 @@ export function draftOf(c: CalculationDraft): CalculationDraft {
     decimals: c.decimals,
     includes: c.includes,
     links: c.links,
+    visualizations: c.visualizations,
   };
 }

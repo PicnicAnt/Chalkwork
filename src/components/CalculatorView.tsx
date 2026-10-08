@@ -13,6 +13,8 @@ import {
   type Analysis,
 } from "@/lib/formulas";
 import { groupOf } from "@/lib/boards";
+import type { BundleVisualization } from "@/lib/visualizations";
+import { VisualizationView, type VizValues } from "./Visualization";
 
 function compute(analysis: Analysis, values: Record<string, string>, locked: string[]) {
   const plan = planSolve(analysis, locked);
@@ -53,6 +55,7 @@ export function CalculatorPanel({
   links,
   groups,
   decimals,
+  visualizations,
 }: {
   analysis: Analysis;
   values: Record<string, string>;
@@ -73,6 +76,8 @@ export function CalculatorPanel({
   groups?: Record<string, { title: string; board: string }>;
   /** Decimals to show per variable name for calculated values. Display only. */
   decimals?: Record<string, number>;
+  /** Drawings that follow the variables: the board's own come first, those of used boards go with their board. */
+  visualizations?: BundleVisualization[];
 }) {
   // Locked variables, in the order they were locked. A variable that has a value when the board
   // loads starts locked, so it is kept; values the formulas leave no room for are left unlocked.
@@ -199,6 +204,19 @@ export function CalculatorPanel({
     ...topGroups.map((key) => ({ key, variables: analysis.variables.filter((v) => groupOf(v.name) === key) })),
   ].filter((section) => section.variables.length > 0);
 
+  // What the drawings read: the numbers as they are right now, and how to write them.
+  const vizValues: VizValues = {
+    number: (name) => parseValue(display[name]),
+    text: (name) => {
+      const unit = units?.[name];
+      return `${shown[name] ?? ""}${unit ? " " + unit : ""}`;
+    },
+  };
+  const drawingsOf = (group: string | null) =>
+    (visualizations ?? [])
+      .filter((viz) => (viz.group ?? null) === group)
+      .map((viz, i) => <VisualizationView key={`${group}-${i}`} viz={viz} values={vizValues} />);
+
   function row(v: { name: string }, group: string | null) {
     const isHidden = hidden?.[v.name] === true;
     if (isHidden && !revealHidden) return null;
@@ -245,6 +263,7 @@ export function CalculatorPanel({
                 </a>
               </h3>
             )}
+            {drawingsOf(section.key)}
             <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>
           </div>
         );

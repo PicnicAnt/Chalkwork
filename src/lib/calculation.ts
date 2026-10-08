@@ -1,6 +1,7 @@
 // Shared types and validation for calculations. Safe to import from client and server.
 import { flatten, type Include, type IncludedBundle } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems } from "./formulas";
+import { parseVisualizations, type Visualization } from "./visualizations";
 
 export type CalculationDraft = {
   title: string;
@@ -24,6 +25,8 @@ export type CalculationDraft = {
   includes: Include[];
   // Variables linked to another variable, keyed by variable name: the two follow each other.
   links: Record<string, string>;
+  // Drawings that follow the board's variables, such as a rectangle with its width and height.
+  visualizations: Visualization[];
 };
 
 export type Calculation = CalculationDraft & {
@@ -84,7 +87,7 @@ export function validateDraft(
 
   // What this board and the boards it uses make up together, before anything is overridden. Links
   // are left out here: they can only join variables that exist, so these are found first.
-  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, links: {} };
+  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, links: {}, visualizations: [] };
   const { bundle: inherited, ownErrors } = flatten({ formulas, ...none }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
   const analysis = analyzeFormulas(inherited.formulas);
@@ -167,6 +170,9 @@ export function validateDraft(
     } else decimals[variable.name] = d;
   }
 
+  const parsedViz = parseVisualizations(r.visualizations, known, true);
+  errors.push(...parsedViz.errors);
+
   return errors.length
     ? { errors: [...new Set(errors)] }
     : {
@@ -182,6 +188,7 @@ export function validateDraft(
           decimals,
           includes: included.map((i) => (i.name ? { board: i.board, alias: i.alias, name: i.name } : { board: i.board, alias: i.alias })),
           links,
+          visualizations: parsedViz.visualizations,
         },
         errors,
       };

@@ -1,4 +1,5 @@
 import { PATH_SEPARATOR, isVariableName, tokenize } from "./formulas";
+import type { BundleVisualization, Visualization } from "./visualizations";
 
 // Boards that use other boards.
 //
@@ -36,9 +37,11 @@ export type Bundle = {
   links: Record<string, string>;
   /** The included boards behind the variables, by alias path (weapon, weapon$sub), for headings. */
   groups: Record<string, { title: string; board: string }>;
+  /** The drawings of this board and of the boards it uses (those say which board they belong to). */
+  visualizations: BundleVisualization[];
 };
 
-export type OwnData = Omit<Bundle, "groups">;
+export type OwnData = Omit<Bundle, "groups" | "visualizations"> & { visualizations: Visualization[] };
 
 export type IncludedBundle = { alias: string; board: string; title: string; name?: string; bundle: Bundle };
 
@@ -115,6 +118,12 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
       Object.entries(bundle.links).map(([from, to]) => [withAlias(alias, from), withAlias(alias, to)]),
     ),
     groups: keys(bundle.groups),
+    // A drawing of a used board follows that board's variables, and is shown with that board.
+    visualizations: bundle.visualizations.map((v) => ({
+      type: v.type,
+      map: Object.fromEntries(Object.entries(v.map).map(([param, name]) => [param, withAlias(alias, name)])),
+      group: alias,
+    })),
   };
 }
 
@@ -154,6 +163,7 @@ export function flatten(
       labels: merge((b) => b.labels, own.labels),
       hidden: merge((b) => b.hidden, own.hidden),
       decimals: merge((b) => b.decimals, own.decimals),
+      visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],
       groups: Object.assign(
         {},
         ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.name || p.i.title, board: p.i.board } })),

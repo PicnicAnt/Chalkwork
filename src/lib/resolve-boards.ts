@@ -21,6 +21,7 @@ const ownData = (calc: Calculation): OwnData => ({
   hidden: calc.hidden,
   decimals: calc.decimals,
   links: calc.links,
+  visualizations: calc.visualizations,
 });
 
 // What one board brings along: its own formulas and settings plus, in turn, the boards it uses.
