@@ -3,7 +3,7 @@ import { BoardList } from "@/components/BoardList";
 import { requireUser } from "@/lib/auth";
 import { listAllCalculations } from "@/lib/db";
 
-export const metadata: Metadata = { title: "Browse · Chalkwork" };
+export const metadata: Metadata = { title: "Boards · Chalkwork" };
 
 // Every board by every user, or just your own, searchable. Only signed-in users can browse, so a board's link stays
 // something you have to be given unless you have an account.

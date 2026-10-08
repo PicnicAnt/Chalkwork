@@ -13,13 +13,8 @@ export async function MainNav() {
         New
       </Link>
       <Link href="/boards" className="link text-lg">
-        Browse
+        Boards
       </Link>
-      {user && (
-        <Link href="/boards?mine=1" className="link text-lg">
-          My boards
-        </Link>
-      )}
       {user && (
         <Link href="/suggestions" className="link text-lg">
           Suggestions{waiting > 0 ? ` (${waiting})` : ""}
