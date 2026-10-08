@@ -346,7 +346,7 @@ const VariableRow = memo(function VariableRow({
   const id = `var-${name}`;
   return (
     <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
-      <span className={`flex items-center gap-2 ${readOnly ? "row-decided" : ""}`}>
+      <span className="flex items-center gap-2">
         <label
           htmlFor={id}
           title={label && label !== name ? displayName(name) : undefined}
@@ -355,10 +355,13 @@ const VariableRow = memo(function VariableRow({
           {label || name}
         </label>
         <span className="text-xl text-ink-muted">=</span>
+        {/* A fixed value is only as wide as its text, so the double line sits under the value alone. */}
+        <span className="flex min-w-0 flex-1">
         <input
           id={id}
           ref={(el) => register(name, el)}
-          className={`field min-w-0 flex-1 rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
+          style={readOnly ? { width: `${Math.max(value.length, 1) + 1}ch`, maxWidth: "100%" } : undefined}
+          className={`field min-w-0 rounded-sm text-2xl ${readOnly ? "flex-none" : "flex-1"} ${problem ? "!border-danger" : ""} ${
             readOnly ? "field-decided" : "field-bare"
           }`}
           inputMode="decimal"
@@ -369,6 +372,7 @@ const VariableRow = memo(function VariableRow({
           onChange={(e) => onEdit(name, e.target.value)}
           onBlur={() => onBlur(name)}
         />
+        </span>
         {unit && <span className="shrink-0 text-lg text-ink-muted">{unit}</span>}
         {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
         {readOnly ? (
