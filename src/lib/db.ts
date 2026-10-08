@@ -233,3 +233,39 @@ export function listCalculationsByOwner(ownerId: string): { id: string; title: s
       .all(ownerId) as { id: string; title: string; created_at: string }[]
   ).map((r) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
 }
+
+export type BoardSummary = {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  ownerId: string | null;
+  ownerName: string | null;
+};
+
+// Every calculation by every user, newest first, for the browse page.
+export function listAllCalculations(limit = 1000): BoardSummary[] {
+  return (
+    db
+      .prepare(
+        `SELECT c.id, c.title, c.description, c.created_at, c.owner_id, u.name AS owner_name
+         FROM calculations c LEFT JOIN users u ON u.id = c.owner_id
+         ORDER BY c.created_at DESC LIMIT ?`,
+      )
+      .all(limit) as {
+      id: string;
+      title: string;
+      description: string;
+      created_at: string;
+      owner_id: string | null;
+      owner_name: string | null;
+    }[]
+  ).map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    createdAt: r.created_at,
+    ownerId: r.owner_id,
+    ownerName: r.owner_name,
+  }));
+}

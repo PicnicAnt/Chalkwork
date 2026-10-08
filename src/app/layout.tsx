@@ -54,6 +54,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <Link href="/new" className="link text-lg">
                   New
                 </Link>
+                <Link href="/boards" className="link text-lg">
+                  Browse
+                </Link>
                 <UserMenu />
                 <ThemeToggle />
               </nav>
