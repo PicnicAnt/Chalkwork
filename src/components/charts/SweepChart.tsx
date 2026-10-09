@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 import type { Visualization } from "@/lib/visualizations";
+import { downloadCsv, fileNameOf } from "@/lib/export";
 import type { VizValues } from "../viz-values";
 import { Text, Note, Figure, short, withUnit, finite, W, INK, MUTED, FAINT, FONT } from "./common";
 
@@ -145,7 +146,19 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
         </text>
       </svg>
       <p className="text-center text-base text-ink-muted">
-        Now: {values.text(xName)} gives {values.text(yName)}. Drag the dot to change {values.name(xName)}.
+        Now: {values.text(xName)} gives {values.text(yName)}. Drag the dot to change {values.name(xName)}.{" "}
+        <button
+          type="button"
+          className="link"
+          onClick={() =>
+            downloadCsv(`${fileNameOf(values.name(yName))}-against-${fileNameOf(values.name(xName))}.csv`, [
+              [withUnit(values, xName), withUnit(values, yName)],
+              ...line.points.map((p) => [p.x, p.y ?? ""]),
+            ])
+          }
+        >
+          Download CSV
+        </button>
       </p>
     </Figure>
   );

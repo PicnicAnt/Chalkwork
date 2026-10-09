@@ -79,6 +79,8 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           flat={resolved.bundle}
           formulas={calculation.formulas}
           initialState={initialState ?? undefined}
+          title={calculation.title}
+          publicId={calculation.id}
           boardId={user ? calculation.id : undefined}
           scenarios={user ? listScenarios(calculation.id, user.id) : undefined}
           editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}

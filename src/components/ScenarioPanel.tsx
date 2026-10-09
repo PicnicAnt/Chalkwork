@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { deleteScenario, saveScenario } from "@/app/actions/scenarios";
 import { difference, outcomeOf, SCENARIO_LIMITS, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
 import { displayName, formatDecimals, formatNumber, type Analysis } from "@/lib/formulas";
+import { downloadCsv } from "@/lib/export";
 import { encodeState } from "@/lib/share-state";
 import { ratio as unitRatio } from "@/lib/units";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
@@ -268,6 +269,18 @@ export function ScenarioPanel({
               </tbody>
             </table>
             <p className="pt-2 text-base text-ink-muted">
+            <button
+              type="button"
+              className="link mr-3"
+              onClick={() =>
+                downloadCsv("scenarios.csv", [
+                  ["Variable", "Unit", ...columns.map((c) => c.title)],
+                  ...rows.map((v) => [labels[v.name] || displayName(v.name), unitOf(v.name).label, ...columns.map((c) => cell(v.name, c).text + (cell(v.name, c).note ? ` (${cell(v.name, c).note?.text})` : ""))]),
+                ])
+              }
+            >
+              Download CSV
+            </button>
               {view === "values"
                 ? "Numbers that differ from what the board shows now are coloured."
                 : view === "both"

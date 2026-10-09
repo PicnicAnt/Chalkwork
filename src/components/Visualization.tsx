@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { vizType, type Visualization } from "@/lib/visualizations";
+import { SaveImageButton } from "./SaveImageButton";
 import { BarsChart, BreakdownBar, DependencyDiagram, GaugeChart, HeatMap, PieChart, SensitivityBars, SweepChart } from "./charts";
 import { annulus, circle, donut, ellipse, polygon, rectangle, triangle } from "./shapes/flat";
 import { box, cone, cylinder, pyramid, sphere } from "./shapes/solid";
@@ -24,7 +26,20 @@ const DRAWINGS: Record<string, (v: Record<string, number>, t: (param: string) =>
 };
 
 // One drawing, from the values the board has right now. It follows them as they change.
+// One drawing or chart, with "Save image" under it once there is a picture to save.
 export function VisualizationView({ viz, values }: { viz: Visualization; values: VizValues }) {
+  const frame = useRef<HTMLDivElement>(null);
+  return (
+    <div ref={frame} className="flex flex-col gap-1 [&:not(:has(svg[role=img]))>.save-image]:hidden">
+      <VisualizationBody viz={viz} values={values} />
+      <div className="save-image flex justify-end">
+        <SaveImageButton target={frame} name={vizType(viz.type)?.label ?? "chart"} />
+      </div>
+    </div>
+  );
+}
+
+function VisualizationBody({ viz, values }: { viz: Visualization; values: VizValues }) {
   const type = vizType(viz.type);
   if (!type) return null;
   if (type.kind === "chart") {

@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import type { Bundle } from "@/lib/boards";
-import { initialLocks } from "@/lib/calculator";
-import { analyzeFormulas } from "@/lib/formulas";
+import { compute, initialLocks, shownValues } from "@/lib/calculator";
+import { downloadCsv, fileNameOf } from "@/lib/export";
+import { analyzeFormulas, displayName, parseValue } from "@/lib/formulas";
 import type { Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
+import { ApiHint } from "./ApiHint";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
@@ -20,6 +22,8 @@ export function SharedCalculator({
   boardId,
   scenarios,
   initialState,
+  title = "board",
+  publicId,
 }: {
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
@@ -31,6 +35,10 @@ export function SharedCalculator({
   scenarios?: Scenario[];
   /** Values and locks to start with, from a link that carried them. */
   initialState?: ScenarioSnapshot;
+  /** The board's title, for the name of a downloaded file. */
+  title?: string;
+  /** The board's id, to show how to use it from outside. */
+  publicId?: string;
 }) {
   const analysis = useMemo(() => analyzeFormulas(flat.formulas), [flat.formulas]);
   const [values, setValues] = useState(() => (initialState ? { ...flat.values, ...initialState.values } : flat.values));
@@ -93,6 +101,23 @@ export function SharedCalculator({
             {copied ? "Link copied ✓" : "Copy link with these values"}
           </button>
         )}
+        {view === "board" && (
+          <button
+            type="button"
+            className="link text-base"
+            title="The values on screen as a spreadsheet file"
+            onClick={() => {
+              const out = compute(analysis, values, locks ?? initialLocks(analysis, values));
+              const shown = shownValues(out.display, out.plan.held, flat.decimals);
+              downloadCsv(`${fileNameOf(title)}.csv`, [
+                ["Variable", "Name", "Value", "Unit"],
+                ...analysis.variables.filter((v) => flat.hidden[v.name] !== true).map((v) => [flat.labels[v.name] || displayName(v.name), displayName(v.name), shown[v.name] ?? "", flat.units[v.name] ?? ""]),
+              ]);
+            }}
+          >
+            Download CSV
+          </button>
+        )}
         {!sameValues(values, flat.values) && view === "board" && (
           <button
             type="button"
@@ -147,6 +172,16 @@ export function SharedCalculator({
             setLoadedLocks(scenario.locked);
             setResets(resets + 1);
           }}
+        />
+      )}
+      {view === "board" && publicId && (
+        <ApiHint
+          boardId={publicId}
+          inputs={analysis.variables
+            .filter((v) => flat.hidden[v.name] !== true && parseValue(flat.values[v.name]) !== undefined)
+            .slice(0, 2)
+            .map((v) => ({ name: displayName(v.name), value: String(parseValue(flat.values[v.name])) }))}
+          variables={analysis.variables.filter((v) => flat.hidden[v.name] !== true).map((v) => displayName(v.name))}
         />
       )}
       {view === "board" && formulas.length > 0 && (

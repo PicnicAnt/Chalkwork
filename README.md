@@ -54,6 +54,12 @@ Every save of a board is kept as a numbered version (`board_versions`: the whole
 
 **Copy link with these values** (above a board, and **Copy link** on each scenario) makes a link like `/c/<id>?state=…` that carries the numbers that were typed and which are locked, as base64 text (`src/lib/share-state.ts`, at most 6000 characters, checked when read because it comes from outside). Opening it starts the board from those values, with **Erase and start over** to go back.
 
+## Boards as a service
+
+- **Web API:** `GET /api/boards/<id>?width=5&area=20` or `POST` with `{"inputs": {...}}` returns every value the board works out. Inputs are held like numbers typed on the board and the rest is solved in any direction, so a result can be an input. Values typed into the board stay fixed unless you name them in the request, which decides what gets calculated when you solve backwards. Names are written as shown (`alias.variable`). 120 requests per minute per address, CORS open, no login.
+- **Embed:** `/embed/<id>` shows just the board for an iframe. `?theme=light|dark` and `?state=` (from "Copy link with these values") are supported.
+- **Export:** "Save image" under drawings and charts (PNG), "Download CSV" for the variables, scenarios and sweep charts.
+
 ## Scenarios
 
 A signed-in user can save what is on a board as a named **scenario** (the typed values and which are locked; table `scenarios`, private to that user, at most 20 per board), load one back, and tick several to see them side by side with what the board shows now; numbers that differ are coloured. The comparison starts as each value with its **change in percent** beside it (+50%), and can also show only the values or the **difference** (+5, −2.5) or the difference **in percent** (+50%) from a chosen baseline (what the board shows now, or any ticked scenario), and writes each number in the unit chosen for that variable on the board. The board is solved again for each, so a scenario follows later changes to the board. The pure part is `src/lib/scenarios.ts`.

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cabin_Sketch, Patrick_Hand } from "next/font/google";
 import Link from "next/link";
 import { MainNav } from "@/components/MainNav";
+import { SiteFrame } from "@/components/SiteFrame";
 import { UserMenu } from "@/components/UserMenu";
 import "./globals.css";
 
@@ -44,9 +45,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full flex flex-col">
-        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-2 py-3 sm:px-4 sm:py-6">
-          <div className="board flex flex-1 flex-col">
-            <header className="relative flex flex-col gap-3 px-4 pt-4 sm:px-8 sm:pt-6">
+        <SiteFrame
+          header={
+            <>
               <div className="flex items-start justify-between gap-3">
                 <Link href="/" className="sketch text-2xl font-bold sm:text-3xl">
                   Chalkwork
@@ -54,10 +55,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <UserMenu />
               </div>
               <MainNav />
-            </header>
-            <main className="relative w-full flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
-          </div>
-        </div>
+            </>
+          }
+        >
+          {children}
+        </SiteFrame>
       </body>
     </html>
   );
