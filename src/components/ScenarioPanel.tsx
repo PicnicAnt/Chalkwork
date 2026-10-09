@@ -107,7 +107,8 @@ export function ScenarioPanel({
       const text = valueText(variable, column);
       return { text: text || "?", className: column.key !== NOW && text !== valueText(variable, columns[0]) ? "text-accent" : "" };
     }
-    if (column.key === baseKey) return { text: "baseline", className: "text-ink-faint" };
+    // The baseline shows its own value: it is what the others are measured from.
+    if (column.key === baseKey) return { text: valueText(variable, column) || "?", className: "text-ink-muted" };
     const value = column.outcome.numbers[variable];
     const from = base.outcome.numbers[variable];
     const d = difference(value === undefined ? undefined : value * r, from === undefined ? undefined : from * r, view, view === "difference" ? places : undefined);
@@ -203,6 +204,7 @@ export function ScenarioPanel({
                   {columns.map((c) => (
                     <th key={c.key} className="px-3 py-1 font-normal">
                       {c.title}
+                      {view !== "values" && c.key === baseKey && <span className="block text-sm text-ink-faint">baseline</span>}
                     </th>
                   ))}
                 </tr>
@@ -232,7 +234,7 @@ export function ScenarioPanel({
             <p className="pt-2 text-base text-ink-muted">
               {view === "values"
                 ? "Numbers that differ from what the board shows now are coloured."
-                : `Each number is the change from ${baseKey === NOW ? "what the board shows now" : `"${shownScenarios.find((s) => s.id === baseKey)?.name}"`}${view === "percent" ? ", as a percentage of it" : ""}. Green is higher, orange is lower.`}
+                : `Each number is the change from ${baseKey === NOW ? "what the board shows now" : `"${shownScenarios.find((s) => s.id === baseKey)?.name}"`}${view === "percent" ? ", as a percentage of it" : ""}. The baseline column shows its own values. Green is higher, orange is lower.`}
             </p>
           </div>
         </div>
