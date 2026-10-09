@@ -12,7 +12,7 @@ const base: BoardDraft = {
   units: {},
   hidden: {},
   labels: {},
-  decimals: {},
+  decimals: {}, ranges: {},
   includes: [],
   links: {},
   visualizations: [],
@@ -33,6 +33,12 @@ describe("checking a board before it is saved", () => {
 
   it("refuses a formula that can't make sense", () => {
     expect(validateDraft({ ...base, formulas: ["a = a - 2"] }).errors.length).toBeGreaterThan(0);
+  });
+
+  it("keeps ranges, drops empty ones and refuses a lowest above the highest", () => {
+    expect(validateDraft({ ...base, ranges: { width: { min: 1, max: 9 }, height: {}, nothing: { min: 3 } } }).draft?.ranges).toEqual({ width: { min: 1, max: 9 } });
+    expect(validateDraft({ ...base, ranges: { width: { min: 9, max: 1 } } }).errors.join(" ")).toMatch(/min of width/);
+    expect(validateDraft({ ...base, ranges: { width: { min: "x" as unknown as number } } }).errors.join(" ")).toMatch(/must be a number/);
   });
 
   it("refuses decimals that aren't whole numbers from 0 to 10", () => {

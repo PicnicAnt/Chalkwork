@@ -23,6 +23,7 @@ export function VariableEditor({
   links,
   ownLinks,
   decimals,
+  ranges,
   onRename,
   onDescribe,
   onUnit,
@@ -30,6 +31,7 @@ export function VariableEditor({
   onHide,
   onLink,
   onDecimals,
+  onRange,
 }: {
   analysis: Analysis;
   /** The boards in use, by alias. Their variables are listed under their title. */
@@ -53,6 +55,9 @@ export function VariableEditor({
   /** Links a variable to another (by the other's internal name), or removes the link (null). */
   onLink: (name: string, target: string | null) => void;
   onDecimals: (name: string, decimals: string) => void;
+  /** The values a variable should stay within, as typed. */
+  ranges: Record<string, { min: string; max: string }>;
+  onRange: (name: string, end: "min" | "max", text: string) => void;
 }) {
   const fold = useFold();
   if (analysis.variables.length === 0) return null;
@@ -139,6 +144,9 @@ export function VariableEditor({
                 onHide={(value) => onHide(v.name, value)}
                 onLink={(text) => applyLink(v.name, text)}
                 onDecimals={(text) => onDecimals(v.name, text)}
+                min={ranges[v.name]?.min ?? ""}
+                max={ranges[v.name]?.max ?? ""}
+                onRange={(end, text) => onRange(v.name, end, text)}
               />
             ))}
           </div>

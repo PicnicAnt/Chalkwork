@@ -319,3 +319,10 @@ select optgroup {
   background-color: var(--board);
   color: var(--ink);
 }
+
+/* The slider under a variable that has a lowest and a highest value. */
+.slider {
+  accent-color: var(--accent);
+  height: 1.1rem;
+  cursor: pointer;
+}

@@ -57,6 +57,8 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
   compareMap(out, (n) => `Unit of ${n}`, base.units, next.units);
   compareMap(out, (n) => `Note on ${n}`, base.descriptions, next.descriptions);
   compareMap(out, (n) => `Decimals of ${n}`, base.decimals, next.decimals, (v) => (v === undefined ? "automatic" : String(v)));
+  const rangeText = (v: { min?: number; max?: number } | undefined) => (v ? `${v.min ?? "…"} to ${v.max ?? "…"}` : "none");
+  compareMap(out, (n) => `Range of ${n}`, base.ranges ?? {}, next.ranges ?? {}, rangeText);
   // Only what is hidden counts: "not hidden" and no entry are the same.
   const hiddenOnly = (h: Record<string, boolean>) => Object.fromEntries(Object.entries(h).filter(([, v]) => v));
   compareMap(out, (n) => `${n} hidden`, hiddenOnly(base.hidden), hiddenOnly(next.hidden), (v) => (v ? "yes" : "no"));
@@ -77,6 +79,7 @@ export function draftOf(c: BoardDraft): BoardDraft {
     labels: c.labels,
     hidden: c.hidden,
     decimals: c.decimals,
+    ranges: c.ranges,
     includes: c.includes,
     links: c.links,
     visualizations: c.visualizations,

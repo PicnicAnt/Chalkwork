@@ -15,6 +15,7 @@ type Row = {
   variable_descriptions: string;
   variable_units: string;
   variable_decimals: string;
+  variable_ranges: string;
   variable_labels: string;
   variable_hidden: string;
   board_includes: string;
@@ -29,8 +30,8 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variable_units, variable_decimals, variable_ranges, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     draft.title,
@@ -40,6 +41,7 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
     JSON.stringify(draft.descriptions),
     JSON.stringify(draft.units),
     JSON.stringify(draft.decimals),
+    JSON.stringify(draft.ranges),
     JSON.stringify(draft.labels),
     JSON.stringify(draft.hidden),
     JSON.stringify(draft.includes),
@@ -57,7 +59,7 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
   const result = db
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
-         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_labels = ?, variable_hidden = ?,
+         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, variable_labels = ?, variable_hidden = ?,
          board_includes = ?, variable_links = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
@@ -69,6 +71,8 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
       JSON.stringify(draft.descriptions),
       JSON.stringify(draft.units),
       JSON.stringify(draft.decimals),
+      JSON.stringify(draft.ranges),
+    JSON.stringify(draft.ranges),
       JSON.stringify(draft.labels),
       JSON.stringify(draft.hidden),
       JSON.stringify(draft.includes),
@@ -92,6 +96,7 @@ const parse = (row: Row): Board => ({
   units: JSON.parse(row.variable_units || "{}"),
   labels: JSON.parse(row.variable_labels || "{}"),
   decimals: JSON.parse(row.variable_decimals || "{}"),
+  ranges: JSON.parse(row.variable_ranges || "{}"),
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
   links: JSON.parse(row.variable_links || "{}"),

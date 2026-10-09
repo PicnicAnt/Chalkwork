@@ -16,7 +16,8 @@ import {
   type IncludedBundle,
 } from "@/lib/boards";
 import { includeOf, LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
-import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
+import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib/formulas";
+import type { Range } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardsSection, type BoardChoice } from "./BoardsSection";
@@ -72,6 +73,19 @@ export function BoardEditor({
       ),
     [decimalText],
   );
+  // Min and max per variable, held as typed so the fields can be emptied.
+  const [rangeText, setRangeText] = useState<Record<string, { min: string; max: string }>>(
+    Object.fromEntries(Object.entries(initial?.ranges ?? {}).map(([k, r]) => [k, { min: r.min === undefined ? "" : String(r.min), max: r.max === undefined ? "" : String(r.max) }])),
+  );
+  const ranges = useMemo(() => {
+    const out: Record<string, Range> = {};
+    for (const [name, text] of Object.entries(rangeText)) {
+      const min = parseValue(text.min);
+      const max = parseValue(text.max);
+      if (min !== undefined || max !== undefined) out[name] = { ...(min !== undefined && { min }), ...(max !== undefined && { max }) };
+    }
+    return out;
+  }, [rangeText]);
   // The boards this one uses, each loaded together with the boards it uses in turn.
   const [included, setIncluded] = useState<IncludedBundle[]>(initialIncluded);
   const [boardError, setBoardError] = useState<string | null>(null);
@@ -85,8 +99,8 @@ export function BoardEditor({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, links, visualizations }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, links, visualizations, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, links, visualizations }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, links, visualizations, included],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
@@ -183,6 +197,7 @@ export function BoardEditor({
     setLabels((l) => renameKey(l, from, to));
     setHidden((h) => renameKey(h, from, to));
     setDecimalText((d) => renameKey(d, from, to));
+    setRangeText((r) => renameKey(r, from, to));
     setLinks((l) => renameLinks(l, from, to));
     setVisualizations((vs) => renameInVisualizations(vs, (name) => (name === from ? to : name)));
   }
@@ -190,7 +205,7 @@ export function BoardEditor({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -326,6 +341,14 @@ export function BoardEditor({
           })
         }
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
+        ranges={Object.fromEntries(Object.entries(flat.bundle.ranges).map(([k, r]) => [k, { min: r.min === undefined ? "" : String(r.min), max: r.max === undefined ? "" : String(r.max) }]))}
+        onRange={(name, end, text) =>
+          setRangeText((r) => {
+            const inherited = flat.bundle.ranges[name];
+            const was = r[name] ?? { min: inherited?.min === undefined ? "" : String(inherited.min), max: inherited?.max === undefined ? "" : String(inherited.max) };
+            return { ...r, [name]: { ...was, [end]: text } };
+          })
+        }
       />
 
       <VisualizationEditor
@@ -354,6 +377,7 @@ export function BoardEditor({
           links={flat.bundle.links}
           revealHidden
           decimals={flat.bundle.decimals}
+          ranges={flat.bundle.ranges}
           groups={flat.bundle.groups}
           visualizations={flat.bundle.visualizations}
         />

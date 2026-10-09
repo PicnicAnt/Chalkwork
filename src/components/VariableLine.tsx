@@ -27,6 +27,9 @@ export function VariableLine({
   onHide,
   onLink,
   onDecimals,
+  min,
+  max,
+  onRange,
 }: {
   name: string;
   expanded: boolean;
@@ -52,6 +55,10 @@ export function VariableLine({
   /** Applies a link typed by the user. Returns why it can't be used, or null when it was applied. */
   onLink: (text: string) => string | null;
   onDecimals: (decimals: string) => void;
+  /** The values this variable should stay within, as typed; empty is open. */
+  min: string;
+  max: string;
+  onRange: (end: "min" | "max", text: string) => void;
 }) {
   // Applied when the field is left, so half-typed names never rewrite the formulas. After a rename the line
   // is replaced under its new name, so this component starts over with a clean draft.
@@ -69,7 +76,7 @@ export function VariableLine({
       expanded={expanded}
       onToggle={onToggle}
       summary={label || fixedName || displayName(name)}
-      hint={`${unit ? ` · ${unit}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
+      hint={`${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
         {fixedName !== undefined ? (
@@ -121,6 +128,18 @@ export function VariableLine({
           aria-label={`Decimals of ${name}`}
           title="How many decimals to show for the calculated value. Empty shows it automatically."
         />
+        {(["min", "max"] as const).map((end) => (
+          <input
+            key={end}
+            className="field w-20 text-lg"
+            value={end === "min" ? min : max}
+            inputMode="decimal"
+            placeholder={end}
+            onChange={(e) => onRange(end, e.target.value.replace(/[^0-9.,eE+-]/g, ""))}
+            aria-label={`${end === "min" ? "Lowest" : "Highest"} value of ${name}`}
+            title={`The ${end === "min" ? "lowest" : "highest"} value this should have. Shows a warning outside it, limits the slider and sets the spread chart. Empty means no limit.`}
+          />
+        ))}
         <input
           {...link.inputProps}
           className={`field w-48 text-lg ${link.error ? "!border-danger" : ""}`}

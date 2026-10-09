@@ -182,4 +182,10 @@ export function migrate(db: Database.Database) {
     }
     db.pragma("user_version = 16");
   }
+  if (version < 17) {
+    // The values a variable should stay within, as JSON: { "speed": { "min": 0, "max": 120 } }.
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "variable_ranges");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_ranges TEXT NOT NULL DEFAULT '{}';`);
+    db.pragma("user_version = 17");
+  }
 }

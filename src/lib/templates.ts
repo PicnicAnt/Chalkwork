@@ -5,7 +5,7 @@ import { EXAMPLE } from "./example-board";
 // copy that belongs to whoever saves it.
 export type Template = { id: string; title: string; blurb: string; draft: BoardDraft };
 
-const none = { descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, includes: [], links: {}, visualizations: [] };
+const none = { descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, ranges: {}, includes: [], links: {}, visualizations: [] };
 
 export const BLANK_ID = "blank";
 
@@ -77,8 +77,10 @@ export const TEMPLATES: Template[] = [
       units: EXAMPLE.units,
       labels: EXAMPLE.labels,
       decimals: Object.fromEntries(Object.entries(EXAMPLE.decimals).map(([k, v]) => [k, Number(v)])),
+      ranges: { accuracy: { min: 1500, max: 3500 }, inc_dmg: { min: 150, max: 350 }, more_dmg: { min: 30, max: 70 } },
       visualizations: [
         { type: "sensitivity", map: { y: "dps" } },
+        { type: "spread", map: { y: "dps" } },
         { type: "sweep", map: { x: "accuracy", y: "dps" }, options: { from: 500, to: 8000 } },
       ],
     },

@@ -21,6 +21,9 @@ export type Include = { board: string; alias: string; name?: string; /** Pinned 
 
 // Everything one board contributes to a bigger system, with all its variables named in its own
 // namespace (before any alias is put in front).
+/** The values a variable is meant to stay within; either end can be left open. */
+export type Range = { min?: number; max?: number };
+
 export type Bundle = {
   formulas: string[];
   values: Record<string, string>;
@@ -29,6 +32,7 @@ export type Bundle = {
   labels: Record<string, string>;
   hidden: Record<string, boolean>;
   decimals: Record<string, number>;
+  ranges: Record<string, Range>;
   /**
    * Variables linked to another variable, by name. A link is an equation, `variable = other`, so
    * the two follow each other whichever one is changed. Meant for joining the variables of
@@ -124,6 +128,7 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
     labels: keys(bundle.labels),
     hidden: keys(bundle.hidden),
     decimals: keys(bundle.decimals),
+    ranges: keys(bundle.ranges),
     // A link joins two variables of the same board, so both ends get the alias.
     links: Object.fromEntries(
       Object.entries(bundle.links).map(([from, to]) => [withAlias(alias, from), withAlias(alias, to)]),
@@ -175,6 +180,7 @@ export function flatten(
       labels: merge((b) => b.labels, own.labels),
       hidden: merge((b) => b.hidden, own.hidden),
       decimals: merge((b) => b.decimals, own.decimals),
+      ranges: merge((b) => b.ranges, own.ranges),
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],
       groups: Object.assign(
         {},

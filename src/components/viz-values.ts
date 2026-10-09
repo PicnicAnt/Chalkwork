@@ -1,4 +1,4 @@
-import { groupOf } from "@/lib/boards";
+import { groupOf, type Range } from "@/lib/boards";
 import { compute } from "@/lib/calculator";
 import { displayName, parseValue, type Analysis } from "@/lib/formulas";
 
@@ -17,6 +17,8 @@ export type VizValues = {
   unit: (name: string) => string;
   /** True when the variable is locked (kept at the value typed). */
   isLocked: (name: string) => boolean;
+  /** The values the variable should stay within, if the creator set any. */
+  range: (name: string) => Range | undefined;
   /** The variables the user has typed values for, which are the board's inputs. */
   inputs: () => string[];
   /**
@@ -45,6 +47,7 @@ export function makeVizValues({
   labels,
   groups,
   locked,
+  ranges,
 }: {
   analysis: Analysis;
   display: Record<string, string>;
@@ -53,6 +56,7 @@ export function makeVizValues({
   labels?: Record<string, string>;
   groups?: Record<string, { title: string; board: string }>;
   locked: string[];
+  ranges?: Record<string, Range>;
 }): Omit<VizValues, "focus" | "setValue"> {
   // A variable of a used board without the board's alias in front.
   const local = (name: string) => labels?.[name] || displayName(groupOf(name) ? name.slice(name.indexOf("$") + 1) : name);
@@ -69,6 +73,7 @@ export function makeVizValues({
     },
     unit: (name) => units?.[name] ?? "",
     isLocked: (name) => locked.includes(name),
+    range: (name) => ranges?.[name],
     inputs: () => locked.filter((n) => parseValue(display[n]) !== undefined),
     // The board solved again with some variables held at other numbers, as if they had been typed.
     evaluate: (overrides) => {

@@ -1,5 +1,5 @@
 // Shared types and validation for calculations. Safe to import from client and server.
-import { flatten, type Include, type IncludedBundle } from "./boards";
+import { flatten, type Include, type IncludedBundle, type Range } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems } from "./formulas";
 import { parseVisualizations, type Visualization } from "./visualizations";
 
@@ -21,6 +21,9 @@ export type BoardDraft = {
   // How many decimals to show for each variable's calculated value, keyed by variable name.
   // Display only: the maths always uses the full value. Variables without an entry show automatically.
   decimals: Record<string, number>;
+  // The values a variable should stay within, keyed by variable name. Only used for warnings, sliders and
+  // ranges in the spread chart; the maths does not stop at them.
+  ranges: Record<string, Range>;
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
   includes: Include[];
   // Variables linked to another variable, keyed by variable name: the two follow each other.
@@ -95,7 +98,7 @@ export function validateDraft(
 
   // What this board and the boards it uses make up together, before anything is overridden. Links
   // are left out here: they can only join variables that exist, so these are found first.
-  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, links: {}, visualizations: [] };
+  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [] };
   const { bundle: inherited, ownErrors } = flatten({ formulas, ...none }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
   const analysis = analyzeFormulas(inherited.formulas);
@@ -178,6 +181,23 @@ export function validateDraft(
     } else decimals[variable.name] = d;
   }
 
+  const rawRanges = typeof r.ranges === "object" && r.ranges !== null ? (r.ranges as Record<string, unknown>) : {};
+  const ranges: Record<string, Range> = {};
+  for (const variable of analysis.variables) {
+    const raw = rawRanges[variable.name];
+    if (typeof raw !== "object" || raw === null) continue;
+    const { min, max } = raw as Record<string, unknown>;
+    const range: Range = {};
+    for (const [key, v] of [["min", min], ["max", max]] as const) {
+      if (v === undefined || v === null || v === "") continue;
+      if (typeof v !== "number" || !Number.isFinite(v)) errors.push(`The ${key} of ${displayName(variable.name)} must be a number.`);
+      else range[key] = v;
+    }
+    if (range.min !== undefined && range.max !== undefined && range.min > range.max)
+      errors.push(`The min of ${displayName(variable.name)} can't be above its max.`);
+    if (range.min !== undefined || range.max !== undefined) ranges[variable.name] = range;
+  }
+
   const parsedViz = parseVisualizations(r.visualizations, known, true);
   errors.push(...parsedViz.errors);
 
@@ -194,6 +214,7 @@ export function validateDraft(
           hidden,
           labels,
           decimals,
+          ranges,
           includes: included.map(includeOf),
           links,
           visualizations: parsedViz.visualizations,

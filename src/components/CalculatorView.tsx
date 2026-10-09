@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { sectionsByBoard } from "@/lib/boards";
+import { sectionsByBoard, type Range } from "@/lib/boards";
 import { compute, initialLocks, shownValues, type Computed } from "@/lib/calculator";
 import { decidedBy, displayName, formatDecimals, formatNumber, parseValue, type Analysis } from "@/lib/formulas";
 import { alternatives, ratio as unitRatio } from "@/lib/units";
@@ -26,6 +26,7 @@ export function CalculatorPanel({
   links,
   groups,
   decimals,
+  ranges,
   visualizations,
   initialLocked,
   onLocks,
@@ -51,6 +52,8 @@ export function CalculatorPanel({
   groups?: Record<string, { title: string; board: string }>;
   /** Decimals to show per variable name for calculated values. Display only. */
   decimals?: Record<string, number>;
+  /** The values each variable should stay within, by name: a warning outside them, a slider between them. */
+  ranges?: Record<string, Range>;
   /** Drawings that follow the variables: the board's own come first, those of used boards go with their board. */
   visualizations?: BundleVisualization[];
   /** Starts with these variables locked instead of working it out from the values (a loaded scenario). */
@@ -198,7 +201,7 @@ export function CalculatorPanel({
 
   // What the drawings and charts read from the board.
   const vizValues: VizValues = {
-    ...makeVizValues({ analysis, display, shown, units, labels, groups, locked }),
+    ...makeVizValues({ analysis, display, shown, units, labels, groups, locked, ranges }),
     focus: focusField,
     // Written with four significant digits, like a number someone would type.
     setValue: (name, value) => edit(name, String(Number(value.toPrecision(4)))),
@@ -248,6 +251,8 @@ export function CalculatorPanel({
         onToggleLock={toggleLock}
         onBlur={endDraft}
         register={register}
+        range={ranges?.[v.name]}
+        current={parseValue(display[v.name])}
       />
     );
   }

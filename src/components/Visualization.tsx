@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { vizType, type Visualization } from "@/lib/visualizations";
 import { SaveImageButton } from "./SaveImageButton";
-import { BarsChart, BreakdownBar, DependencyDiagram, GaugeChart, HeatMap, PieChart, SensitivityBars, SweepChart } from "./charts";
+import { BarsChart, BreakdownBar, DependencyDiagram, GaugeChart, HeatMap, PieChart, SensitivityBars, SpreadChart, SweepChart } from "./charts";
 import { annulus, circle, donut, ellipse, polygon, rectangle, triangle } from "./shapes/flat";
 import { box, cone, cylinder, pyramid, sphere } from "./shapes/solid";
 import { H, W, type Drawn } from "./shapes/common";
@@ -44,6 +44,7 @@ function VisualizationBody({ viz, values }: { viz: Visualization; values: VizVal
   if (!type) return null;
   if (type.kind === "chart") {
     if (viz.type === "sweep") return <SweepChart viz={viz} values={values} />;
+    if (viz.type === "spread") return <SpreadChart viz={viz} values={values} />;
     if (viz.type === "sensitivity") return <SensitivityBars viz={viz} values={values} />;
     if (viz.type === "breakdown") return <BreakdownBar viz={viz} values={values} />;
     if (viz.type === "gauge") return <GaugeChart viz={viz} values={values} />;

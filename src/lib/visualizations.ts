@@ -184,6 +184,14 @@ VIZ_TYPES.splice(
 
 VIZ_TYPES.push(
   {
+    id: "spread",
+    label: "Spread (uncertainty)",
+    kind: "chart",
+    params: [{ key: "y", label: "Result", short: "y" }],
+    lists: [{ key: "inputs", label: "Inputs to vary (none chosen: the inputs that have a lowest and a highest value)" }],
+    options: [{ key: "samples", label: "Draws", placeholder: "300" }],
+  },
+  {
     id: "gauge",
     label: "Gauge",
     kind: "chart",

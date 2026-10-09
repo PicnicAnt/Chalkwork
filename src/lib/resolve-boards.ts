@@ -20,6 +20,7 @@ const ownData = (calc: Board): OwnData => ({
   labels: calc.labels,
   hidden: calc.hidden,
   decimals: calc.decimals,
+  ranges: calc.ranges,
   links: calc.links,
   visualizations: calc.visualizations,
 });

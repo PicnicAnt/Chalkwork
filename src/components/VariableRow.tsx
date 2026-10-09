@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import type { Range } from "@/lib/boards";
 import { displayName, formatNumber, parseValue } from "@/lib/formulas";
 
 // Written like a line on the board: name = value
@@ -23,6 +24,8 @@ export const VariableRow = memo(function VariableRow({
   onUnit,
   onBlur,
   register,
+  range,
+  current,
 }: {
   name: string;
   description?: string;
@@ -47,12 +50,26 @@ export const VariableRow = memo(function VariableRow({
   onUnit: (name: string, unit: string) => void;
   onBlur: (name: string) => void;
   register: (name: string, el: HTMLInputElement | null) => void;
+  /** The values this should stay within (in the unit it is written in), for the warning and the slider. */
+  range?: Range;
+  /** The value now, in the unit it is written in. */
+  current?: number;
 }) {
   const id = `var-${name}`;
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
   // What was typed stays in the field while it is being edited, so "1." and "1.50" aren't rewritten under the cursor.
   // It is only kept for the unit it was typed in.
   const [typed, setTyped] = useState<{ text: string; unit?: string } | null>(null);
+  // Outside its range is a warning, not an error. With both ends known a slider can move it.
+  const outside =
+    range && current !== undefined
+      ? range.min !== undefined && current < range.min
+        ? `Below the lowest value, ${formatNumber(range.min * ratio)}`
+        : range.max !== undefined && current > range.max
+          ? `Above the highest value, ${formatNumber(range.max * ratio)}`
+          : null
+      : null;
+  const slidable = !readOnly && range?.min !== undefined && range.max !== undefined && range.max > range.min;
   const shownText = typed && typed.unit === unit ? typed.text : value;
   return (
     <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
@@ -122,7 +139,23 @@ export const VariableRow = memo(function VariableRow({
           <LockButton locked={locked} disabled={!locked && !canLock} label={label || name} onClick={() => onToggleLock(name)} />
         )}
       </span>
+      {slidable && range && (
+        <input
+          type="range"
+          className="slider mt-1 w-full"
+          min={range.min}
+          max={range.max}
+          step="any"
+          value={Math.min(range.max!, Math.max(range.min!, current ?? range.min!))}
+          onChange={(e) => {
+            setTyped(null);
+            onEdit(name, formatNumber(Number(Number(e.target.value).toPrecision(6))));
+          }}
+          aria-label={`Slide ${label || name}`}
+        />
+      )}
       {problem && <span className="text-sm text-danger">{problem}</span>}
+      {outside && !problem && <span className="text-sm text-op">{outside}</span>}
       {description && !problem && <span className="pt-0.5 text-base leading-snug text-note">{description}</span>}
       {linkedTo && !problem && <span className="text-sm text-ink-faint">linked to {linkedTo}</span>}
     </div>
