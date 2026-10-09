@@ -3,12 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { deleteScenario, saveScenario } from "@/app/actions/scenarios";
-import { resultsOf, SCENARIO_LIMITS, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
-import { displayName, type Analysis } from "@/lib/formulas";
+import { difference, outcomeOf, SCENARIO_LIMITS, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
+import { displayName, formatDecimals, formatNumber, type Analysis } from "@/lib/formulas";
+import { ratio as unitRatio } from "@/lib/units";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
 
+type View = "values" | "difference" | "percent";
+const NOW = "now";
+
 // Named sets of values for a board, kept by the person who made them. A scenario can be loaded back into the
-// board, and any number can be put side by side with what the board shows now.
+// board, and any number can be put side by side with what the board shows now, as values, as the difference
+// from a chosen baseline, or as a percentage of it. Values are written in the unit chosen for each variable
+// on the board.
 export function ScenarioPanel({
   boardId,
   analysis,
@@ -18,6 +24,7 @@ export function ScenarioPanel({
   units,
   hidden,
   decimals,
+  shownUnits,
   onLoad,
 }: {
   boardId: string;
@@ -29,6 +36,8 @@ export function ScenarioPanel({
   units: Record<string, string>;
   hidden: Record<string, boolean>;
   decimals: Record<string, number>;
+  /** The unit each variable is shown in on the board, where one was chosen. */
+  shownUnits: Record<string, string>;
   onLoad: (scenario: Scenario) => void;
 }) {
   const router = useRouter();
@@ -36,6 +45,8 @@ export function ScenarioPanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [compared, setCompared] = useState<string[]>([]);
+  const [view, setView] = useState<View>("values");
+  const [baseline, setBaseline] = useState<string>(NOW);
 
   function save() {
     setError(null);
@@ -59,14 +70,50 @@ export function ScenarioPanel({
   }
 
   const shownScenarios = scenarios.filter((s) => compared.includes(s.id));
+  // The baseline has to be one of the columns; if it was unticked, it is the board as it is now.
+  const baseKey = baseline === NOW || shownScenarios.some((s) => s.id === baseline) ? baseline : NOW;
+
   const columns = useMemo(
     () => [
-      { key: "now", title: "Now", results: resultsOf(analysis, current, decimals) },
-      ...shownScenarios.map((s) => ({ key: s.id, title: s.name, results: resultsOf(analysis, s, decimals) })),
+      { key: NOW, title: "Now", outcome: outcomeOf(analysis, current, decimals) },
+      ...shownScenarios.map((s) => ({ key: s.id, title: s.name, outcome: outcomeOf(analysis, s, decimals) })),
     ],
     [analysis, current, decimals, shownScenarios],
   );
+  const base = columns.find((c) => c.key === baseKey) ?? columns[0];
   const rows = analysis.variables.filter((v) => hidden[v.name] !== true);
+
+  // How a variable is shown: in the unit chosen on the board (a number written in its own unit is multiplied
+  // by r), with the unit's label.
+  const unitOf = (variable: string) => {
+    const chosen = shownUnits[variable];
+    const r = chosen ? unitRatio(units[variable], chosen) : null;
+    return r === null ? { label: units[variable] ?? "", r: 1 } : { label: chosen, r };
+  };
+
+  // A value as written for a column, in the unit chosen for the variable.
+  function valueText(variable: string, column: (typeof columns)[number]) {
+    const { r } = unitOf(variable);
+    const n = column.outcome.numbers[variable];
+    if (r === 1 || n === undefined) return column.outcome.shown[variable] ?? "";
+    const places = decimals[variable];
+    return places !== undefined ? formatDecimals(n * r, places) : formatNumber(n * r);
+  }
+
+  function cell(variable: string, column: (typeof columns)[number]) {
+    const { r } = unitOf(variable);
+    const places = decimals[variable];
+    if (view === "values") {
+      const text = valueText(variable, column);
+      return { text: text || "?", className: column.key !== NOW && text !== valueText(variable, columns[0]) ? "text-accent" : "" };
+    }
+    if (column.key === baseKey) return { text: "baseline", className: "text-ink-faint" };
+    const value = column.outcome.numbers[variable];
+    const from = base.outcome.numbers[variable];
+    const d = difference(value === undefined ? undefined : value * r, from === undefined ? undefined : from * r, view, view === "difference" ? places : undefined);
+    if (!d) return { text: "–", className: "text-ink-faint" };
+    return { text: d.text, className: d.sign > 0 ? "text-accent-2" : d.sign < 0 ? "text-op" : "text-ink-faint" };
+  }
 
   return (
     <CollapsibleSection
@@ -123,42 +170,71 @@ export function ScenarioPanel({
       )}
 
       {shownScenarios.length > 0 && (
-        <div className="overflow-x-auto" aria-label="Scenarios side by side">
-          <table className="w-full min-w-max border-collapse text-lg">
-            <thead>
-              <tr className="text-left text-ink-muted">
-                <th className="py-1 pr-4 font-normal">Variable</th>
-                {columns.map((c) => (
-                  <th key={c.key} className="px-3 py-1 font-normal">
-                    {c.title}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((v) => {
-                const now = columns[0].results[v.name];
-                return (
-                  <tr key={v.name} className="border-t border-ink-faint">
-                    <td className="py-1 pr-4">
-                      {labels[v.name] || displayName(v.name)}
-                      {units[v.name] && <span className="text-ink-muted"> ({units[v.name]})</span>}
-                    </td>
-                    {columns.map((c, i) => {
-                      const value = c.results[v.name] ?? "";
-                      const differs = i > 0 && value !== now;
-                      return (
-                        <td key={c.key} className={`px-3 py-1 ${differs ? "text-accent" : ""}`} title={differs ? `Now: ${now}` : undefined}>
-                          {value || "?"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <p className="pt-2 text-base text-ink-muted">Numbers that differ from what the board shows now are coloured.</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-lg">
+            <label className="flex items-baseline gap-2">
+              <span className="text-ink-muted">Show</span>
+              <select value={view} onChange={(e) => setView(e.target.value as View)} className="cursor-pointer bg-transparent text-lg" aria-label="How to show the scenarios">
+                <option value="values">the values</option>
+                <option value="difference">the difference</option>
+                <option value="percent">the difference in percent</option>
+              </select>
+            </label>
+            {view !== "values" && (
+              <label className="flex items-baseline gap-2">
+                <span className="text-ink-muted">compared with</span>
+                <select value={baseKey} onChange={(e) => setBaseline(e.target.value)} className="cursor-pointer bg-transparent text-lg" aria-label="What the differences are measured from">
+                  <option value={NOW}>now</option>
+                  {shownScenarios.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+
+          <div className="overflow-x-auto" aria-label="Scenarios side by side">
+            <table className="w-full min-w-max border-collapse text-lg">
+              <thead>
+                <tr className="text-left text-ink-muted">
+                  <th className="py-1 pr-4 font-normal">Variable</th>
+                  {columns.map((c) => (
+                    <th key={c.key} className="px-3 py-1 font-normal">
+                      {c.title}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((v) => {
+                  const unit = unitOf(v.name).label;
+                  return (
+                    <tr key={v.name} className="border-t border-ink-faint">
+                      <td className="py-1 pr-4">
+                        {labels[v.name] || displayName(v.name)}
+                        {unit && <span className="text-ink-muted">{view === "percent" ? "" : ` (${unit})`}</span>}
+                      </td>
+                      {columns.map((c) => {
+                        const { text, className } = cell(v.name, c);
+                        return (
+                          <td key={c.key} className={`px-3 py-1 ${className}`}>
+                            {text}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="pt-2 text-base text-ink-muted">
+              {view === "values"
+                ? "Numbers that differ from what the board shows now are coloured."
+                : `Each number is the change from ${baseKey === NOW ? "what the board shows now" : `"${shownScenarios.find((s) => s.id === baseKey)?.name}"`}${view === "percent" ? ", as a percentage of it" : ""}. Green is higher, orange is lower.`}
+            </p>
+          </div>
         </div>
       )}
     </CollapsibleSection>

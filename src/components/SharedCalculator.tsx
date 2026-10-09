@@ -39,6 +39,8 @@ export function SharedCalculator({
   // A loaded scenario starts the panel over with its own locks.
   const [locks, setLocks] = useState<string[] | null>(null);
   const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(undefined);
+  // The unit each variable is shown in. Kept here so the scenarios are compared in the same units.
+  const [shownUnits, setShownUnits] = useState<Record<string, string>>({});
 
   return (
     <div className="flex flex-col gap-3">
@@ -100,6 +102,8 @@ export function SharedCalculator({
           visualizations={flat.visualizations}
           initialLocked={loadedLocks}
           onLocks={setLocks}
+          shownUnits={shownUnits}
+          onShownUnits={setShownUnits}
         />
       )}
       {view === "board" && boardId && scenarios && (
@@ -112,6 +116,7 @@ export function SharedCalculator({
           units={flat.units}
           hidden={flat.hidden}
           decimals={flat.decimals}
+          shownUnits={shownUnits}
           onLoad={(scenario) => {
             setValues(scenario.values);
             setLocks(scenario.locked);

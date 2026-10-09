@@ -1,5 +1,5 @@
 import { compute, shownValues } from "./calculator";
-import type { Analysis } from "./formulas";
+import { formatNumber, parseValue, type Analysis } from "./formulas";
 
 // A scenario is a named set of values for a board: what is typed (and so locked) and the numbers that
 // went with it. It is the user's own; nobody else sees it.
@@ -9,11 +9,39 @@ export type Scenario = { id: string; name: string } & ScenarioSnapshot;
 export const SCENARIO_LIMITS = { name: 40, perBoard: 20, variables: 300, text: 50 };
 
 // What a scenario shows on this board as it is now: the board is solved again with the values kept
-// where they were locked, so a change to the board since shows up. Numbers are rounded as the board does.
-export function resultsOf(analysis: Analysis, snapshot: ScenarioSnapshot, decimals?: Record<string, number>): Record<string, string> {
+// where they were locked, so a change to the board since shows up. `shown` is rounded as the board does,
+// `numbers` has the full precision, for working out differences.
+export type Outcome = { shown: Record<string, string>; numbers: Record<string, number | undefined> };
+
+export function outcomeOf(analysis: Analysis, snapshot: ScenarioSnapshot, decimals?: Record<string, number>): Outcome {
   const locked = snapshot.locked.filter((name) => analysis.variables.some((v) => v.name === name));
   const out = compute(analysis, snapshot.values, locked);
-  return shownValues(out.display, out.plan.held, decimals);
+  return {
+    shown: shownValues(out.display, out.plan.held, decimals),
+    numbers: Object.fromEntries(Object.entries(out.display).map(([name, text]) => [name, parseValue(text)])),
+  };
+}
+
+export function resultsOf(analysis: Analysis, snapshot: ScenarioSnapshot, decimals?: Record<string, number>): Record<string, string> {
+  return outcomeOf(analysis, snapshot, decimals).shown;
+}
+
+// How a number differs from a baseline, as the difference or as a percentage of the baseline. Returns null when
+// there is nothing to say: a number is missing, or the baseline is zero so there is no percentage.
+export type Difference = { text: string; sign: -1 | 0 | 1 };
+
+export function difference(value: number | undefined, baseline: number | undefined, as: "difference" | "percent", places?: number): Difference | null {
+  if (value === undefined || baseline === undefined) return null;
+  const change = value - baseline;
+  if (Math.abs(change) <= 1e-12 * Math.max(1, Math.abs(baseline))) return { text: as === "percent" ? "0%" : "0", sign: 0 };
+  const sign = change > 0 ? 1 : -1;
+  const mark = sign > 0 ? "+" : "−";
+  if (as === "difference") {
+    const size = places === undefined ? formatNumber(Number(Math.abs(change).toPrecision(6))) : Math.abs(change).toFixed(places);
+    return { text: `${mark}${size}`, sign };
+  }
+  if (baseline === 0) return null;
+  return { text: `${mark}${formatNumber(Number(Math.abs((change / Math.abs(baseline)) * 100).toPrecision(3)))}%`, sign };
 }
 
 // Reads what was sent for saving, or says why it can't be used.

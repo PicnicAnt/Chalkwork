@@ -52,7 +52,7 @@ Every save of a board is kept as a numbered version (`board_versions`: the whole
 
 ## Scenarios
 
-A signed-in user can save what is on a board as a named **scenario** (the typed values and which are locked; table `scenarios`, private to that user, at most 20 per board), load one back, and tick several to see them side by side with what the board shows now; numbers that differ are coloured. The board is solved again for each, so a scenario follows later changes to the board. The pure part is `src/lib/scenarios.ts`.
+A signed-in user can save what is on a board as a named **scenario** (the typed values and which are locked; table `scenarios`, private to that user, at most 20 per board), load one back, and tick several to see them side by side with what the board shows now; numbers that differ are coloured. The comparison can also show the **difference** (+5, −2.5) or the difference **in percent** (+50%) from a chosen baseline (what the board shows now, or any ticked scenario), and writes each number in the unit chosen for that variable on the board. The board is solved again for each, so a scenario follows later changes to the board. The pure part is `src/lib/scenarios.ts`.
 
 ## Tests and backups
 

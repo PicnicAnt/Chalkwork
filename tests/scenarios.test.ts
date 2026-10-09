@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyzeFormulas } from "@/lib/formulas";
-import { parseSnapshot, resultsOf } from "@/lib/scenarios";
+import { difference, outcomeOf, parseSnapshot, resultsOf } from "@/lib/scenarios";
 
 const analysis = analyzeFormulas(["area = width * height"]);
 
@@ -35,5 +35,36 @@ describe("scenarios", () => {
     expect(parseSnapshot({ values: { a: 1 }, locked: [] })).toBeNull();
     expect(parseSnapshot({ values: { a: "x".repeat(200) }, locked: [] })).toBeNull();
     expect(parseSnapshot({ values: {}, locked: "a" })).toBeNull();
+  });
+});
+
+describe("differences between scenarios", () => {
+  it("gives the change and its sign", () => {
+    expect(difference(15, 10, "difference")).toEqual({ text: "+5", sign: 1 });
+    expect(difference(7.5, 10, "difference")).toEqual({ text: "−2.5", sign: -1 });
+    expect(difference(10, 10, "difference")).toEqual({ text: "0", sign: 0 });
+  });
+
+  it("rounds the change the way the board does when it is told how", () => {
+    expect(difference(10.126, 10, "difference", 1)).toEqual({ text: "+0.1", sign: 1 });
+  });
+
+  it("gives the change as a percentage of the baseline", () => {
+    expect(difference(15, 10, "percent")).toEqual({ text: "+50%", sign: 1 });
+    expect(difference(5, 10, "percent")).toEqual({ text: "−50%", sign: -1 });
+    expect(difference(-5, -10, "percent")).toEqual({ text: "+50%", sign: 1 });
+  });
+
+  it("has nothing to say when a number is missing, or the baseline is zero for a percentage", () => {
+    expect(difference(undefined, 10, "difference")).toBeNull();
+    expect(difference(10, undefined, "percent")).toBeNull();
+    expect(difference(5, 0, "percent")).toBeNull();
+    expect(difference(5, 0, "difference")).toEqual({ text: "+5", sign: 1 });
+  });
+
+  it("works from the numbers a scenario gives", () => {
+    const a = outcomeOf(analysis, { values: { width: "3", height: "4" }, locked: ["width", "height"] });
+    const b = outcomeOf(analysis, { values: { width: "6", height: "4" }, locked: ["width", "height"] });
+    expect(difference(b.numbers.area, a.numbers.area, "percent")).toEqual({ text: "+100%", sign: 1 });
   });
 });

@@ -29,6 +29,8 @@ export function CalculatorPanel({
   visualizations,
   initialLocked,
   onLocks,
+  shownUnits: chosenUnits,
+  onShownUnits,
 }: {
   analysis: Analysis;
   values: Record<string, string>;
@@ -55,6 +57,9 @@ export function CalculatorPanel({
   initialLocked?: string[];
   /** Told which variables are locked, each time that changes through an edit. */
   onLocks?: (locked: string[]) => void;
+  /** The unit each variable is shown in, when the caller keeps track of it (so it can show the same units elsewhere). */
+  shownUnits?: Record<string, string>;
+  onShownUnits?: (units: Record<string, string>) => void;
 }) {
   // Locked variables, in the order they were locked. A variable that has a value when the board
   // loads starts locked, so it is kept; values the formulas leave no room for are left unlocked.
@@ -87,12 +92,16 @@ export function CalculatorPanel({
   // Recalculated values briefly flash in the accent color so the change is noticed.
   // A variable can be shown in another unit of the same kind (cm for m). Only what is shown changes: the
   // board is worked out in the unit each variable was written in.
-  const [shownUnits, setShownUnits] = useState<Record<string, string>>({});
+  const [ownUnits, setOwnUnits] = useState<Record<string, string>>({});
+  const shownUnits = chosenUnits ?? ownUnits;
   const unitOptions = useMemo(
     () => Object.fromEntries(analysis.variables.flatMap((v) => { const alt = alternatives(units?.[v.name]); return alt.length > 1 ? [[v.name, alt] as const] : []; })),
     [analysis, units],
   );
-  const changeUnit = useCallback((name: string, unit: string) => setShownUnits((s) => ({ ...s, [name]: unit })), []);
+  const changeUnit = useCallback(
+    (name: string, unit: string) => (onShownUnits ? onShownUnits({ ...shownUnits, [name]: unit }) : setOwnUnits((s) => ({ ...s, [name]: unit }))),
+    [onShownUnits, shownUnits],
+  );
 
   const flash = useCallback((names: string[]) => {
     const styles = getComputedStyle(document.documentElement);
