@@ -38,6 +38,12 @@ On someone else's board, **Suggest a change** opens the editor with that board; 
 
 A board that uses other boards has a **Connections** view: each used board is a pinned note and a red string runs between variables linked across boards (an option adds dotted strings for variables used in the same formula). The owner can press **Edit connections**, click one variable and then one on another board to link them, and click a solid string to cut it. This only changes the board's own links (the same as the **linked to** field).
 
+## Tests and backups
+
+`npm test` runs the automated tests (`tests/`, with [Vitest](https://vitest.dev)): the formula parser and solver (forwards, backwards, locks, numeric solving, nonsense formulas), boards that use boards, board validation, drawings and charts, the list of what a suggestion changes, the database schema steps and the backups.
+
+The database is copied with SQLite's own backup into `data/backups/` (not committed) when the production server starts, if the newest copy is more than a day old; `npm run backup` makes one on demand, and the newest 14 are kept. Set `CHALKWORK_BACKUP=0` to turn the automatic copy off. To restore, stop the site and copy a backup over `data/chalkwork.db`.
+
 ## Sample boards
 
 `node scripts/seed.mjs` creates sample boards for the test user Martin: RPG character stats, Path of Exile DPS calculator, Monster stats and the boards that combine them (Melee build, Boss fight), and the shapes Circle, Rectangle and Triangle with Cylinder from a circle, Garden plan, Pyramid (a rectangle and two triangles), Donut (two circles), and Sphere, Cone, Box, Hexagon, Ellipse and Washer with their own drawings and charts. Running it again doesn't create duplicates.
