@@ -12,6 +12,7 @@ import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
 import { FormulaText } from "./FormulaText";
+import { OptimizerPanel } from "./OptimizerPanel";
 import { ScenarioPanel } from "./ScenarioPanel";
 
 // `flat` is the board together with the boards it uses, as one set of formulas and settings.
@@ -54,6 +55,14 @@ export function SharedCalculator({
   const [copied, setCopied] = useState(false);
   // The unit each variable is shown in. Kept here so the scenarios are compared in the same units.
   const [shownUnits, setShownUnits] = useState<Record<string, string>>({});
+
+  // Puts a set of values and locks on the board, as if they had been typed.
+  const load = (snapshot: ScenarioSnapshot) => {
+    setValues(snapshot.values);
+    setLocks(snapshot.locked);
+    setLoadedLocks(snapshot.locked);
+    setResets(resets + 1);
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -167,12 +176,17 @@ export function SharedCalculator({
           hidden={flat.hidden}
           decimals={flat.decimals}
           shownUnits={shownUnits}
-          onLoad={(scenario) => {
-            setValues(scenario.values);
-            setLocks(scenario.locked);
-            setLoadedLocks(scenario.locked);
-            setResets(resets + 1);
-          }}
+          onLoad={load}
+        />
+      )}
+      {view === "board" && (
+        <OptimizerPanel
+          analysis={analysis}
+          flat={flat}
+          values={values}
+          locked={locks ?? initialLocks(analysis, values)}
+          boardId={boardId}
+          onApply={load}
         />
       )}
       {view === "board" && publicId && (
