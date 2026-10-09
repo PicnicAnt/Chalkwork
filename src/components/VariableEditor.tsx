@@ -8,7 +8,7 @@ import { CollapsibleSection } from "./ui/CollapsibleSection";
 import { ExpandAllBar, useFold } from "./ui/Foldable";
 
 // Units people commonly want, offered as suggestions while typing a unit.
-const COMMON_UNITS = ["%", "m", "m²", "m³", "cm", "mm", "km", "kg", "g", "s", "ms", "min", "h", "km/h", "m/s", "/s", "°C", "$", "€", "£", "USD", "kW", "kWh", "W", "V", "A", "L", "px"];
+const COMMON_UNITS = ["%", "m", "m²", "m³", "cm", "cm²", "cm³", "mm", "km", "km²", "in", "ft", "mi", "kg", "g", "mg", "lb", "s", "ms", "min", "h", "d", "km/h", "m/s", "/s", "°C", "$", "€", "£", "USD", "W", "kW", "kWh", "L", "mL", "px"];
 
 // One folded line per variable: its name, which can be changed (the formulas are rewritten to match), a
 // unit such as % or m², a note about what it means, and more. People see the unit and the note on the

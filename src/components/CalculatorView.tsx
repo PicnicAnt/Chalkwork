@@ -3,7 +3,8 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { sectionsByBoard } from "@/lib/boards";
 import { compute, initialLocks, shownValues, type Computed } from "@/lib/calculator";
-import { decidedBy, displayName, parseValue, type Analysis } from "@/lib/formulas";
+import { decidedBy, displayName, formatDecimals, formatNumber, parseValue, type Analysis } from "@/lib/formulas";
+import { alternatives, ratio as unitRatio } from "@/lib/units";
 import type { BundleVisualization } from "@/lib/visualizations";
 import { VariableRow } from "./VariableRow";
 import { VisualizationView } from "./Visualization";
@@ -84,6 +85,15 @@ export function CalculatorPanel({
   const shown = useMemo(() => shownValues(display, plan.held, decimals), [display, decimals, plan]);
 
   // Recalculated values briefly flash in the accent color so the change is noticed.
+  // A variable can be shown in another unit of the same kind (cm for m). Only what is shown changes: the
+  // board is worked out in the unit each variable was written in.
+  const [shownUnits, setShownUnits] = useState<Record<string, string>>({});
+  const unitOptions = useMemo(
+    () => Object.fromEntries(analysis.variables.flatMap((v) => { const alt = alternatives(units?.[v.name]); return alt.length > 1 ? [[v.name, alt] as const] : []; })),
+    [analysis, units],
+  );
+  const changeUnit = useCallback((name: string, unit: string) => setShownUnits((s) => ({ ...s, [name]: unit })), []);
+
   const flash = useCallback((names: string[]) => {
     const styles = getComputedStyle(document.documentElement);
     const from = styles.getPropertyValue("--accent").trim();
@@ -189,6 +199,20 @@ export function CalculatorPanel({
       .filter((viz) => (viz.group ?? null) === group)
       .map((viz, i) => <VisualizationView key={`${group}-${i}`} viz={viz} values={vizValues} />);
 
+  // By what the number written in the variable's own unit is multiplied to be shown in the unit chosen for it.
+  const ratioOf = (name: string): number => {
+    const chosen = shownUnits[name];
+    return chosen && unitOptions[name] ? (unitRatio(units?.[name], chosen) ?? 1) : 1;
+  };
+  // The value as shown, in the chosen unit. What was typed is kept as typed while it is being edited (in the row).
+  const valueOf = (name: string, text: string | undefined): string => {
+    const r = ratioOf(name);
+    const n = parseValue(text);
+    if (r === 1 || n === undefined) return text ?? "";
+    const places = decimals?.[name];
+    return places !== undefined && !plan.held.includes(name) ? formatDecimals(n * r, places) : formatNumber(n * r);
+  };
+
   function row(v: { name: string }, group: string | null) {
     const isHidden = hidden?.[v.name] === true;
     if (isHidden && !revealHidden) return null;
@@ -198,12 +222,15 @@ export function CalculatorPanel({
         key={v.name}
         name={v.name}
         description={descriptions?.[v.name]}
-        unit={units?.[v.name]}
+        unit={shownUnits[v.name] && unitOptions[v.name] ? shownUnits[v.name] : units?.[v.name]}
+        unitOptions={unitOptions[v.name]}
+        ratio={ratioOf(v.name)}
+        onUnit={changeUnit}
         // A variable from a board in use is shown without the board''s alias, under that board''s heading.
         label={labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined)}
         hidden={isHidden}
         linkedTo={links?.[v.name] ? displayName(links[v.name]) : undefined}
-        value={problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]}
+        value={valueOf(v.name, problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name])}
         problem={problem?.reason ?? null}
         canLock={parseValue(display[v.name]) !== undefined}
         readOnly={decided.has(v.name) && !problem}

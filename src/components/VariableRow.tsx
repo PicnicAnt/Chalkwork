@@ -1,13 +1,15 @@
 "use client";
 
-import { memo } from "react";
-import { displayName } from "@/lib/formulas";
+import { memo, useState } from "react";
+import { displayName, formatNumber, parseValue } from "@/lib/formulas";
 
 // Written like a line on the board: name = value
 export const VariableRow = memo(function VariableRow({
   name,
   description,
   unit,
+  unitOptions,
+  ratio = 1,
   label,
   hidden,
   linkedTo,
@@ -18,12 +20,18 @@ export const VariableRow = memo(function VariableRow({
   canLock,
   onEdit,
   onToggleLock,
+  onUnit,
   onBlur,
   register,
 }: {
   name: string;
   description?: string;
+  /** The unit the value is shown in. */
   unit?: string;
+  /** Other units of the same kind it can be shown in (the first is the unit it was written in). */
+  unitOptions?: string[];
+  /** By what a number written in the first unit is multiplied to be shown in `unit`. */
+  ratio?: number;
   label?: string;
   hidden?: boolean;
   /** The variable this one is linked to, shown under it. */
@@ -36,10 +44,15 @@ export const VariableRow = memo(function VariableRow({
   canLock: boolean;
   onEdit: (name: string, text: string) => void;
   onToggleLock: (name: string) => void;
+  onUnit: (name: string, unit: string) => void;
   onBlur: (name: string) => void;
   register: (name: string, el: HTMLInputElement | null) => void;
 }) {
   const id = `var-${name}`;
+  // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
+  // What was typed stays in the field while it is being edited, so "1." and "1.50" aren't rewritten under the cursor.
+  const [typed, setTyped] = useState<string | null>(null);
+  const shownText = typed ?? value;
   return (
     <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
       <span className="flex items-center gap-2">
@@ -57,7 +70,7 @@ export const VariableRow = memo(function VariableRow({
         <input
           id={id}
           ref={(el) => register(name, el)}
-          style={{ width: `${Math.max(value.length, readOnly ? 1 : 3) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
+          style={{ width: `${Math.max(shownText.length, readOnly ? 1 : 3) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
           className={`field min-w-0 flex-none rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
             readOnly ? "field-decided" : locked ? "field-bare field-locked" : "field-bare"
           }`}
@@ -65,11 +78,41 @@ export const VariableRow = memo(function VariableRow({
           placeholder="?"
           readOnly={readOnly}
           tabIndex={readOnly ? -1 : undefined}
-          value={value}
-          onChange={(e) => onEdit(name, e.target.value)}
-          onBlur={() => onBlur(name)}
+          value={shownText}
+          onChange={(e) => {
+            const text = e.target.value;
+            const n = parseValue(text);
+            if (ratio === 1 || n === undefined) {
+              setTyped(null);
+              onEdit(name, text);
+            } else {
+              setTyped(text);
+              onEdit(name, formatNumber(n / ratio));
+            }
+          }}
+          onBlur={() => {
+            setTyped(null);
+            onBlur(name);
+          }}
         />
-        {unit && <span className="shrink-0 text-lg text-ink-muted">{unit}</span>}
+        {unit &&
+          (unitOptions && unitOptions.length > 1 ? (
+            <select
+              value={unit}
+              onChange={(e) => onUnit(name, e.target.value)}
+              aria-label={`Unit to show ${label || name} in`}
+              title="Show this in another unit"
+              className="ml-1 shrink-0 cursor-pointer bg-transparent text-lg text-ink-muted"
+            >
+              {unitOptions.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="shrink-0 text-lg text-ink-muted">{unit}</span>
+          ))}
         </span>
         {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
         {readOnly ? (

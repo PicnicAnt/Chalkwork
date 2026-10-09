@@ -17,6 +17,7 @@ import {
 } from "@/lib/boards";
 import { includeOf, LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
 import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
+import { checkUnits } from "@/lib/unit-check";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardsSection, type BoardChoice } from "./BoardsSection";
 import { VisualizationEditor } from "./VisualizationEditor";
@@ -111,6 +112,8 @@ export function BoardEditor({
     const filled = textLines.flatMap((text, i) => (text.trim() ? [i] : []));
     return new Set(problems.filter((p) => p.line > 0).map((p) => filled[p.line - 1]));
   }, [formulaText, problems]);
+  // Formulas whose units don't fit. They are warnings: the board can still be saved.
+  const unitWarnings = useMemo(() => checkUnits(analysis, flat.bundle.units), [analysis, flat]);
   // board.variable names to suggest while typing a formula.
   const boardVariables = useMemo(
     () => analysis.variables.filter((v) => v.name.includes("$")).map((v) => displayName(v.name)),
@@ -260,6 +263,16 @@ export function BoardEditor({
           badLines={badLines}
           extraNames={boardVariables}
         />
+        {unitWarnings.length > 0 && (
+          <ul className="flex flex-col gap-1 text-base text-accent" aria-label="Unit warnings">
+            {unitWarnings.map((w) => (
+              <li key={`${w.line}-${w.message}`}>
+                <span className="text-xl">{w.formula} — </span>
+                {w.message}
+              </li>
+            ))}
+          </ul>
+        )}
         {problems.length > 0 && (
           <ul className="flex flex-col gap-1 text-base text-danger">
             {problems.map((p) => (
