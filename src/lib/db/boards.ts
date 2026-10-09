@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Board, BoardDraft } from "../board-draft";
 import { db } from "./client";
+import { recordVersion } from "./versions";
 
 // ---------------------------------------------------------------------------
 // Calculations
@@ -46,11 +47,13 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
     JSON.stringify(draft.visualizations),
     ownerId,
   );
+  recordVersion(id, draft, ownerId);
   return id;
 }
 
 // Only the owner's own calculation is changed: the ownership check is part of the statement.
-export function saveBoard(id: string, ownerId: string, draft: BoardDraft): boolean {
+// `note` says why, for the history ("Restored version 3").
+export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note = ""): boolean {
   const result = db
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
@@ -74,7 +77,9 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft): boole
       id,
       ownerId,
     );
-  return result.changes > 0;
+  if (result.changes === 0) return false;
+  recordVersion(id, draft, ownerId, note);
+  return true;
 }
 
 const parse = (row: Row): Board => ({

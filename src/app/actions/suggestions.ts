@@ -56,7 +56,7 @@ export async function approveSuggestion(id: string, force = false): Promise<Deci
   }
   const prepared = prepare(s.draft, s.boardId);
   if ("errors" in prepared) return { ok: false, error: `It no longer fits the board: ${prepared.errors.join(" ")}` };
-  if (!saveBoard(s.boardId, user.id, prepared.draft)) return { ok: false, error: "Only the owner of the board can approve this." };
+  if (!saveBoard(s.boardId, user.id, prepared.draft, `Suggestion from ${s.authorName}`)) return { ok: false, error: "Only the owner of the board can approve this." };
   decideSuggestion(id, "approved", "");
   return { ok: true };
 }

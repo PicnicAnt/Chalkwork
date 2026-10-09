@@ -33,17 +33,17 @@ export async function updateBoard(id: string, payload: unknown): Promise<SaveRes
   return { ok: true, id };
 }
 
-export type BoardToUse = { ok: true; board: string; title: string; bundle: Bundle } | { ok: false; error: string };
+export type BoardToUse = { ok: true; board: string; title: string; latest: number; bundle: Bundle } | { ok: false; error: string };
 
 // Loads a board so the editor can add it to the board being built. `selfId` is that board, if it
 // already exists, so that boards can't end up using each other in a loop.
-export async function loadBoardToUse(boardId: string, selfId?: string): Promise<BoardToUse> {
+export async function loadBoardToUse(boardId: string, selfId?: string, version?: number): Promise<BoardToUse> {
   if (!(await getCurrentUser())) return { ok: false, error: "Sign in to use a board." };
   if (typeof boardId !== "string") return { ok: false, error: "Pick a board." };
-  const found = resolveBoard(boardId, typeof selfId === "string" ? selfId : undefined);
+  const found = resolveBoard(boardId, typeof selfId === "string" ? selfId : undefined, Number.isInteger(version) ? version : undefined);
   return "error" in found
     ? { ok: false, error: found.error }
-    : { ok: true, board: boardId, title: found.title, bundle: found.bundle };
+    : { ok: true, board: boardId, title: found.title, latest: found.latest, bundle: found.bundle };
 }
 
 // Changes only the links of a board, which is what the Connections view edits. Everything else on

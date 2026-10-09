@@ -17,7 +17,7 @@ import type { BundleVisualization, Visualization } from "./visualizations";
 // it loads and checks a board, and by the editor, to preview a board while it is being built.
 
 /** `name` is what the board is called here (so one board can be used twice, as player and as enemy); empty means its own title. */
-export type Include = { board: string; alias: string; name?: string };
+export type Include = { board: string; alias: string; name?: string; /** Pinned to this version of the board; without it the latest is used. */ version?: number };
 
 // Everything one board contributes to a bigger system, with all its variables named in its own
 // namespace (before any alias is put in front).
@@ -43,7 +43,17 @@ export type Bundle = {
 
 export type OwnData = Omit<Bundle, "groups" | "visualizations"> & { visualizations: Visualization[] };
 
-export type IncludedBundle = { alias: string; board: string; title: string; name?: string; bundle: Bundle };
+export type IncludedBundle = {
+  alias: string;
+  board: string;
+  title: string;
+  name?: string;
+  /** The version it is pinned to, if it is. */
+  version?: number;
+  /** The newest version of the board, to say when a pinned one is behind. */
+  latest?: number;
+  bundle: Bundle;
+};
 
 export const BOARD_LIMITS = { includes: 10, depth: 5, alias: 30, name: 60 };
 
@@ -72,7 +82,8 @@ export function parseIncludes(raw: unknown): { includes: Include[]; errors: stri
     else {
       seen.add(alias);
       const name = typeof item?.name === "string" ? item.name.trim().slice(0, BOARD_LIMITS.name) : "";
-      includes.push(name ? { board, alias, name } : { board, alias });
+      const version = Number.isInteger(item?.version) && item.version >= 1 ? (item.version as number) : undefined;
+      includes.push({ board, alias, ...(name ? { name } : {}), ...(version ? { version } : {}) });
     }
   }
   return { includes, errors };

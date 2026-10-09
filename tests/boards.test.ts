@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { includeOf } from "@/lib/board-draft";
 import {
   checkAlias,
   defaultAlias,
@@ -105,5 +106,21 @@ describe("aliases and links", () => {
       [null, ["total", "x"]],
       ["room", ["room$width", "room$height"]],
     ]);
+  });
+});
+
+describe("pinning a used board to a version", () => {
+  it("keeps a pinned version and ignores nonsense", () => {
+    const { includes } = parseIncludes([
+      { board: "x", alias: "one", version: 3 },
+      { board: "y", alias: "two", version: 0 },
+      { board: "z", alias: "three", version: "2" },
+    ]);
+    expect(includes).toEqual([{ board: "x", alias: "one", version: 3 }, { board: "y", alias: "two" }, { board: "z", alias: "three" }]);
+  });
+
+  it("saves only what belongs to a used board", () => {
+    expect(includeOf({ board: "x", alias: "a", name: "A", version: 2, latest: 5 } as never)).toEqual({ board: "x", alias: "a", name: "A", version: 2 });
+    expect(includeOf({ board: "x", alias: "a" })).toEqual({ board: "x", alias: "a" });
   });
 });

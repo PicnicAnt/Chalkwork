@@ -45,6 +45,11 @@ export default async function BoardPage({ params }: PageProps<"/c/[id]">) {
         </div>
         <div className="flex shrink-0 items-center gap-4">
           {isOwner && (
+            <Link href={`/c/${calculation.id}/history`} className="link text-lg">
+              History
+            </Link>
+          )}
+          {isOwner && (
             <Link href={`/suggestions`} className="link text-lg">
               Suggestions{openSuggestions > 0 ? ` (${openSuggestions})` : ""}
             </Link>

@@ -45,6 +45,7 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
     const now = nextUse.get(alias);
     if (!now || now.board !== inc.board) out.push(`Stops using a board as ${alias}`);
     else if ((now.name ?? "") !== (inc.name ?? "")) out.push(`Board ${alias} is now named ${show(now.name)}`);
+    else if ((now.version ?? 0) !== (inc.version ?? 0)) out.push(now.version ? `Board ${alias} is pinned to version ${now.version}` : `Board ${alias} follows the latest version`);
   }
   for (const [alias, inc] of nextUse) {
     const was = baseUse.get(alias);

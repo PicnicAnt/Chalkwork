@@ -1,7 +1,7 @@
 import "server-only";
 import { BOARD_LIMITS, flatten, type Bundle, type Include, type IncludedBundle, type OwnData } from "./boards";
 import type { Board } from "./board-draft";
-import { getBoard } from "./db";
+import { getBoard, getVersion, latestVersion } from "./db";
 
 // Loading the boards a board uses. Boards use boards by id and are read when needed, so a change to
 // a used board shows up in every board that uses it. The two things that can go wrong are boards
@@ -30,18 +30,26 @@ function bundleOf(
   boardId: string,
   visiting: readonly string[],
   budget: Budget,
+  version?: number,
 ): { title: string; bundle: Bundle } | Failure {
   if (visiting.includes(boardId)) return { error: "Boards can't use each other in a loop." };
   if (visiting.length >= BOARD_LIMITS.depth) {
     return { error: `Boards can only use other boards ${BOARD_LIMITS.depth} levels deep.` };
   }
   if (--budget.left < 0) return { error: "That is too many boards to load at once." };
-  const calc = getBoard(boardId);
-  if (!calc) return { error: "A board that is used no longer exists." };
+  const current = getBoard(boardId);
+  if (!current) return { error: "A board that is used no longer exists." };
+  // A pinned board is the saved version, with the board's own title.
+  let calc: Board = current;
+  if (version) {
+    const saved = getVersion(boardId, version);
+    if (!saved) return { error: `Version ${version} of "${current.title}" doesn't exist.` };
+    calc = { ...current, ...saved };
+  }
 
   const resolved = resolveWithBudget(calc.includes, [...visiting, boardId], budget);
   if ("error" in resolved) return resolved;
-  return { title: calc.title, bundle: flatten(ownData(calc), resolved.included).bundle };
+  return { title: current.title, bundle: flatten(ownData(calc), resolved.included).bundle };
 }
 
 function resolveWithBudget(
@@ -51,9 +59,9 @@ function resolveWithBudget(
 ): { included: IncludedBundle[] } | Failure {
   const included: IncludedBundle[] = [];
   for (const inc of includes) {
-    const found = bundleOf(inc.board, visiting, budget);
+    const found = bundleOf(inc.board, visiting, budget, inc.version);
     if ("error" in found) return found;
-    included.push({ alias: inc.alias, board: inc.board, title: found.title, name: inc.name, bundle: found.bundle });
+    included.push({ alias: inc.alias, board: inc.board, title: found.title, name: inc.name, version: inc.version, latest: latestVersion(inc.board), bundle: found.bundle });
   }
   return { included };
 }
@@ -69,9 +77,10 @@ export function resolveIncludes(
 }
 
 // One board, loaded so it can be added to another.
-export function resolveBoard(boardId: string, selfId?: string): { title: string; bundle: Bundle } | Failure {
+export function resolveBoard(boardId: string, selfId?: string, version?: number): { title: string; latest: number; bundle: Bundle } | Failure {
   if (selfId && boardId === selfId) return { error: "A board can't use itself." };
-  return bundleOf(boardId, selfId ? [selfId] : [], { left: MAX_BOARDS_LOADED });
+  const found = bundleOf(boardId, selfId ? [selfId] : [], { left: MAX_BOARDS_LOADED }, version);
+  return "error" in found ? found : { ...found, latest: latestVersion(boardId) };
 }
 
 // A board together with the boards it uses, as the one system of formulas to show.

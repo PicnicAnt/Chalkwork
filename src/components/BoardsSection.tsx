@@ -20,6 +20,7 @@ export function BoardsSection({
   onAdd,
   onAlias,
   onName,
+  onPin,
   onRemove,
 }: {
   includes: Include[];
@@ -32,6 +33,7 @@ export function BoardsSection({
   onAdd: (boardId: string) => void;
   onAlias: (from: string, to: string) => void;
   onName: (alias: string, name: string) => void;
+  onPin: (alias: string, version: number | undefined) => void;
   onRemove: (alias: string) => void;
 }) {
   const fold = useFold();
@@ -61,6 +63,7 @@ export function BoardsSection({
                 key={inc.alias}
                 inc={inc}
                 title={included.find((i) => i.alias === inc.alias)?.title ?? "Board"}
+                latest={included.find((i) => i.alias === inc.alias)?.latest}
                 otherAliases={includes.filter((i) => i.alias !== inc.alias).map((i) => i.alias)}
                 expanded={fold.isOpen(inc.alias)}
                 onToggle={() => fold.toggle(inc.alias)}
@@ -69,6 +72,7 @@ export function BoardsSection({
                   if (fold.isOpen(inc.alias)) fold.open(to);
                 }}
                 onName={(name) => onName(inc.alias, name)}
+                onPin={(version) => onPin(inc.alias, version)}
                 onRemove={() => onRemove(inc.alias)}
               />
             ))}

@@ -9,21 +9,27 @@ import { useCommitField } from "./ui/useCommitField";
 export function UsedBoard({
   inc,
   title,
+  latest,
   otherAliases,
   expanded,
   onToggle,
   onAlias,
   onName,
+  onPin,
   onRemove,
 }: {
   inc: Include;
   /** The board's own title. */
   title: string;
+  /** The newest version of the board. */
+  latest?: number;
   otherAliases: string[];
   expanded: boolean;
   onToggle: () => void;
   onAlias: (to: string) => void;
   onName: (name: string) => void;
+  /** Pins the board to a version, or follows its latest again (undefined). */
+  onPin: (version: number | undefined) => void;
   onRemove: () => void;
 }) {
   // The alias rewrites formulas, so it is applied when the field is left, not on every keystroke.
@@ -36,7 +42,7 @@ export function UsedBoard({
   });
 
   return (
-    <Foldable expanded={expanded} onToggle={onToggle} summary={inc.name || title} hint={` · used as ${inc.alias}`}>
+    <Foldable expanded={expanded} onToggle={onToggle} summary={inc.name || title} hint={` · used as ${inc.alias}${inc.version ? ` · version ${inc.version}` : ""}`}>
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <a
           href={`/c/${inc.board}`}
@@ -72,6 +78,33 @@ export function UsedBoard({
         </button>
       </div>
       {alias.error && <span className="text-sm text-danger">{alias.error}</span>}
+      {latest !== undefined && latest > 0 && (
+        <p className="flex flex-wrap items-baseline gap-x-3 text-base text-ink-muted">
+          {inc.version ? (
+            <>
+              <span>
+                Pinned to version {inc.version}
+                {latest > inc.version ? ` (version ${latest} is newer)` : ""}.
+              </span>
+              {latest > inc.version && (
+                <button type="button" onClick={() => onPin(latest)} className="link">
+                  Update to version {latest}
+                </button>
+              )}
+              <button type="button" onClick={() => onPin(undefined)} className="link">
+                Follow the latest
+              </button>
+            </>
+          ) : (
+            <>
+              <span>Follows the latest version (now {latest}), so changes to it show up here.</span>
+              <button type="button" onClick={() => onPin(latest)} className="link">
+                Pin to version {latest}
+              </button>
+            </>
+          )}
+        </p>
+      )}
     </Foldable>
   );
 }

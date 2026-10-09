@@ -62,6 +62,14 @@ export function splitFormulas(text: string): string[] {
 
 // `included` is the boards this one uses, already loaded by the server (see resolve-boards.ts). They
 // are part of the system of formulas, so their variables can be named, noted and linked here too.
+// What is saved of a used board: which board, its alias, the name shown for it and the version it is pinned to.
+export const includeOf = (i: { board: string; alias: string; name?: string; version?: number }): Include => ({
+  board: i.board,
+  alias: i.alias,
+  ...(i.name ? { name: i.name } : {}),
+  ...(i.version ? { version: i.version } : {}),
+});
+
 export function validateDraft(
   raw: unknown,
   included: readonly IncludedBundle[] = [],
@@ -186,7 +194,7 @@ export function validateDraft(
           hidden,
           labels,
           decimals,
-          includes: included.map((i) => (i.name ? { board: i.board, alias: i.alias, name: i.name } : { board: i.board, alias: i.alias })),
+          includes: included.map(includeOf),
           links,
           visualizations: parsedViz.visualizations,
         },

@@ -83,6 +83,37 @@ describe("backups", () => {
     const backups = path.join(dir, "backups");
     expect(await backupIfDue(db, backups)).not.toBeNull();
     expect(await backupIfDue(db, backups)).toBeNull();
-    expect(await backupIfDue(db, backups, 0)).not.toBeNull();
+    // A zero age can race the file's own timestamp, so ask for a copy no matter how recent the last is.
+    expect(await backupIfDue(db, backups, -60_000)).not.toBeNull();
+  });
+});
+
+describe("the history of a board", () => {
+  it("gives every board that exists its current state as version 1", () => {
+    const db = new Database(":memory:");
+    migrate(db);
+    // Go back to before the history existed, with a board in the database.
+    db.exec("DROP TABLE board_versions");
+    db.pragma("user_version = 15");
+    db.prepare("INSERT INTO calculations (id, title, description, formulas, input_values) VALUES ('b1', 'Rectangle', 'd', ?, ?)").run('["area = w * h"]', '{"w":"3"}');
+    migrate(db);
+    const rows = db.prepare("SELECT version, draft FROM board_versions WHERE board_id = 'b1'").all() as { version: number; draft: string }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].version).toBe(1);
+    const draft = JSON.parse(rows[0].draft);
+    expect(draft.title).toBe("Rectangle");
+    expect(draft.formulas).toEqual(["area = w * h"]);
+    expect(draft.values).toEqual({ w: "3" });
+    expect(draft.includes).toEqual([]);
+  });
+
+  it("goes with the board when it is deleted", () => {
+    const db = new Database(":memory:");
+    db.pragma("foreign_keys = ON");
+    migrate(db);
+    db.prepare("INSERT INTO calculations (id, title, description, formulas, input_values) VALUES ('b1', 't', '', '[]', '{}')").run();
+    db.prepare("INSERT INTO board_versions (board_id, version, draft) VALUES ('b1', 1, '{}')").run();
+    db.prepare("DELETE FROM calculations WHERE id = 'b1'").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM board_versions").get()).toEqual({ n: 0 });
   });
 });

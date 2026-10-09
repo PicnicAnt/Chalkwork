@@ -146,4 +146,40 @@ export function migrate(db: Database.Database) {
     `);
     db.pragma("user_version = 15");
   }
+  if (version < 16) {
+    // The history of a board: every save is kept as a numbered version (the draft, as JSON). The boards that
+    // exist now get their current state as version 1.
+    db.exec(`
+      CREATE TABLE board_versions (
+        board_id TEXT NOT NULL REFERENCES calculations(id) ON DELETE CASCADE,
+        version INTEGER NOT NULL,
+        draft TEXT NOT NULL,
+        saved_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+        note TEXT NOT NULL DEFAULT '',
+        saved_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        PRIMARY KEY (board_id, version)
+      );
+    `);
+    const boards = db.prepare("SELECT * FROM calculations").all() as Record<string, string | null>[];
+    const keep = db.prepare("INSERT INTO board_versions (board_id, version, draft, saved_by, saved_at) VALUES (?, 1, ?, ?, COALESCE(?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')))");
+    for (const b of boards) {
+      const json = (text: string | null, fallback: string) => JSON.parse(text || fallback);
+      const draft = {
+        title: b.title,
+        description: b.description,
+        formulas: json(b.formulas, "[]"),
+        values: json(b.input_values, "{}"),
+        descriptions: json(b.variable_descriptions, "{}"),
+        units: json(b.variable_units, "{}"),
+        labels: json(b.variable_labels, "{}"),
+        hidden: json(b.variable_hidden, "{}"),
+        decimals: json(b.variable_decimals, "{}"),
+        includes: json(b.board_includes, "[]"),
+        links: json(b.variable_links, "{}"),
+        visualizations: json(b.visualizations, "[]"),
+      };
+      keep.run(b.id, JSON.stringify(draft), b.owner_id, b.updated_at, b.created_at);
+    }
+    db.pragma("user_version = 16");
+  }
 }

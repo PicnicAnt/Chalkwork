@@ -15,7 +15,7 @@ import {
   renameLinks,
   type IncludedBundle,
 } from "@/lib/boards";
-import { LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
+import { includeOf, LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
 import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardsSection, type BoardChoice } from "./BoardsSection";
@@ -134,9 +134,25 @@ export function BoardEditor({
           ),
           board: result.board,
           title: result.title,
+          latest: result.latest,
           bundle: result.bundle,
         },
       ]);
+    });
+  }
+
+  // A used board is pinned to a version, or follows the latest again: its formulas are loaded as that version had them.
+  function pinBoard(alias: string, version: number | undefined) {
+    const item = included.find((i) => i.alias === alias);
+    if (!item) return;
+    setBoardError(null);
+    startLoadingBoard(async () => {
+      const result = await loadBoardToUse(item.board, editing?.id ?? suggesting?.boardId, version);
+      if (!result.ok) {
+        setBoardError(result.error);
+        return;
+      }
+      setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, version, latest: result.latest, bundle: result.bundle } : i)));
     });
   }
 
@@ -170,7 +186,7 @@ export function BoardEditor({
 
   function save() {
     startTransition(async () => {
-      const includes = included.map((i) => (i.name ? { board: i.board, alias: i.alias, name: i.name } : { board: i.board, alias: i.alias }));
+      const includes = included.map(includeOf);
       const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
@@ -257,7 +273,7 @@ export function BoardEditor({
       </section>
 
       <BoardsSection
-        includes={included.map((i) => ({ board: i.board, alias: i.alias, name: i.name }))}
+        includes={included.map(includeOf)}
         included={included}
         available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
         busy={loadingBoard}
@@ -265,6 +281,7 @@ export function BoardEditor({
         onAdd={addBoard}
         onAlias={renameAlias}
         onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
+        onPin={pinBoard}
         onRemove={(alias) => {
           setIncluded((list) => list.filter((i) => i.alias !== alias));
           setLinks((l) => dropAliasLinks(l, alias));
