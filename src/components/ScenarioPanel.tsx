@@ -8,7 +8,8 @@ import { displayName, formatDecimals, formatNumber, type Analysis } from "@/lib/
 import { ratio as unitRatio } from "@/lib/units";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
 
-type View = "values" | "difference" | "percent";
+// "both" is the value with its change in percent beside it, which is what is shown to begin with.
+type View = "both" | "values" | "difference" | "percent";
 const NOW = "now";
 
 // Named sets of values for a board, kept by the person who made them. A scenario can be loaded back into the
@@ -45,7 +46,7 @@ export function ScenarioPanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [compared, setCompared] = useState<string[]>([]);
-  const [view, setView] = useState<View>("values");
+  const [view, setView] = useState<View>("both");
   const [baseline, setBaseline] = useState<string>(NOW);
 
   function save() {
@@ -100,9 +101,25 @@ export function ScenarioPanel({
     return places !== undefined ? formatDecimals(n * r, places) : formatNumber(n * r);
   }
 
-  function cell(variable: string, column: (typeof columns)[number]) {
+  // How far a column is from the baseline, as the numbers are written in the unit shown.
+  function change(variable: string, column: (typeof columns)[number], as: "difference" | "percent") {
+    const { r } = unitOf(variable);
+    const value = column.outcome.numbers[variable];
+    const from = base.outcome.numbers[variable];
+    return difference(value === undefined ? undefined : value * r, from === undefined ? undefined : from * r, as, as === "difference" ? decimals[variable] : undefined);
+  }
+
+  const signClass = (sign: number) => (sign > 0 ? "text-accent-2" : sign < 0 ? "text-op" : "text-ink-faint");
+
+  function cell(variable: string, column: (typeof columns)[number]): { text: string; className: string; note?: { text: string; className: string } } {
     const { r } = unitOf(variable);
     const places = decimals[variable];
+    if (view === "both") {
+      const text = valueText(variable, column) || "?";
+      if (column.key === baseKey) return { text, className: "text-ink-muted" };
+      const d = change(variable, column, "percent");
+      return { text, className: "", note: d ? { text: d.text, className: signClass(d.sign) } : undefined };
+    }
     if (view === "values") {
       const text = valueText(variable, column);
       return { text: text || "?", className: column.key !== NOW && text !== valueText(variable, columns[0]) ? "text-accent" : "" };
@@ -113,7 +130,7 @@ export function ScenarioPanel({
     const from = base.outcome.numbers[variable];
     const d = difference(value === undefined ? undefined : value * r, from === undefined ? undefined : from * r, view, view === "difference" ? places : undefined);
     if (!d) return { text: "–", className: "text-ink-faint" };
-    return { text: d.text, className: d.sign > 0 ? "text-accent-2" : d.sign < 0 ? "text-op" : "text-ink-faint" };
+    return { text: d.text, className: signClass(d.sign) };
   }
 
   return (
@@ -176,6 +193,7 @@ export function ScenarioPanel({
             <label className="flex items-baseline gap-2">
               <span className="text-ink-muted">Show</span>
               <select value={view} onChange={(e) => setView(e.target.value as View)} className="cursor-pointer bg-transparent text-lg" aria-label="How to show the scenarios">
+                <option value="both">the values and the change in percent</option>
                 <option value="values">the values</option>
                 <option value="difference">the difference</option>
                 <option value="percent">the difference in percent</option>
@@ -219,10 +237,11 @@ export function ScenarioPanel({
                         {unit && <span className="text-ink-muted">{view === "percent" ? "" : ` (${unit})`}</span>}
                       </td>
                       {columns.map((c) => {
-                        const { text, className } = cell(v.name, c);
+                        const { text, className, note } = cell(v.name, c);
                         return (
                           <td key={c.key} className={`px-3 py-1 ${className}`}>
                             {text}
+                            {note && <span className={`ml-2 text-base ${note.className}`}>{note.text}</span>}
                           </td>
                         );
                       })}
@@ -234,7 +253,9 @@ export function ScenarioPanel({
             <p className="pt-2 text-base text-ink-muted">
               {view === "values"
                 ? "Numbers that differ from what the board shows now are coloured."
-                : `Each number is the change from ${baseKey === NOW ? "what the board shows now" : `"${shownScenarios.find((s) => s.id === baseKey)?.name}"`}${view === "percent" ? ", as a percentage of it" : ""}. The baseline column shows its own values. Green is higher, orange is lower.`}
+                : view === "both"
+                  ? `Each value is followed by its change in percent from ${baseKey === NOW ? "what the board shows now" : `"${shownScenarios.find((s) => s.id === baseKey)?.name}"`}, which is the baseline column. Green is higher, orange is lower.`
+                  : `Each number is the change from ${baseKey === NOW ? "what the board shows now" : `"${shownScenarios.find((s) => s.id === baseKey)?.name}"`}${view === "percent" ? ", as a percentage of it" : ""}. The baseline column shows its own values. Green is higher, orange is lower.`}
             </p>
           </div>
         </div>
