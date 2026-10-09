@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Bundle } from "@/lib/boards";
 import { analyzeFormulas } from "@/lib/formulas";
+import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
 import { FormulaText } from "./FormulaText";
@@ -29,6 +30,7 @@ export function SharedCalculator({
 
   return (
     <div className="flex flex-col gap-3">
+      <BoardGuide />
       <div className="flex items-baseline justify-between gap-3">
         {usesBoards ? (
           <div className="flex gap-4 text-lg" role="tablist" aria-label="View">

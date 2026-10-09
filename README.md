@@ -38,6 +38,10 @@ On someone else's board, **Suggest a change** opens the editor with that board; 
 
 A board that uses other boards has a **Connections** view: each used board is a pinned note and a red string runs between variables linked across boards (an option adds dotted strings for variables used in the same formula). The owner can press **Edit connections**, click one variable and then one on another board to link them, and click a solid string to cut it. This only changes the board's own links (the same as the **linked to** field).
 
+## Getting started
+
+**New** first shows a gallery of templates (loan payment, savings growth, rectangle, damage per second, or nothing), in `src/lib/templates.ts`; the editor opens filled in and saving makes the visitor's own board. A board has a short guide, `How does this work?`, that opens by itself the first time in a browser (remembered in local storage) and explains locks, fixed values and `?` with the real colours.
+
 ## Tests and backups
 
 `npm test` runs the automated tests (`tests/`, with [Vitest](https://vitest.dev)): the formula parser and solver (forwards, backwards, locks, numeric solving, nonsense formulas), boards that use boards, board validation, drawings and charts, the list of what a suggestion changes, the database schema steps and the backups.

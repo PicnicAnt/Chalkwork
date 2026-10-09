@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { createBoard, loadBoardToUse, updateBoard } from "@/app/actions/boards";
@@ -15,7 +16,6 @@ import {
   type IncludedBundle,
 } from "@/lib/boards";
 import { LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
-import { EXAMPLE } from "@/lib/example-board";
 import { analyzeFormulas, displayName, formulaProblems } from "@/lib/formulas";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardsSection, type BoardChoice } from "./BoardsSection";
@@ -155,23 +155,6 @@ export function BoardEditor({
     setVisualizations((vs) => renameInVisualizations(vs, (name) => (name.startsWith(from + "$") ? to + name.slice(from.length) : name)));
   }
 
-  function loadExample() {
-    setTitle(EXAMPLE.title);
-    setDescription(EXAMPLE.description);
-    setFormulaText(EXAMPLE.formulas);
-    setValues(EXAMPLE.values);
-    setDescriptions(EXAMPLE.descriptions);
-    setUnits(EXAMPLE.units);
-    setLabels(EXAMPLE.labels);
-    setHidden({});
-    setDecimalText(EXAMPLE.decimals);
-    setIncluded([]);
-    setLinks({});
-    setVisualizations([]);
-    setBoardError(null);
-    setErrors([]);
-  }
-
   // Renaming rewrites the formulas, and the starting value and note move to the new name.
   function renameVariable(from: string, to: string) {
     setFormulaText((text) => renameVariableInText(text, analysis, from, to));
@@ -220,10 +203,10 @@ export function BoardEditor({
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="text-3xl font-bold sm:text-4xl">{heading}</h1>
-          {!initial && (
-            <button type="button" onClick={loadExample} className="link text-base">
-              Fill in an example
-            </button>
+          {!initial && !editing && !suggesting && (
+            <Link href="/new" className="link text-base">
+              Start from a template
+            </Link>
           )}
         </div>
         <input
