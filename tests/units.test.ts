@@ -15,7 +15,7 @@ describe("understanding unit labels", () => {
   });
 
   it("leaves what it doesn't know alone", () => {
-    expect(parseUnit("months")).toBeNull();
+    expect(parseUnit("widgets")).toBeNull();
     expect(parseUnit("dmg")).toBeNull();
     expect(parseUnit("")).toBeNull();
     expect(parseUnit(undefined)).toBeNull();
@@ -36,7 +36,7 @@ describe("understanding unit labels", () => {
   it("does not convert what has no scale of its own", () => {
     expect(alternatives("$")).toEqual([]);
     expect(alternatives("%")).toEqual([]);
-    expect(alternatives("months")).toEqual([]);
+    expect(alternatives("widgets")).toEqual([]);
   });
 
   it("writes a dimension in SI units", () => {
@@ -83,7 +83,7 @@ describe("checking that formulas fit their units", () => {
 
   it("says nothing when a variable has no known unit", () => {
     expect(check(["area = width * height"], { width: "m", area: "cm" })).toEqual([]);
-    expect(check(["x = a + b"], { a: "m", b: "months", x: "m" })).toEqual([]);
+    expect(check(["x = a + b"], { a: "m", b: "widgets", x: "m" })).toEqual([]);
   });
 });
 
@@ -92,5 +92,31 @@ describe("more checks", () => {
   it("inverts a unit that a plain number is divided by", () => {
     expect(check(["rate = 1 / time"], { time: "s", rate: "/s" })).toEqual([]);
     expect(check(["rate = 10 / time"], { time: "s", rate: "s" })).toHaveLength(1);
+  });
+});
+
+describe("time", () => {
+  it("converts between seconds, minutes, hours, days, weeks, months and years, in short or long names", () => {
+    expect(ratio("min", "s")).toBeCloseTo(60);
+    expect(ratio("h", "min")).toBeCloseTo(60);
+    expect(ratio("days", "h")).toBeCloseTo(24);
+    expect(ratio("wk", "d")).toBeCloseTo(7);
+    expect(ratio("year", "d")).toBeCloseTo(365.2425);
+    expect(ratio("months", "years")).toBeCloseTo(1 / 12);
+    expect(ratio("yr", "mo")).toBeCloseTo(12);
+    expect(ratio("ms", "µs")).toBeCloseTo(1000);
+  });
+
+  it("offers the other units of time, the one it was written in first", () => {
+    const alt = alternatives("months");
+    expect(alt[0]).toBe("months");
+    expect(alt).toEqual(expect.arrayContaining(["s", "min", "h", "d", "wk", "yr"]));
+    expect(alternatives("/yr")).toEqual(expect.arrayContaining(["/s", "/d", "/mo"]));
+  });
+
+  it("checks time in formulas like any other unit", () => {
+    const check = (formulas: string[], units: Record<string, string>) => checkUnits(analyzeFormulas(formulas), units);
+    expect(check(["total = a + b"], { a: "h", b: "min", total: "h" })).toHaveLength(1);
+    expect(check(["distance = speed * time"], { speed: "km/h", time: "h", distance: "km" })).toEqual([]);
   });
 });

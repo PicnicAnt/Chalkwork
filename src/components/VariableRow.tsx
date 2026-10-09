@@ -51,8 +51,9 @@ export const VariableRow = memo(function VariableRow({
   const id = `var-${name}`;
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
   // What was typed stays in the field while it is being edited, so "1." and "1.50" aren't rewritten under the cursor.
-  const [typed, setTyped] = useState<string | null>(null);
-  const shownText = typed ?? value;
+  // It is only kept for the unit it was typed in.
+  const [typed, setTyped] = useState<{ text: string; unit?: string } | null>(null);
+  const shownText = typed && typed.unit === unit ? typed.text : value;
   return (
     <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
       <span className="flex items-center gap-2">
@@ -86,7 +87,7 @@ export const VariableRow = memo(function VariableRow({
               setTyped(null);
               onEdit(name, text);
             } else {
-              setTyped(text);
+              setTyped({ text, unit });
               onEdit(name, formatNumber(n / ratio));
             }
           }}
