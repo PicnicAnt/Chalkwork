@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { flatten, type Bundle } from "@/lib/boards";
 import { solveBoard } from "@/lib/board-api";
 
-const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [] };
+const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], links: {}, visualizations: [] };
 const bundleOf = (formulas: string[], more: Partial<typeof empty> = {}): Bundle => flatten({ ...empty, formulas, ...more }, []).bundle;
 
 describe("using a board from code", () => {

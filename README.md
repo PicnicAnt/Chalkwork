@@ -58,6 +58,12 @@ Every save of a board is kept as a numbered version (`board_versions`: the whole
 
 Each variable can have a lowest and a highest value (in the variable editor). A value outside them gets a warning, and a variable with both gets a slider under it. The **Spread** chart draws the inputs at random between their ranges (most often near the value they have now), solves the board for each draw and shows how the result could turn out: a histogram with the 5% and 95% marks. The draws are seeded, so a board shows the same picture every time.
 
+## Conditions and tables
+
+- **Conditions:** `if(income > 40000, 2000, 1000)` picks between two values. Comparisons (`>`, `<`, `>=`, `<=`, `==`, `!=`), `and`, `or` and `a ? b : c` work too.
+- **Tables:** a board can have lookup tables (an x, y list) that formulas call like functions, such as `tax_rate(income)`. A *step* table gives the y of the last row at or below the value (tiers, price lists); a *linear* table draws straight lines between rows. Outside the rows the first or last y is used. A used board keeps its own tables (they are named `alias.table` and only its own formulas call them).
+- Both work backwards too, as long as the result can be reached; a jump in a formula can leave a value that no input gives, in which case the board says no values fit. Calling something that is neither built in nor a table is flagged as a problem on its line.
+
 ## Find the best
 
 The **Find the best** section on a board picks a result to make as high or as low as possible, the variables that may change (those with a lowest and highest value, at most six) and optionally a limit on another result. It scans the ranges at random and then refines the best point step by step (`src/lib/optimize.ts`). The best settings can be put on the board or saved as a scenario. It finds a good answer, not a proven best one.

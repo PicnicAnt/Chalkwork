@@ -26,6 +26,8 @@ import { dropFromVisualizations, renameInVisualizations, type Visualization } fr
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
+import { readTableDrafts, TablesEditor, type TableDraft } from "./TablesEditor";
+import { rowsToText } from "@/lib/tables";
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
 // existing one (which the signed-in user owns); with `initial` but no `editing`, it saves a new copy.
@@ -86,6 +88,11 @@ export function BoardEditor({
     }
     return out;
   }, [rangeText]);
+  // Lookup tables, held as typed (the rows are text until they are read).
+  const [tableDrafts, setTableDrafts] = useState<TableDraft[]>(() =>
+    (initial?.tables ?? []).map((t) => ({ name: t.name, mode: t.mode, text: rowsToText(t.rows) })),
+  );
+  const { tables, problems: tableProblems } = useMemo(() => readTableDrafts(tableDrafts), [tableDrafts]);
   // The boards this one uses, each loaded together with the boards it uses in turn.
   const [included, setIncluded] = useState<IncludedBundle[]>(initialIncluded);
   const [boardError, setBoardError] = useState<string | null>(null);
@@ -99,10 +106,10 @@ export function BoardEditor({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, links, visualizations }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, links, visualizations, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, links, visualizations }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, links, visualizations, included],
   );
-  const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas), [flat]);
+  const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas, flat.bundle.tables), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
   const problems = useMemo(() => {
     const linkList = Object.entries(links);
@@ -205,7 +212,7 @@ export function BoardEditor({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -268,7 +275,8 @@ export function BoardEditor({
           <p className="text-base text-ink-muted">
             One per line, like <span className="text-accent-2">area = width * height</span>. Every name becomes a
             variable, and any variable can be changed: the others adjust so all formulas still hold. Supports + − ×
-            ÷, ^, parentheses, and functions like sqrt, round, min, max.
+            ÷, ^, parentheses, and functions like sqrt, round, min, max. Conditions work with if(price &gt; 100, 5, 2), and
+            tables (below) can be called like functions.
           </p>
         </div>
         <FormulaInput
@@ -317,6 +325,8 @@ export function BoardEditor({
           setVisualizations((vs) => dropFromVisualizations(vs, (name) => name.startsWith(alias + "$")));
         }}
       />
+
+      <TablesEditor drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} />
 
       <VariableEditor
         analysis={analysis}

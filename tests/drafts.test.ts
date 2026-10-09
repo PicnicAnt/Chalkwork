@@ -12,7 +12,7 @@ const base: BoardDraft = {
   units: {},
   hidden: {},
   labels: {},
-  decimals: {}, ranges: {},
+  decimals: {}, ranges: {}, tables: [],
   includes: [],
   links: {},
   visualizations: [],

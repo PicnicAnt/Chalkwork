@@ -1,5 +1,7 @@
 import {
   all,
+  isConditionalNode,
+  isOperatorNode,
   create,
   isAssignmentNode,
   isFunctionAssignmentNode,
@@ -8,9 +10,14 @@ import {
   type EvalFunction,
   type MathNode,
 } from "mathjs";
+import { tableFunctions, type Table } from "./tables";
 
 const math = create(all);
 const parse = math.parse.bind(math);
+
+// if(condition, a, b): a when the condition holds, otherwise b. Comparisons (>, <, >=, <=, ==, !=), and, or and not
+// give true or false, and a ? b : c works the same way.
+math.import({ if: (condition: unknown, a: unknown, b: unknown) => (condition ? a : b) }, { override: true });
 
 // Formulas come from other users, so disable the functions that can define or change things.
 // parse above is captured first, so only formulas lose access to these.
@@ -27,6 +34,10 @@ math.import(
   { override: true },
 );
 
+// What makes a formula jump instead of change smoothly.
+const JUMPY_OPERATORS = new Set(["<", ">", "<=", ">=", "==", "!=", "and", "or", "not"]);
+const JUMPY_FUNCTIONS = new Set(["if", "floor", "ceil", "round", "fix", "sign"]);
+
 // Symbols that mean something on their own and so never become variables.
 const CONSTANTS = new Set(["pi", "e", "tau", "phi", "i", "true", "false", "null", "Infinity", "NaN", "PI", "E"]);
 
@@ -36,6 +47,8 @@ export type Formula = {
   text: string;
   name: string; // the variable on the left side
   vars: string[]; // every variable in the equation, left side first
+  /** The right side jumps (a condition, a table, rounding), so it is a poor variable to guess when solving backwards. */
+  discontinuous?: boolean;
   selfReferencing?: boolean; // the left-side variable also appears on the right
   error?: string;
   compiled?: EvalFunction; // the right side
@@ -133,6 +146,14 @@ export function tokenize(text: string): { kind: TokenKind; text: string }[] {
   }
   return tokens;
 }
+// The compiled formula gets the tables as functions in its scope, next to the values of its variables.
+function withTables(compiled: EvalFunction, functions: Record<string, (x: number) => number>): EvalFunction {
+  if (Object.keys(functions).length === 0) return compiled;
+  return {
+    evaluate: (scope?: unknown) => compiled.evaluate(new Map([...Object.entries(functions), ...(scope instanceof Map ? scope : [])])),
+  } as EvalFunction;
+}
+
 function symbolsUsed(node: MathNode): string[] {
   const names: string[] = [];
   node.traverse((n, path, parent) => {
@@ -144,7 +165,9 @@ function symbolsUsed(node: MathNode): string[] {
   return names;
 }
 
-export function analyzeFormulas(lines: string[]): Analysis {
+// A formula can call the board's tables as functions, such as tax_rate(income).
+export function analyzeFormulas(lines: string[], tables: readonly Table[] = []): Analysis {
+  const functions = tableFunctions(tables);
   const formulas: Formula[] = lines.map((text, i) => {
     const base = { line: i + 1, text, name: `result_${i + 1}`, vars: [] as string[] };
     let node: MathNode;
@@ -169,10 +192,23 @@ export function analyzeFormulas(lines: string[]): Analysis {
     if (nested || isFunctionAssignmentNode(node)) return { ...base, error: "Only one name = expression per line" };
     if (!isVariableName(base.name)) return { ...base, error: `"${base.name}" is a built-in name` };
 
+    // A call to something that is neither built in nor a table can never be worked out.
+    let unknown: string | undefined;
+    let discontinuous = false;
+    expression.traverse((n) => {
+      if (isConditionalNode(n) || (isOperatorNode(n) && JUMPY_OPERATORS.has(n.op))) discontinuous = true;
+      if (isFunctionNode(n) && isSymbolNode(n.fn) && (JUMPY_FUNCTIONS.has(n.fn.name) || n.fn.name in functions)) discontinuous = true;
+      if (isFunctionNode(n) && isSymbolNode(n.fn) && !unknown) {
+        const name = n.fn.name;
+        if (!(name in functions) && typeof (math as unknown as Record<string, unknown>)[name] !== "function") unknown = name;
+      }
+    });
+    if (unknown) return { ...base, error: `${unknown.replaceAll(PATH_SEPARATOR, ".")} isn't a function or a table of this board` };
+
     try {
       const used = symbolsUsed(expression);
       const vars = [base.name, ...used.filter((v) => v !== base.name)];
-      return { ...base, vars, selfReferencing: used.includes(base.name), compiled: expression.compile() };
+      return { ...base, vars, selfReferencing: used.includes(base.name), discontinuous, compiled: withTables(expression.compile(), functions) };
     } catch (e) {
       return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
     }
@@ -252,6 +288,10 @@ function propagate(equations: Formula[], held: Set<string>): Step[] {
       (v) => !known.has(v),
     );
     let found = false;
+    // A variable that comes out of a condition or a table is a poor guess (it can only take certain values), so the
+    // others are tried first.
+    const jumpy = new Set(equations.filter((f) => f.discontinuous).map((f) => f.name));
+    unknownVars.sort((a, b) => Number(jumpy.has(a)) - Number(jumpy.has(b)));
     for (const tear of unknownVars) {
       const k = new Set(known).add(tear);
       const u = new Set(used);

@@ -1,6 +1,7 @@
 // Shared types and validation for calculations. Safe to import from client and server.
+import { parseTables, type Table } from "./tables";
 import { flatten, type Include, type IncludedBundle, type Range } from "./boards";
-import { analyzeFormulas, displayName, formulaProblems } from "./formulas";
+import { analyzeFormulas, displayName, formulaProblems, isVariableName } from "./formulas";
 import { parseVisualizations, type Visualization } from "./visualizations";
 
 export type BoardDraft = {
@@ -24,6 +25,8 @@ export type BoardDraft = {
   // The values a variable should stay within, keyed by variable name. Only used for warnings, sliders and
   // ranges in the spread chart; the maths does not stop at them.
   ranges: Record<string, Range>;
+  // Lookup tables the formulas can call like functions, such as tax_rate(income).
+  tables: Table[];
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
   includes: Include[];
   // Variables linked to another variable, keyed by variable name: the two follow each other.
@@ -98,10 +101,17 @@ export function validateDraft(
 
   // What this board and the boards it uses make up together, before anything is overridden. Links
   // are left out here: they can only join variables that exist, so these are found first.
-  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [] };
-  const { bundle: inherited, ownErrors } = flatten({ formulas, ...none }, included);
+  const parsedTables = parseTables(r.tables);
+  errors.push(...parsedTables.errors);
+  const tables = parsedTables.tables;
+  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], links: {}, visualizations: [] };
+  const { bundle: inherited, ownErrors } = flatten({ formulas, ...none, tables }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
-  const analysis = analyzeFormulas(inherited.formulas);
+  const analysis = analyzeFormulas(inherited.formulas, inherited.tables);
+  for (const t of tables) {
+    if (!isVariableName(t.name)) errors.push(`${t.name} is a built-in name, so it can't be a table.`);
+    else if (analysis.variables.some((v) => v.name === t.name)) errors.push(`${t.name} is used both as a variable and as a table.`);
+  }
 
   // A link joins two different variables that exist.
   const rawLinks = typeof r.links === "object" && r.links !== null ? (r.links as Record<string, unknown>) : {};
@@ -116,7 +126,8 @@ export function validateDraft(
   // Problems with the formulas, the links and the used boards together. They are numbered formulas
   // first, then links, then the formulas of the used boards.
   const linkList = Object.entries(links);
-  const system = analyzeFormulas(flatten({ formulas, ...none, links }, included).bundle.formulas);
+  const flatSystem = flatten({ formulas, ...none, links, tables }, included).bundle;
+  const system = analyzeFormulas(flatSystem.formulas, flatSystem.tables);
   for (const problem of formulaProblems(system)) {
     const link = linkList[problem.line - formulas.length - 1];
     errors.push(
@@ -215,6 +226,7 @@ export function validateDraft(
           labels,
           decimals,
           ranges,
+          tables,
           includes: included.map(includeOf),
           links,
           visualizations: parsedViz.visualizations,

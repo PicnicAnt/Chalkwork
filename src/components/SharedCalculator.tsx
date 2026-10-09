@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { Bundle } from "@/lib/boards";
 import { compute, initialLocks, shownValues } from "@/lib/calculator";
 import { downloadCsv, fileNameOf } from "@/lib/export";
-import { analyzeFormulas, displayName, parseValue } from "@/lib/formulas";
+import { analyzeFormulas, displayName, formatNumber, parseValue } from "@/lib/formulas";
 import type { Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
 import { ApiHint } from "./ApiHint";
@@ -41,7 +41,7 @@ export function SharedCalculator({
   /** The board's id, to show how to use it from outside. */
   publicId?: string;
 }) {
-  const analysis = useMemo(() => analyzeFormulas(flat.formulas), [flat.formulas]);
+  const analysis = useMemo(() => analyzeFormulas(flat.formulas, flat.tables), [flat.formulas, flat.tables]);
   const [values, setValues] = useState(() => (initialState ? { ...flat.values, ...initialState.values } : flat.values));
   // Bumping the key remounts the panel, which also forgets the edit history.
   const [resets, setResets] = useState(0);
@@ -198,6 +198,30 @@ export function SharedCalculator({
             .map((v) => ({ name: displayName(v.name), value: String(parseValue(flat.values[v.name])) }))}
           variables={analysis.variables.filter((v) => flat.hidden[v.name] !== true).map((v) => displayName(v.name))}
         />
+      )}
+      {view === "board" && flat.tables.length > 0 && (
+        <section className="mt-4 flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">Tables</h2>
+          <div className="flex flex-wrap gap-4">
+            {flat.tables.map((t) => (
+              <figure key={t.name} className="sketch-box px-4 py-3 text-lg">
+                <figcaption className="pb-1 text-ink-muted">
+                  {displayName(t.name)}(x), {t.mode === "step" ? "step" : "linear"}
+                </figcaption>
+                <table className="border-collapse">
+                  <tbody>
+                    {t.rows.map(([x, y]) => (
+                      <tr key={x}>
+                        <td className="pr-4 text-right">{formatNumber(x)}</td>
+                        <td className="text-accent-2">{formatNumber(y)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </figure>
+            ))}
+          </div>
+        </section>
       )}
       {view === "board" && formulas.length > 0 && (
         <section className="mt-6 flex flex-col gap-2">

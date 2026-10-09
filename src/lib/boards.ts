@@ -1,4 +1,5 @@
 import { PATH_SEPARATOR, isVariableName, tokenize } from "./formulas";
+import type { Table } from "./tables";
 import type { BundleVisualization, Visualization } from "./visualizations";
 
 // Boards that use other boards.
@@ -33,6 +34,8 @@ export type Bundle = {
   hidden: Record<string, boolean>;
   decimals: Record<string, number>;
   ranges: Record<string, Range>;
+  /** Lookup tables the formulas can call like functions. Those of a used board are named alias$table. */
+  tables: Table[];
   /**
    * Variables linked to another variable, by name. A link is an equation, `variable = other`, so
    * the two follow each other whichever one is changed. Meant for joining the variables of
@@ -116,12 +119,15 @@ const withAlias = (alias: string, name: string) => `${alias}${PATH_SEPARATOR}${n
 export function prefixBundle(bundle: Bundle, alias: string): Bundle {
   const keys = <T>(record: Record<string, T>) =>
     Object.fromEntries(Object.entries(record).map(([name, value]) => [withAlias(alias, name), value]));
+  const tableNames = new Set(bundle.tables.map((t) => t.name));
   return {
     formulas: bundle.formulas.map((formula) =>
       tokenize(formula)
-        .map((t) => (t.kind === "variable" ? withAlias(alias, t.text) : t.text))
+        // A call to one of the board's tables follows the table to its new name.
+        .map((t) => (t.kind === "variable" || (t.kind === "reserved" && tableNames.has(t.text)) ? withAlias(alias, t.text) : t.text))
         .join(""),
     ),
+    tables: bundle.tables.map((t) => ({ ...t, name: withAlias(alias, t.name) })),
     values: keys(bundle.values),
     descriptions: keys(bundle.descriptions),
     units: keys(bundle.units),
@@ -181,6 +187,7 @@ export function flatten(
       hidden: merge((b) => b.hidden, own.hidden),
       decimals: merge((b) => b.decimals, own.decimals),
       ranges: merge((b) => b.ranges, own.ranges),
+      tables: [...own.tables, ...parts.flatMap((p) => p.bundle.tables)],
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],
       groups: Object.assign(
         {},

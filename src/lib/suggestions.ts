@@ -16,6 +16,7 @@ export type SuggestionList = {
 };
 
 const FUNCTIONS: [string, string][] = [
+  ["if", "if(condition, a, b)"],
   ["sqrt", "square root"],
   ["cbrt", "cube root"],
   ["abs", "absolute value"],

@@ -12,7 +12,7 @@ export type ApiResult =
   | { ok: false; status: 400 | 422; error: string };
 
 export function solveBoard(bundle: Bundle, rawInputs: Record<string, unknown>): ApiResult {
-  const analysis = analyzeFormulas(bundle.formulas);
+  const analysis = analyzeFormulas(bundle.formulas, bundle.tables);
   const names = analysis.variables.map((v) => v.name);
   const byShownName = new Map(names.map((n) => [displayName(n), n]));
 

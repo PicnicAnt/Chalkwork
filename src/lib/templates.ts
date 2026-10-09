@@ -5,7 +5,7 @@ import { EXAMPLE } from "./example-board";
 // copy that belongs to whoever saves it.
 export type Template = { id: string; title: string; blurb: string; draft: BoardDraft };
 
-const none = { descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, ranges: {}, includes: [], links: {}, visualizations: [] };
+const none = { descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, ranges: {}, tables: [], includes: [], links: {}, visualizations: [] };
 
 export const BLANK_ID = "blank";
 
@@ -61,6 +61,28 @@ export const TEMPLATES: Template[] = [
       units: { width: "m", height: "m", area: "m²", perimeter: "m", diagonal: "m" },
       decimals: { area: 2, perimeter: 2, diagonal: 2 },
       visualizations: [{ type: "rectangle", map: { width: "width", height: "height" } }],
+    },
+  },
+  {
+    id: "tax",
+    title: "Tax by income tier",
+    blurb: "A tax rate looked up in a table of income tiers, with a condition for the deduction. Type the net pay you want to see what income it takes.",
+    draft: {
+      ...none,
+      title: "Tax by income tier",
+      description: "The rate depends on which tier the taxable income falls in (a table), and the deduction depends on a condition. Both work backwards too.",
+      formulas: [
+        "deduction = if(income > 40000, 2000, 1000)",
+        "taxable = income - deduction",
+        "rate = tax_rate(taxable)",
+        "tax = taxable * rate / 100",
+        "net = income - tax",
+      ],
+      values: { income: "45000" },
+      labels: { income: "Income", deduction: "Deduction", taxable: "Taxable income", rate: "Tax rate", tax: "Tax", net: "Take-home pay" },
+      units: { rate: "%" },
+      decimals: { tax: 0, net: 0, taxable: 0 },
+      tables: [{ name: "tax_rate", mode: "step", rows: [[0, 10], [20000, 20], [50000, 30]] }],
     },
   },
   {

@@ -188,4 +188,10 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_ranges TEXT NOT NULL DEFAULT '{}';`);
     db.pragma("user_version = 17");
   }
+  if (version < 18) {
+    // Lookup tables the formulas can call, as JSON: [{ "name": "rate", "mode": "step", "rows": [[0, 10], [20000, 20]] }].
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "board_tables");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN board_tables TEXT NOT NULL DEFAULT '[]';`);
+    db.pragma("user_version = 18");
+  }
 }

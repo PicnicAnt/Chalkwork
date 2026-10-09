@@ -52,7 +52,7 @@ describe("finding the best settings", () => {
   });
 
   it("works on a board: the biggest area for a fixed fence", () => {
-    const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [] };
+    const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], links: {}, visualizations: [] };
     const { bundle } = flatten({ ...empty, formulas: ["area = width * length", "fence = 2 * (width + length)"], values: { width: "4", length: "6", fence: "20" } }, []);
     const analysis = analyzeFormulas(bundle.formulas);
     // The fence is locked at 20; width is varied; length and area are worked out.
