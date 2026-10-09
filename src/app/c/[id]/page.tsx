@@ -6,7 +6,7 @@ import { SharedCalculator } from "@/components/SharedCalculator";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { getBoard, listSuggestionsForBoard } from "@/lib/db";
+import { getBoard, listScenarios, listSuggestionsForBoard } from "@/lib/db";
 import { resolveForView } from "@/lib/resolve-boards";
 
 async function load(id: string) {
@@ -69,6 +69,8 @@ export default async function BoardPage({ params }: PageProps<"/c/[id]">) {
         <SharedCalculator
           flat={resolved.bundle}
           formulas={calculation.formulas}
+          boardId={user ? calculation.id : undefined}
+          scenarios={user ? listScenarios(calculation.id, user.id) : undefined}
           editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}
         />
       )}

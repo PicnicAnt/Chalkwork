@@ -42,6 +42,10 @@ A board that uses other boards has a **Connections** view: each used board is a 
 
 **New** first shows a gallery of templates (loan payment, savings growth, rectangle, damage per second, or nothing), in `src/lib/templates.ts`; the editor opens filled in and saving makes the visitor's own board. A board has a short guide, `How does this work?`, that opens by itself the first time in a browser (remembered in local storage) and explains locks, fixed values and `?` with the real colours.
 
+## Scenarios
+
+A signed-in user can save what is on a board as a named **scenario** (the typed values and which are locked; table `scenarios`, private to that user, at most 20 per board), load one back, and tick several to see them side by side with what the board shows now; numbers that differ are coloured. The board is solved again for each, so a scenario follows later changes to the board. The pure part is `src/lib/scenarios.ts`.
+
 ## Tests and backups
 
 `npm test` runs the automated tests (`tests/`, with [Vitest](https://vitest.dev)): the formula parser and solver (forwards, backwards, locks, numeric solving, nonsense formulas), boards that use boards, board validation, drawings and charts, the list of what a suggestion changes, the database schema steps and the backups.

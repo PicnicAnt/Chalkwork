@@ -1,4 +1,4 @@
-import { brokenFormulas, formatNumber, parseValue, planSolve, solve, type Analysis } from "./formulas";
+import { brokenFormulas, formatDecimals, formatNumber, parseValue, planSolve, solve, type Analysis } from "./formulas";
 
 // What a board shows for a set of typed values and locks. Pure, so the panel, the charts and the tests can
 // all ask the same question.
@@ -28,3 +28,15 @@ export function initialLocks(analysis: Analysis, values: Record<string, string>)
 }
 
 export type Computed = ReturnType<typeof compute>;
+
+// What is shown for the values: `display` keeps full precision (it is fed back into the next solve), so the
+// rounding the board asks for is only applied here, to calculated values. Values that were typed show as typed.
+export function shownValues(display: Record<string, string>, held: string[], decimals?: Record<string, number>): Record<string, string> {
+  if (!decimals) return display;
+  const out = { ...display };
+  for (const [name, places] of Object.entries(decimals)) {
+    const n = parseValue(display[name]);
+    if (n !== undefined && !held.includes(name)) out[name] = formatDecimals(n, places);
+  }
+  return out;
+}

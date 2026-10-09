@@ -2,23 +2,31 @@
 
 import { useMemo, useState } from "react";
 import type { Bundle } from "@/lib/boards";
+import { initialLocks } from "@/lib/calculator";
 import { analyzeFormulas } from "@/lib/formulas";
+import type { Scenario } from "@/lib/scenarios";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
 import { FormulaText } from "./FormulaText";
+import { ScenarioPanel } from "./ScenarioPanel";
 
 // `flat` is the board together with the boards it uses, as one set of formulas and settings.
 export function SharedCalculator({
   flat,
   formulas = [],
   editable,
+  boardId,
+  scenarios,
 }: {
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
   formulas?: string[];
   /** Set when the signed-in user owns the board: the Connections view can then change its links. */
   editable?: { boardId: string; ownLinks: Record<string, string> };
+  /** Set for a signed-in user: the board's id and the scenarios that user has saved on it. */
+  boardId?: string;
+  scenarios?: Scenario[];
 }) {
   const analysis = useMemo(() => analyzeFormulas(flat.formulas), [flat.formulas]);
   const [values, setValues] = useState(flat.values);
@@ -27,6 +35,10 @@ export function SharedCalculator({
   // The strings view only makes sense for a board that uses other boards.
   const usesBoards = Object.keys(flat.groups).length > 0;
   const [view, setView] = useState<"board" | "strings">("board");
+  // Which variables are locked, as far as an edit has told us; until then it is what the panel starts with.
+  // A loaded scenario starts the panel over with its own locks.
+  const [locks, setLocks] = useState<string[] | null>(null);
+  const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(undefined);
 
   return (
     <div className="flex flex-col gap-3">
@@ -60,6 +72,8 @@ export function SharedCalculator({
             type="button"
             onClick={() => {
               setValues(flat.values);
+              setLocks(null);
+              setLoadedLocks(undefined);
               setResets(resets + 1);
             }}
             className="link text-base"
@@ -84,6 +98,26 @@ export function SharedCalculator({
           links={flat.links}
           groups={flat.groups}
           visualizations={flat.visualizations}
+          initialLocked={loadedLocks}
+          onLocks={setLocks}
+        />
+      )}
+      {view === "board" && boardId && scenarios && (
+        <ScenarioPanel
+          boardId={boardId}
+          analysis={analysis}
+          scenarios={scenarios}
+          current={{ values, locked: locks ?? initialLocks(analysis, values) }}
+          labels={flat.labels}
+          units={flat.units}
+          hidden={flat.hidden}
+          decimals={flat.decimals}
+          onLoad={(scenario) => {
+            setValues(scenario.values);
+            setLocks(scenario.locked);
+            setLoadedLocks(scenario.locked);
+            setResets(resets + 1);
+          }}
         />
       )}
       {view === "board" && formulas.length > 0 && (

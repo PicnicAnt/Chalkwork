@@ -2,8 +2,8 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { sectionsByBoard } from "@/lib/boards";
-import { compute, initialLocks, type Computed } from "@/lib/calculator";
-import { decidedBy, displayName, formatDecimals, parseValue, type Analysis } from "@/lib/formulas";
+import { compute, initialLocks, shownValues, type Computed } from "@/lib/calculator";
+import { decidedBy, displayName, parseValue, type Analysis } from "@/lib/formulas";
 import type { BundleVisualization } from "@/lib/visualizations";
 import { VariableRow } from "./VariableRow";
 import { VisualizationView } from "./Visualization";
@@ -26,6 +26,8 @@ export function CalculatorPanel({
   groups,
   decimals,
   visualizations,
+  initialLocked,
+  onLocks,
 }: {
   analysis: Analysis;
   values: Record<string, string>;
@@ -48,10 +50,14 @@ export function CalculatorPanel({
   decimals?: Record<string, number>;
   /** Drawings that follow the variables: the board's own come first, those of used boards go with their board. */
   visualizations?: BundleVisualization[];
+  /** Starts with these variables locked instead of working it out from the values (a loaded scenario). */
+  initialLocked?: string[];
+  /** Told which variables are locked, each time that changes through an edit. */
+  onLocks?: (locked: string[]) => void;
 }) {
   // Locked variables, in the order they were locked. A variable that has a value when the board
   // loads starts locked, so it is kept; values the formulas leave no room for are left unlocked.
-  const [locked, setLocked] = useState<string[]>(() => initialLocks(analysis, values));
+  const [locked, setLocked] = useState<string[]>(() => initialLocked ?? initialLocks(analysis, values));
   const inputs = useRef(new Map<string, HTMLInputElement>());
   // A value that couldn't be applied stays visible in its field with the reason.
   const [rejected, setRejected] = useState<Rejected | null>(null);
@@ -75,15 +81,7 @@ export function CalculatorPanel({
   const decided = useMemo(() => decidedBy(analysis, locked), [analysis, locked]);
   // What is shown. `display` keeps full precision because it is fed back into the next solve;
   // rounding is only applied here. Values the user typed are shown exactly as typed.
-  const shown = useMemo(() => {
-    if (!decimals) return display;
-    const out = { ...display };
-    for (const [name, places] of Object.entries(decimals)) {
-      const n = parseValue(display[name]);
-      if (n !== undefined && !plan.held.includes(name)) out[name] = formatDecimals(n, places);
-    }
-    return out;
-  }, [display, decimals, plan]);
+  const shown = useMemo(() => shownValues(display, plan.held, decimals), [display, decimals, plan]);
 
   // Recalculated values briefly flash in the accent color so the change is noticed.
   const flash = useCallback((names: string[]) => {
@@ -100,14 +98,14 @@ export function CalculatorPanel({
 
   // The handlers below are shared by every row and read the latest state from here, so rows
   // can stay memoized and only the ones whose values changed re-render.
-  const latest = useRef({ analysis, locked, display, onChange, labels });
+  const latest = useRef({ analysis, locked, display, onChange, onLocks, labels });
   useLayoutEffect(() => {
-    latest.current = { analysis, locked, display, onChange, labels };
+    latest.current = { analysis, locked, display, onChange, onLocks, labels };
   });
 
   const apply = useCallback(
     (nextLocked: string[], nextValues: Record<string, string>, edited?: { name: string; text: string }) => {
-      const { analysis, display, onChange, labels } = latest.current;
+      const { analysis, display, onChange, onLocks, labels } = latest.current;
       // A variable with no value (shown as "?") is never locked: there is nothing to keep.
       const unspecified = edited !== undefined && parseValue(edited.text) === undefined;
       const lockedNow = unspecified ? nextLocked.filter((n) => n !== edited.name) : nextLocked;
@@ -130,6 +128,7 @@ export function CalculatorPanel({
       flash(analysis.variables.map((v) => v.name).filter((n) => n !== edited?.name && next.display[n] !== display[n]));
       setComputedByEdit({ values: next.display, locked: lockedNow, out: next });
       setLocked(lockedNow);
+      onLocks?.(lockedNow);
       // Store calculated values too, so the next change starts from what's on screen.
       onChange(next.display);
     },

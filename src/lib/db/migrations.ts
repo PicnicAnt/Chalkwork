@@ -130,4 +130,20 @@ export function migrate(db: Database.Database) {
     db.exec(`ALTER TABLE calculations ADD COLUMN visualizations TEXT NOT NULL DEFAULT '[]';`);
     db.pragma("user_version = 14");
   }
+  if (version < 15) {
+    // Scenarios: a named set of values for a board, saved by a user for themselves. The snapshot is JSON:
+    // { "values": { name: text }, "locked": [names] }.
+    db.exec(`
+      CREATE TABLE scenarios (
+        id TEXT PRIMARY KEY,
+        board_id TEXT NOT NULL REFERENCES calculations(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        snapshot TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+      CREATE INDEX scenarios_board_user ON scenarios(board_id, user_id);
+    `);
+    db.pragma("user_version = 15");
+  }
 }
