@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import type { Bundle } from "@/lib/boards";
 import { initialLocks } from "@/lib/calculator";
 import { analyzeFormulas } from "@/lib/formulas";
-import type { Scenario } from "@/lib/scenarios";
+import type { Scenario, ScenarioSnapshot } from "@/lib/scenarios";
+import { encodeState } from "@/lib/share-state";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
@@ -18,6 +19,7 @@ export function SharedCalculator({
   editable,
   boardId,
   scenarios,
+  initialState,
 }: {
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
@@ -27,9 +29,11 @@ export function SharedCalculator({
   /** Set for a signed-in user: the board's id and the scenarios that user has saved on it. */
   boardId?: string;
   scenarios?: Scenario[];
+  /** Values and locks to start with, from a link that carried them. */
+  initialState?: ScenarioSnapshot;
 }) {
   const analysis = useMemo(() => analyzeFormulas(flat.formulas), [flat.formulas]);
-  const [values, setValues] = useState(flat.values);
+  const [values, setValues] = useState(() => (initialState ? { ...flat.values, ...initialState.values } : flat.values));
   // Bumping the key remounts the panel, which also forgets the edit history.
   const [resets, setResets] = useState(0);
   // The strings view only makes sense for a board that uses other boards.
@@ -37,15 +41,16 @@ export function SharedCalculator({
   const [view, setView] = useState<"board" | "strings">("board");
   // Which variables are locked, as far as an edit has told us; until then it is what the panel starts with.
   // A loaded scenario starts the panel over with its own locks.
-  const [locks, setLocks] = useState<string[] | null>(null);
-  const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(undefined);
+  const [locks, setLocks] = useState<string[] | null>(initialState?.locked ?? null);
+  const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(initialState?.locked);
+  const [copied, setCopied] = useState(false);
   // The unit each variable is shown in. Kept here so the scenarios are compared in the same units.
   const [shownUnits, setShownUnits] = useState<Record<string, string>>({});
 
   return (
     <div className="flex flex-col gap-3">
       <BoardGuide />
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         {usesBoards ? (
           <div className="flex gap-4 text-lg" role="tablist" aria-label="View">
             {(
@@ -68,6 +73,25 @@ export function SharedCalculator({
           </div>
         ) : (
           <span />
+        )}
+        {view === "board" && (
+          <button
+            type="button"
+            onClick={async () => {
+              const link = `${location.origin}${location.pathname}?state=${encodeState({ values, locked: locks ?? initialLocks(analysis, values) })}`;
+              try {
+                await navigator.clipboard.writeText(link);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              } catch {
+                window.prompt("Copy this link:", link);
+              }
+            }}
+            className="link text-base"
+            title="A link that opens this board with the numbers you have typed"
+          >
+            {copied ? "Link copied ✓" : "Copy link with these values"}
+          </button>
         )}
         {!sameValues(values, flat.values) && view === "board" && (
           <button

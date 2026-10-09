@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { deleteScenario, saveScenario } from "@/app/actions/scenarios";
 import { difference, outcomeOf, SCENARIO_LIMITS, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
 import { displayName, formatDecimals, formatNumber, type Analysis } from "@/lib/formulas";
+import { encodeState } from "@/lib/share-state";
 import { ratio as unitRatio } from "@/lib/units";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
 
@@ -48,6 +49,7 @@ export function ScenarioPanel({
   const [compared, setCompared] = useState<string[]>([]);
   const [view, setView] = useState<View>("both");
   const [baseline, setBaseline] = useState<string>(NOW);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   function save() {
     setError(null);
@@ -60,6 +62,18 @@ export function ScenarioPanel({
       setName("");
       router.refresh();
     });
+  }
+
+  // A link that opens the board with this scenario's numbers in place.
+  async function copyLink(scenario: Scenario) {
+    const link = `${location.origin}${location.pathname}?state=${encodeState(scenario)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedId(scenario.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      window.prompt("Copy this link:", link);
+    }
   }
 
   function remove(id: string) {
@@ -178,6 +192,9 @@ export function ScenarioPanel({
               </label>
               <button type="button" onClick={() => onLoad(s)} className="link text-base">
                 Load
+              </button>
+              <button type="button" onClick={() => copyLink(s)} className="link text-base" aria-label={`Copy a link with ${s.name}`}>
+                {copiedId === s.id ? "Copied ✓" : "Copy link"}
               </button>
               <button type="button" disabled={pending} onClick={() => remove(s.id)} className="link text-base text-danger" aria-label={`Delete ${s.name}`}>
                 Delete

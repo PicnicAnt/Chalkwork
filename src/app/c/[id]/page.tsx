@@ -8,6 +8,7 @@ import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
 import { getBoard, listScenarios, listSuggestionsForBoard } from "@/lib/db";
 import { resolveForView } from "@/lib/resolve-boards";
+import { decodeState } from "@/lib/share-state";
 
 async function load(id: string) {
   // better-sqlite3 is synchronous, so opt out of prerendering explicitly.
@@ -22,8 +23,11 @@ export async function generateMetadata({ params }: PageProps<"/c/[id]">): Promis
   return { title: `${calculation.title} · Chalkwork`, description: calculation.description || undefined };
 }
 
-export default async function BoardPage({ params }: PageProps<"/c/[id]">) {
+export default async function BoardPage({ params, searchParams }: PageProps<"/c/[id]">) {
   const full = await load((await params).id);
+  // A link can carry someone's typed values (see lib/share-state.ts).
+  const { state } = await searchParams;
+  const initialState = decodeState(typeof state === "string" ? state : undefined);
   const { ownerId, ...calculation } = full;
   // The board together with the boards it uses.
   const resolved = resolveForView(full);
@@ -74,6 +78,7 @@ export default async function BoardPage({ params }: PageProps<"/c/[id]">) {
         <SharedCalculator
           flat={resolved.bundle}
           formulas={calculation.formulas}
+          initialState={initialState ?? undefined}
           boardId={user ? calculation.id : undefined}
           scenarios={user ? listScenarios(calculation.id, user.id) : undefined}
           editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}

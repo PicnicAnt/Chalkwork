@@ -50,6 +50,10 @@ A unit label (`m`, `cm²`, `km/h`, `kWh`, `$`, `%`) is understood (`src/lib/unit
 
 Every save of a board is kept as a numbered version (`board_versions`: the whole draft, who saved it and why, such as "Restored version 1"). The owner sees them under **History** (`/c/<id>/history`) with what each one changed, and can restore any: the restore is saved as a new version, so it can be undone. A board that uses another board can **pin** it to a version (**Boards used**, saved in the include as `version`); a pinned board is read from that version, so later changes to the used board don't reach it until it is updated or set to follow the latest again. A used board that has a newer version says so. Existing boards got their current state as version 1.
 
+## Sharing the exact state
+
+**Copy link with these values** (above a board, and **Copy link** on each scenario) makes a link like `/c/<id>?state=…` that carries the numbers that were typed and which are locked, as base64 text (`src/lib/share-state.ts`, at most 6000 characters, checked when read because it comes from outside). Opening it starts the board from those values, with **Erase and start over** to go back.
+
 ## Scenarios
 
 A signed-in user can save what is on a board as a named **scenario** (the typed values and which are locked; table `scenarios`, private to that user, at most 20 per board), load one back, and tick several to see them side by side with what the board shows now; numbers that differ are coloured. The comparison starts as each value with its **change in percent** beside it (+50%), and can also show only the values or the **difference** (+5, −2.5) or the difference **in percent** (+50%) from a chosen baseline (what the board shows now, or any ticked scenario), and writes each number in the unit chosen for that variable on the board. The board is solved again for each, so a scenario follows later changes to the board. The pure part is `src/lib/scenarios.ts`.
