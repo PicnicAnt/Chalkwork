@@ -33,6 +33,15 @@ describe("the database schema", () => {
     expect(db.pragma("user_version", { simple: true })).toBeGreaterThanOrEqual(14);
   });
 
+  it("has the columns and tables for ranges, tables, tags, comments and notifications", () => {
+    const db = new Database(":memory:");
+    migrate(db);
+    const columns = (db.pragma("table_info(calculations)") as { name: string }[]).map((c) => c.name);
+    expect(columns).toEqual(expect.arrayContaining(["variable_ranges", "board_tables", "board_tags"]));
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((t) => t.name);
+    expect(tables).toEqual(expect.arrayContaining(["comments", "notifications"]));
+  });
+
   it("can be run again without changing anything", () => {
     const db = new Database(":memory:");
     migrate(db);

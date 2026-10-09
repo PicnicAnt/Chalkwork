@@ -11,6 +11,7 @@ import {
   insertSuggestion,
   saveBoard,
 } from "@/lib/db";
+import { notify, notifyBoardChanged } from "./notify";
 import { prepare } from "./prepare";
 
 // Suggested changes: someone else's version of a board, which its owner approves or rejects.
@@ -40,6 +41,7 @@ export async function createSuggestion(boardId: string, payload: unknown, messag
   const stamp = boardStamp(boardId);
   if (!stamp) return { ok: false, errors: ["That board doesn't exist."] };
   const id = insertSuggestion({ boardId, authorId: user.id, message: clean(message), draft: prepared.draft, baseStamp: stamp });
+  notify(board.ownerId, user.id, "suggestion", boardId, `${user.name} suggested a change to ${board.title}.`, "/suggestions");
   return { ok: true, id };
 }
 
@@ -58,6 +60,8 @@ export async function approveSuggestion(id: string, force = false): Promise<Deci
   if ("errors" in prepared) return { ok: false, error: `It no longer fits the board: ${prepared.errors.join(" ")}` };
   if (!saveBoard(s.boardId, user.id, prepared.draft, `Suggestion from ${s.authorName}`)) return { ok: false, error: "Only the owner of the board can approve this." };
   decideSuggestion(id, "approved", "");
+  notify(s.authorId, user.id, "suggestion-answer", s.boardId, `Your suggestion to ${s.boardTitle} was approved.`, "/suggestions");
+  notifyBoardChanged(s.boardId, user.id);
   return { ok: true };
 }
 
@@ -67,6 +71,7 @@ export async function rejectSuggestion(id: string, note: unknown): Promise<Decis
   const s = typeof id === "string" ? getSuggestion(id) : null;
   if (!s || s.boardOwnerId !== user.id) return { ok: false, error: "Only the owner of the board can reject this." };
   if (!decideSuggestion(id, "rejected", clean(note))) return { ok: false, error: "This suggestion has already been answered." };
+  notify(s.authorId, user.id, "suggestion-answer", s.boardId, `Your suggestion to ${s.boardTitle} was rejected.`, "/suggestions");
   return { ok: true };
 }
 

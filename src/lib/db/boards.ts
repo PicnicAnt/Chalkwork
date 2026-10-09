@@ -17,6 +17,7 @@ type Row = {
   variable_decimals: string;
   variable_ranges: string;
   board_tables: string;
+  board_tags: string;
   variable_labels: string;
   variable_hidden: string;
   board_includes: string;
@@ -31,8 +32,8 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_ranges, board_tables, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     draft.title,
@@ -44,6 +45,7 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
     JSON.stringify(draft.decimals),
     JSON.stringify(draft.ranges),
     JSON.stringify(draft.tables),
+    JSON.stringify(draft.tags),
     JSON.stringify(draft.labels),
     JSON.stringify(draft.hidden),
     JSON.stringify(draft.includes),
@@ -61,7 +63,7 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
   const result = db
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
-         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?, variable_labels = ?, variable_hidden = ?,
+         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?, board_tags = ?, variable_labels = ?, variable_hidden = ?,
          board_includes = ?, variable_links = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
@@ -75,9 +77,13 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
       JSON.stringify(draft.decimals),
       JSON.stringify(draft.ranges),
       JSON.stringify(draft.tables),
+      JSON.stringify(draft.tags),
+    JSON.stringify(draft.tags),
     JSON.stringify(draft.tables),
+    JSON.stringify(draft.tags),
     JSON.stringify(draft.ranges),
     JSON.stringify(draft.tables),
+    JSON.stringify(draft.tags),
       JSON.stringify(draft.labels),
       JSON.stringify(draft.hidden),
       JSON.stringify(draft.includes),
@@ -103,6 +109,7 @@ const parse = (row: Row): Board => ({
   decimals: JSON.parse(row.variable_decimals || "{}"),
   ranges: JSON.parse(row.variable_ranges || "{}"),
   tables: JSON.parse(row.board_tables || "[]"),
+  tags: JSON.parse(row.board_tags || "[]"),
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
   links: JSON.parse(row.variable_links || "{}"),
@@ -130,6 +137,14 @@ export function listBoardsByOwner(ownerId: string): { id: string; title: string;
   ).map((r) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
 }
 
+function safeJson<T>(text: string | null, fallback: T): T {
+  try {
+    return JSON.parse(text || "") as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export type BoardSummary = {
   id: string;
   title: string;
@@ -137,6 +152,9 @@ export type BoardSummary = {
   createdAt: string;
   ownerId: string | null;
   ownerName: string | null;
+  tags: string[];
+  /** The formulas and the display names, so a board can be found by what it calculates. */
+  keywords: string;
 };
 
 // Every calculation by every user, newest first, for the browse page.
@@ -144,7 +162,7 @@ export function listAllBoards(limit = 1000): BoardSummary[] {
   return (
     db
       .prepare(
-        `SELECT c.id, c.title, c.description, c.created_at, c.owner_id, u.name AS owner_name
+        `SELECT c.id, c.title, c.description, c.created_at, c.owner_id, u.name AS owner_name, c.board_tags, c.formulas, c.variable_labels
          FROM calculations c LEFT JOIN users u ON u.id = c.owner_id
          ORDER BY c.created_at DESC LIMIT ?`,
       )
@@ -155,6 +173,9 @@ export function listAllBoards(limit = 1000): BoardSummary[] {
       created_at: string;
       owner_id: string | null;
       owner_name: string | null;
+      board_tags: string;
+      formulas: string;
+      variable_labels: string;
     }[]
   ).map((r) => ({
     id: r.id,
@@ -163,14 +184,16 @@ export function listAllBoards(limit = 1000): BoardSummary[] {
     createdAt: r.created_at,
     ownerId: r.owner_id,
     ownerName: r.owner_name,
+    tags: safeJson<string[]>(r.board_tags, []),
+    keywords: [...safeJson<string[]>(r.formulas, []), ...Object.values(safeJson<Record<string, string>>(r.variable_labels, {}))].join("\n"),
   }));
 }
 
 // The boards that use this one, by title, so it is not deleted from under them.
-export function boardsUsing(id: string): { id: string; title: string }[] {
+export function boardsUsing(id: string): { id: string; title: string; ownerId: string | null }[] {
   const rows = db
-    .prepare("SELECT id, title, board_includes FROM calculations WHERE id != ? AND board_includes LIKE ?")
-    .all(id, `%${id}%`) as { id: string; title: string; board_includes: string }[];
+    .prepare("SELECT id, title, owner_id, board_includes FROM calculations WHERE id != ? AND board_includes LIKE ?")
+    .all(id, `%${id}%`) as { id: string; title: string; owner_id: string | null; board_includes: string }[];
   return rows
     .filter((row) => {
       try {
@@ -179,7 +202,7 @@ export function boardsUsing(id: string): { id: string; title: string }[] {
         return false;
       }
     })
-    .map(({ id, title }) => ({ id, title }));
+    .map(({ id, title, owner_id }) => ({ id, title, ownerId: owner_id }));
 }
 
 // Only the owner's own board is deleted: the ownership check is part of the statement.

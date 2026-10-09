@@ -2,6 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { getBoard, getVersion, saveBoard } from "@/lib/db";
+import { notifyBoardChanged } from "./notify";
 import { prepare } from "./prepare";
 
 export type RestoreResult = { ok: true } | { ok: false; error: string };
@@ -19,5 +20,6 @@ export async function restoreVersion(boardId: string, version: number): Promise<
   const prepared = prepare(draft, boardId);
   if ("errors" in prepared) return { ok: false, error: `It no longer fits: ${prepared.errors.join(" ")}` };
   if (!saveBoard(boardId, user.id, prepared.draft, `Restored version ${version}`)) return { ok: false, error: "Only the owner can restore a version." };
+  notifyBoardChanged(boardId, user.id);
   return { ok: true };
 }

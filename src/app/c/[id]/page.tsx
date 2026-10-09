@@ -6,7 +6,10 @@ import { SharedCalculator } from "@/components/SharedCalculator";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { getBoard, listScenarios, listSuggestionsForBoard } from "@/lib/db";
+import { boardsUsing, getBoard, listComments, listScenarios, listSuggestionsForBoard } from "@/lib/db";
+import { BoardDiscussion } from "@/components/BoardDiscussion";
+import type { Bundle } from "@/lib/boards";
+import { analyzeFormulas, displayName } from "@/lib/formulas";
 import { resolveForView } from "@/lib/resolve-boards";
 import { decodeState } from "@/lib/share-state";
 
@@ -21,6 +24,13 @@ async function load(id: string) {
 export async function generateMetadata({ params }: PageProps<"/c/[id]">): Promise<Metadata> {
   const calculation = await load((await params).id);
   return { title: `${calculation.title} · Chalkwork`, description: calculation.description || undefined };
+}
+
+// The variables a comment can be about: the ones people see, with the names they see.
+function discussable(bundle: Bundle): { name: string; label: string }[] {
+  return analyzeFormulas(bundle.formulas, bundle.tables)
+    .variables.filter((v) => bundle.hidden[v.name] !== true)
+    .map((v) => ({ name: v.name, label: bundle.labels[v.name] || displayName(v.name) }));
 }
 
 export default async function BoardPage({ params, searchParams }: PageProps<"/c/[id]">) {
@@ -85,6 +95,23 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           scenarios={user ? listScenarios(calculation.id, user.id) : undefined}
           editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}
         />
+      )}
+      {user && !("error" in resolved) && (
+        <div className="mt-8 flex flex-col gap-3">
+          <BoardDiscussion
+            boardId={calculation.id}
+            comments={listComments(calculation.id).map((c) => ({
+              id: c.id,
+              userName: c.userName,
+              variable: c.variable,
+              body: c.body,
+              createdAt: c.createdAt,
+              canDelete: c.userId === user.id || isOwner,
+            }))}
+            variables={discussable(resolved.bundle)}
+            usedBy={boardsUsing(calculation.id).map((b) => ({ id: b.id, title: b.title }))}
+          />
+        </div>
       )}
     </>
   );

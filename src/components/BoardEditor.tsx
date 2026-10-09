@@ -19,6 +19,7 @@ import { includeOf, LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-d
 import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib/formulas";
 import type { Range } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
+import { parseTags } from "@/lib/tags";
 import { renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardsSection, type BoardChoice } from "./BoardsSection";
 import { VisualizationEditor } from "./VisualizationEditor";
@@ -52,6 +53,7 @@ export function BoardEditor({
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const [tagText, setTagText] = useState((initial?.tags ?? []).join(", "));
   const [formulaText, setFormulaText] = useState(initial?.formulas.join("\n") ?? "");
   const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
   const [descriptions, setDescriptions] = useState<Record<string, string>>(initial?.descriptions ?? {});
@@ -212,7 +214,7 @@ export function BoardEditor({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, tags: parseTags(tagText), includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -266,6 +268,15 @@ export function BoardEditor({
           maxLength={LIMITS.description}
           onChange={(e) => setDescription(e.target.value)}
           aria-label="Description"
+        />
+        <input
+          className="field text-lg"
+          placeholder="Tags, separated by commas (optional), e.g. finance, loan"
+          value={tagText}
+          onChange={(e) => setTagText(e.target.value)}
+          aria-label="Tags"
+          autoCapitalize="off"
+          spellCheck={false}
         />
       </section>
 

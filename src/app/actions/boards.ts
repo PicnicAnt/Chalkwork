@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import type { Bundle } from "@/lib/boards";
 import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard } from "@/lib/db";
 import { resolveBoard } from "@/lib/resolve-boards";
+import { notifyBoardChanged } from "./notify";
 import { prepare } from "./prepare";
 
 // What a board's owner (and anyone signed in) does with boards. Every action checks who is asking.
@@ -30,6 +31,7 @@ export async function updateBoard(id: string, payload: unknown): Promise<SaveRes
   if (!saveBoard(id, user.id, prepared.draft)) {
     return { ok: false, errors: ["Only the owner can change this board."] };
   }
+  notifyBoardChanged(id, user.id);
   return { ok: true, id };
 }
 

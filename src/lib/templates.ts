@@ -5,7 +5,7 @@ import { EXAMPLE } from "./example-board";
 // copy that belongs to whoever saves it.
 export type Template = { id: string; title: string; blurb: string; draft: BoardDraft };
 
-const none = { descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, ranges: {}, tables: [], includes: [], links: {}, visualizations: [] };
+const none = { descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, ranges: {}, tables: [], tags: [], includes: [], links: {}, visualizations: [] };
 
 export const BLANK_ID = "blank";
 

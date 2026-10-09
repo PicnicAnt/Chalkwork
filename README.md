@@ -58,6 +58,13 @@ Every save of a board is kept as a numbered version (`board_versions`: the whole
 
 Each variable can have a lowest and a highest value (in the variable editor). A value outside them gets a warning, and a variable with both gets a slider under it. The **Spread** chart draws the inputs at random between their ranges (most often near the value they have now), solves the board for each draw and shows how the result could turn out: a histogram with the 5% and 95% marks. The draws are seeded, so a board shows the same picture every time.
 
+## Finding boards, comments and the inbox
+
+- **Tags:** a board can have up to eight tags (lower case, letters and digits). They show in the board list, and the search box finds boards by title, description, tags, formulas and variable names.
+- **Used by:** a board page shows which boards use it (signed-in people only).
+- **Comments:** signed-in people can comment on a board or on one of its variables. The owner and earlier commenters are told. Comments can be removed by their author or the board owner. At most 20 comments an hour per person.
+- **Inbox:** there is no email. `/notifications` and the count in the header list comments, suggested changes and answers to them, and changes to boards that a user's own boards use. Several unread notifications of one kind on one board are merged into one.
+
 ## Conditions and tables
 
 - **Conditions:** `if(income > 40000, 2000, 1000)` picks between two values. Comparisons (`>`, `<`, `>=`, `<=`, `==`, `!=`), `and`, `or` and `a ? b : c` work too.

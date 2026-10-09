@@ -194,4 +194,33 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN board_tables TEXT NOT NULL DEFAULT '[]';`);
     db.pragma("user_version = 18");
   }
+  if (version < 19) {
+    // Tags on a board (a JSON list of words), comments on a board or one of its variables, and the notifications
+    // that tell a user something happened to a board of theirs.
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "board_tags");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN board_tags TEXT NOT NULL DEFAULT '[]';`);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        board_id TEXT NOT NULL REFERENCES calculations(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        variable TEXT,
+        body TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+      CREATE INDEX IF NOT EXISTS comments_board ON comments(board_id, created_at);
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL,
+        board_id TEXT REFERENCES calculations(id) ON DELETE CASCADE,
+        text TEXT NOT NULL,
+        link TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        read_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id, read_at, created_at);
+    `);
+    db.pragma("user_version = 19");
+  }
 }

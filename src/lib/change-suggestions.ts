@@ -63,6 +63,7 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
   const hiddenOnly = (h: Record<string, boolean>) => Object.fromEntries(Object.entries(h).filter(([, v]) => v));
   compareMap(out, (n) => `${n} hidden`, hiddenOnly(base.hidden), hiddenOnly(next.hidden), (v) => (v ? "yes" : "no"));
   compareMap(out, (n) => `Link of ${n}`, base.links, next.links, (v) => (v === undefined ? "none" : displayName(v)));
+  if ((base.tags ?? []).join(",") !== (next.tags ?? []).join(",")) out.push(`Tags: ${(base.tags ?? []).join(", ") || "none"} → ${(next.tags ?? []).join(", ") || "none"}`);
   if (JSON.stringify(base.tables ?? []) !== JSON.stringify(next.tables ?? [])) out.push("Tables changed");
   if (JSON.stringify(base.visualizations ?? []) !== JSON.stringify(next.visualizations ?? [])) out.push("Drawings changed");
   return out;
@@ -82,6 +83,7 @@ export function draftOf(c: BoardDraft): BoardDraft {
     decimals: c.decimals,
     ranges: c.ranges,
     tables: c.tables,
+    tags: c.tags,
     includes: c.includes,
     links: c.links,
     visualizations: c.visualizations,

@@ -11,11 +11,14 @@ export type BoardItem = {
   createdAt: string;
   ownerName: string | null;
   isMine: boolean;
+  tags: string[];
+  /** Formulas and display names, searched too. */
+  keywords: string;
 };
 
 const escapeForRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const matches = (board: BoardItem, words: string[]) => matchesWords(`${board.title}\n${board.description}`, words);
+const matches = (board: BoardItem, words: string[]) => matchesWords(`${board.title}\n${board.description}\n${board.tags.join(" ")}\n${board.keywords}`, words);
 
 // Text with the searched words picked out in the accent color.
 function Highlighted({ text, words }: { text: string; words: string[] }) {
@@ -106,7 +109,7 @@ export function BoardList({
         <input
           type="search"
           className="field text-xl"
-          placeholder="Search titles and descriptions"
+          placeholder="Search titles, descriptions, tags, formulas and variable names"
           aria-label="Search boards"
           value={query}
           onChange={(e) => update(e.target.value)}
@@ -136,7 +139,7 @@ export function BoardList({
         )
       ) : shown.length === 0 ? (
         <p className="text-ink-muted">
-          No board has all of {words.map((w) => `“${w}”`).join(" and ")} in its title or description.
+          No board has all of {words.map((w) => `“${w}”`).join(" and ")} in its title, description, tags or formulas.
         </p>
       ) : (
         <ul className="flex flex-col gap-5">
@@ -155,6 +158,7 @@ export function BoardList({
                   </span>
                 )}
                 <span className="pl-7 text-sm text-ink-faint">
+                  {board.tags.length > 0 && <span className="mr-2 text-accent-2">{board.tags.map((t) => `#${t}`).join(" ")}</span>}
                   {board.ownerName ? `by ${board.ownerName}${board.isMine ? " (you)" : ""}` : "no owner"}
                   {" · "}
                   {new Date(board.createdAt).toLocaleDateString()}

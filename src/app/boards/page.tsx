@@ -22,6 +22,8 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
     createdAt: b.createdAt,
     ownerName: b.ownerName,
     isMine: b.ownerId === user.id,
+    tags: b.tags,
+    keywords: b.keywords,
   }));
 
   return (

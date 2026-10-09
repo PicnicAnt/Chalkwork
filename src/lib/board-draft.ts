@@ -1,4 +1,5 @@
 // Shared types and validation for calculations. Safe to import from client and server.
+import { parseTags } from "./tags";
 import { parseTables, type Table } from "./tables";
 import { flatten, type Include, type IncludedBundle, type Range } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems, isVariableName } from "./formulas";
@@ -27,6 +28,8 @@ export type BoardDraft = {
   ranges: Record<string, Range>;
   // Lookup tables the formulas can call like functions, such as tax_rate(income).
   tables: Table[];
+  // Short labels that make the board easier to find, such as finance or game.
+  tags: string[];
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
   includes: Include[];
   // Variables linked to another variable, keyed by variable name: the two follow each other.
@@ -227,6 +230,7 @@ export function validateDraft(
           decimals,
           ranges,
           tables,
+          tags: parseTags(r.tags),
           includes: included.map(includeOf),
           links,
           visualizations: parsedViz.visualizations,
