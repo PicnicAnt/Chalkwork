@@ -110,8 +110,8 @@ describe("time", () => {
   it("offers the other units of time, the one it was written in first", () => {
     const alt = alternatives("months");
     expect(alt[0]).toBe("months");
-    expect(alt).toEqual(expect.arrayContaining(["s", "min", "h", "d", "wk", "yr"]));
-    expect(alternatives("/yr")).toEqual(expect.arrayContaining(["/s", "/d", "/mo"]));
+    expect(alt).toEqual(expect.arrayContaining(["s", "min", "hours", "days", "weeks", "years"]));
+    expect(alternatives("/year")).toEqual(expect.arrayContaining(["/s", "/day", "/month"]));
   });
 
   it("checks time in formulas like any other unit", () => {
