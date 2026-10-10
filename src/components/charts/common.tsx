@@ -39,10 +39,9 @@ export function Figure({ caption, actions = [], children }: { caption: string; a
   return (
     <figure ref={figure} className="flex flex-col gap-1">
       <figcaption className="relative flex items-baseline justify-center gap-2 text-center text-lg text-ink-muted">
-        <span>{caption}</span>
         <button
           type="button"
-          className="link text-base"
+          className="link text-lg"
           aria-expanded={open}
           aria-label={`Options for ${caption}`}
           title="Save image and more"
@@ -51,7 +50,7 @@ export function Figure({ caption, actions = [], children }: { caption: string; a
             if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node | null)) setOpen(false);
           }}
         >
-          {open ? "▴" : "▾"}
+          {caption} {open ? "▴" : "▾"}
         </button>
         {open && (
           <span role="menu" className="sketch-box absolute inset-x-0 top-0 z-20 flex flex-col bg-[var(--board)] py-1 text-center">
