@@ -94,3 +94,38 @@ describe("solving backwards through conditions and tables", () => {
     expect(Number(out.display.income)).toBeCloseTo(70571.43, 1);
   });
 });
+
+describe("items in a group are summed", () => {
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [] as Table[], order: [] };
+  const item = (formulas: string[], values: Record<string, string>, units: Record<string, string> = {}) => flatten({ ...own, formulas, values, units }, []).bundle;
+  const sword = item(["damage", "strength"], { damage: "10", strength: "2" }, { damage: "pts" });
+  const helm = item(["strength", "armor"], { strength: "3", armor: "5" });
+
+  it("makes a total per variable and an equipped switch per item", () => {
+    const { bundle } = flatten(
+      { ...own, formulas: ["power = gear.strength * 10 + base"], values: { base: "7" } },
+      [
+        { alias: "sword", board: "s", title: "Sword", group: "gear", bundle: sword },
+        { alias: "helm", board: "h", title: "Helm", group: "gear", bundle: helm },
+      ],
+    );
+    expect(bundle.formulas).toContain("power = gear$strength * 10 + base");
+    expect(bundle.formulas).toContain("gear$strength = sword$equipped * sword$strength + helm$equipped * helm$strength");
+    expect(bundle.formulas).toContain("gear$armor = helm$equipped * helm$armor");
+    expect(bundle.values.sword$equipped).toBe("1");
+    expect(bundle.units.gear$damage).toBe("pts");
+    expect(bundle.groups.gear.title).toBe("Gear (total)");
+    const a = analyzeFormulas(bundle.formulas, bundle.tables);
+    const all = { ...bundle.values };
+    expect(compute(a, all, Object.keys(all)).display.power).toBe("57");
+    // Leave the helm out: only the sword's strength counts.
+    expect(compute(a, { ...all, helm$equipped: "0" }, Object.keys(all)).display.power).toBe("27");
+  });
+
+  it("refuses a group named like a used board", async () => {
+    const { parseIncludes } = await import("@/lib/boards");
+    const out = parseIncludes([{ board: "a", alias: "gear" }, { board: "b", alias: "x", group: "gear" }]);
+    expect(out.errors.join(" ")).toMatch(/same name as a used board/);
+    expect(parseIncludes([{ board: "a", alias: "x", group: "gear" }]).includes[0].group).toBe("gear");
+  });
+});

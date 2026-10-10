@@ -20,6 +20,7 @@ export function BoardsSection({
   onAdd,
   onAlias,
   onName,
+  onGroup,
   onPin,
   onRemove,
 }: {
@@ -33,6 +34,7 @@ export function BoardsSection({
   onAdd: (boardId: string) => void;
   onAlias: (from: string, to: string) => void;
   onName: (alias: string, name: string) => void;
+  onGroup: (alias: string, group: string) => void;
   onPin: (alias: string, version: number | undefined) => void;
   onRemove: (alias: string) => void;
 }) {
@@ -72,6 +74,8 @@ export function BoardsSection({
                   if (fold.isOpen(inc.alias)) fold.open(to);
                 }}
                 onName={(name) => onName(inc.alias, name)}
+                onGroup={(group) => onGroup(inc.alias, group)}
+                groups={[...new Set(includes.flatMap((i) => (i.group ? [i.group] : [])))]}
                 onPin={(version) => onPin(inc.alias, version)}
                 onRemove={() => onRemove(inc.alias)}
               />

@@ -433,6 +433,7 @@ function BoardEditorInner({
         onAdd={addBoard}
         onAlias={renameAlias}
         onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
+        onGroup={(alias, group) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, group: group || undefined } : i)))}
         onPin={pinBoard}
         onRemove={(alias) => {
           setIncluded((list) => list.filter((i) => i.alias !== alias));

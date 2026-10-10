@@ -15,6 +15,8 @@ export function UsedBoard({
   onToggle,
   onAlias,
   onName,
+  onGroup,
+  groups,
   onPin,
   onRemove,
 }: {
@@ -28,6 +30,10 @@ export function UsedBoard({
   onToggle: () => void;
   onAlias: (to: string) => void;
   onName: (name: string) => void;
+  /** Puts the board in a collection (empty for none). */
+  onGroup: (group: string) => void;
+  /** The groups already used on this board, to pick from. */
+  groups: string[];
   /** Pins the board to a version, or follows its latest again (undefined). */
   onPin: (version: number | undefined) => void;
   onRemove: () => void;
@@ -77,6 +83,23 @@ export function UsedBoard({
           Remove
         </button>
       </div>
+      <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
+        item in the group
+        <input
+          className="field w-40 text-xl text-ink"
+          value={inc.group ?? ""}
+          maxLength={BOARD_LIMITS.alias}
+          list="item-groups"
+          placeholder="(none)"
+          onChange={(e) => onGroup(e.target.value.replace(/[^A-Za-z0-9_]/g, ""))}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label={`Group ${title} is an item of`}
+          title="Boards in the same group are added up: group.variable is the total over the items that are switched on, and each item gets an Equipped switch. For example a group called gear for the items of a character."
+        />
+        {groups.length > 0 && <datalist id="item-groups">{groups.map((g) => <option key={g} value={g} />)}</datalist>}
+      </label>
       {alias.error && <span className="text-sm text-danger">{alias.error}</span>}
       {latest !== undefined && latest > 0 && (
         <p className="flex flex-wrap items-baseline gap-x-3 text-base text-ink-muted">

@@ -76,6 +76,10 @@ Two buttons use an AI model, and only appear when the server has a key: **Descri
 - **Used by:** a board page shows which boards use it (signed-in people only).
 - **Inbox:** there is no email. `/notifications` and the count in the header list suggested changes and answers to them, and changes to boards that a user's own boards use. Several unread notifications of one kind on one board are merged into one.
 
+## Items in a group
+
+A used board can be put in a group (the "item in the group" field of a used board, for example `gear`). Boards in the same group are added up: for every variable the items have there is a total `gear.variable`, usable in formulas like any other variable (`power = gear.strength * 10 + base`). Each item also gets an **Equipped** variable (1 or 0) that counts it in the totals or leaves it out. An item is just a board, so it can have its own formulas, and the same item can be used on any number of boards. Totals are ordinary formulas, so they work in any direction. A group cannot have the name of a used board.
+
 ## Conditions and tables
 
 - **Conditions:** `if(income > 40000, 2000, 1000)` picks between two values. Comparisons (`>`, `<`, `>=`, `<=`, `==`, `!=`), `and`, `or` and `a ? b : c` work too.

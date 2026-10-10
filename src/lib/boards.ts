@@ -1,4 +1,4 @@
-import { PATH_SEPARATOR, isVariableName, tokenize } from "./formulas";
+import { PATH_SEPARATOR, analyzeFormulas, humanize, isVariableName, tokenize } from "./formulas";
 import type { Table } from "./tables";
 import type { BundleVisualization, Visualization } from "./visualizations";
 
@@ -17,8 +17,19 @@ import type { BundleVisualization, Visualization } from "./visualizations";
 // This file is plain logic with no database or browser code: it is used both by the server, when
 // it loads and checks a board, and by the editor, to preview a board while it is being built.
 
-/** `name` is what the board is called here (so one board can be used twice, as player and as enemy); empty means its own title. */
-export type Include = { board: string; alias: string; name?: string; /** Pinned to this version of the board; without it the latest is used. */ version?: number };
+/**
+ * `name` is what the board is called here (so one board can be used twice, as player and as enemy); empty means its own title.
+ * `group` makes the board an item in a collection: boards in the same group are summed (group.variable is the total of
+ * variable over the items that are switched on, and each item gets an "equipped" switch).
+ */
+export type Include = {
+  board: string;
+  alias: string;
+  name?: string;
+  /** Pinned to this version of the board; without it the latest is used. */
+  version?: number;
+  group?: string;
+};
 
 // Everything one board contributes to a bigger system, with all its variables named in its own
 // namespace (before any alias is put in front).
@@ -59,6 +70,8 @@ export type IncludedBundle = {
   name?: string;
   /** The version it is pinned to, if it is. */
   version?: number;
+  /** The collection it is an item of, if any. */
+  group?: string;
   /** The newest version of the board, to say when a pinned one is behind. */
   latest?: number;
   bundle: Bundle;
@@ -92,8 +105,15 @@ export function parseIncludes(raw: unknown): { includes: Include[]; errors: stri
       seen.add(alias);
       const name = typeof item?.name === "string" ? item.name.trim().slice(0, BOARD_LIMITS.name) : "";
       const version = Number.isInteger(item?.version) && item.version >= 1 ? (item.version as number) : undefined;
-      includes.push({ board, alias, ...(name ? { name } : {}), ...(version ? { version } : {}) });
+      const group = typeof item?.group === "string" ? item.group.trim() : "";
+      const groupProblem = group ? checkAlias(group) : null;
+      if (groupProblem) errors.push(`The group "${group}" can't be used: ${groupProblem}.`);
+      includes.push({ board, alias, ...(name ? { name } : {}), ...(version ? { version } : {}), ...(group && !groupProblem ? { group } : {}) });
     }
+  }
+  // A group can't have the name of a used board: both are written before a dot in formulas.
+  for (const g of new Set(includes.flatMap((i) => (i.group ? [i.group] : [])))) {
+    if (seen.has(g)) errors.push(`The group "${g}" has the same name as a used board.`);
   }
   return { includes, errors };
 }
@@ -153,6 +173,54 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
   };
 }
 
+// The collections of a board: for each group of items, a total of every variable the items have, and for each item a
+// switch (alias.equipped, 1 or 0) that takes it in or leaves it out of the totals. They are ordinary variables and
+// formulas, so the totals work in any direction like everything else.
+function groupSums(included: readonly IncludedBundle[]) {
+  const out = {
+    names: [] as string[],
+    formulas: [] as string[],
+    values: {} as Record<string, string>,
+    descriptions: {} as Record<string, string>,
+    units: {} as Record<string, string>,
+    labels: {} as Record<string, string>,
+    decimals: {} as Record<string, number>,
+    ranges: {} as Record<string, Range>,
+    groups: {} as Record<string, { title: string; board: string }>,
+  };
+  const byGroup = new Map<string, IncludedBundle[]>();
+  for (const i of included) if (i.group) byGroup.set(i.group, [...(byGroup.get(i.group) ?? []), i]);
+  for (const [group, items] of byGroup) {
+    out.names.push(group);
+    out.groups[group] = { title: `${humanize(group)} (total)`, board: "" };
+    const owned = items.map((i) => ({
+      item: i,
+      names: analyzeFormulas(i.bundle.formulas, i.bundle.tables)
+        .variables.map((v) => v.name)
+        .filter((n) => !n.includes(PATH_SEPARATOR) && n !== "equipped" && i.bundle.hidden[n] !== true),
+    }));
+    for (const { item } of owned) {
+      const key = withAlias(item.alias, "equipped");
+      out.values[key] = "1";
+      out.labels[key] = "Equipped";
+      out.descriptions[key] = "1 counts this item in the totals, 0 leaves it out.";
+      out.decimals[key] = 0;
+      out.ranges[key] = { min: 0, max: 1 };
+    }
+    const names = [...new Set(owned.flatMap((o) => o.names))];
+    for (const name of names) {
+      const having = owned.filter((o) => o.names.includes(name));
+      const total = withAlias(group, name);
+      out.formulas.push(`${total} = ${having.map((o) => `${withAlias(o.item.alias, "equipped")} * ${withAlias(o.item.alias, name)}`).join(" + ")}`);
+      const first = having[0].item.bundle;
+      out.labels[total] = first.labels[name] || humanize(name);
+      if (first.units[name]) out.units[total] = first.units[name];
+      if (first.decimals[name] !== undefined) out.decimals[total] = first.decimals[name];
+    }
+  }
+  return out;
+}
+
 // A board's own data plus the boards it includes, as one system of formulas. What a board sets
 // itself wins over what an included board says about the same variable (its starting value, label,
 // unit, note, decimals or hidden flag), so a board can restyle what it borrows.
@@ -160,7 +228,9 @@ export function flatten(
   own: OwnData,
   included: readonly IncludedBundle[],
 ): { bundle: Bundle; ownErrors: { index: number; message: string }[] } {
-  const aliases = included.map((i) => i.alias);
+  // Items put in a group are summed: group.variable is the total over the items that are switched on.
+  const sums = groupSums(included);
+  const aliases = [...included.map((i) => i.alias), ...sums.names];
   const ownErrors: { index: number; message: string }[] = [];
   const ownFormulas = own.formulas.map((formula, index) => {
     const { text, error } = internalizeFormula(formula, aliases);
@@ -181,21 +251,22 @@ export function flatten(
     bundle: {
       // Order matters: this board's formulas, then its links, then the used boards' formulas. The
       // editor relies on it to tell which of the three a problem belongs to.
-      formulas: [...ownFormulas, ...linkFormulas, ...parts.flatMap((p) => p.bundle.formulas)],
+      formulas: [...ownFormulas, ...linkFormulas, ...parts.flatMap((p) => p.bundle.formulas), ...sums.formulas],
       links: merge((b) => b.links, own.links),
-      values: merge((b) => b.values, own.values),
-      descriptions: merge((b) => b.descriptions, own.descriptions),
-      units: merge((b) => b.units, own.units),
-      labels: merge((b) => b.labels, own.labels),
+      values: { ...sums.values, ...merge((b) => b.values, own.values) },
+      descriptions: { ...sums.descriptions, ...merge((b) => b.descriptions, own.descriptions) },
+      units: { ...sums.units, ...merge((b) => b.units, own.units) },
+      labels: { ...sums.labels, ...merge((b) => b.labels, own.labels) },
       hidden: merge((b) => b.hidden, own.hidden),
-      decimals: merge((b) => b.decimals, own.decimals),
-      ranges: merge((b) => b.ranges, own.ranges),
+      decimals: { ...sums.decimals, ...merge((b) => b.decimals, own.decimals) },
+      ranges: { ...sums.ranges, ...merge((b) => b.ranges, own.ranges) },
       tables: [...own.tables, ...parts.flatMap((p) => p.bundle.tables)],
       order: [...own.order, ...parts.flatMap((p) => p.bundle.order)],
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],
       groups: Object.assign(
         {},
         ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.name || p.i.title, board: p.i.board } })),
+        sums.groups,
       ),
     },
   };
