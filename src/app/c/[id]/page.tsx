@@ -7,6 +7,8 @@ import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
 import { boardsUsing, getBoard, listComments, listScenarios, listSuggestionsForBoard } from "@/lib/db";
+import { ExplainBoard } from "@/components/ExplainBoard";
+import { aiConfig } from "@/lib/ai";
 import { BoardDiscussion } from "@/components/BoardDiscussion";
 import type { Bundle } from "@/lib/boards";
 import { analyzeFormulas, displayName } from "@/lib/formulas";
@@ -98,6 +100,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
       )}
       {user && !("error" in resolved) && (
         <div className="mt-8 flex flex-col gap-3">
+          {"key" in aiConfig() && <ExplainBoard boardId={calculation.id} />}
           <BoardDiscussion
             boardId={calculation.id}
             comments={listComments(calculation.id).map((c) => ({

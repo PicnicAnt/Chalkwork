@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AiStarter } from "@/components/AiStarter";
 import { BoardEditor } from "@/components/BoardEditor";
+import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import { listAllBoards } from "@/lib/db";
 import { BLANK_ID, TEMPLATES, templateById } from "@/lib/templates";
@@ -13,6 +15,8 @@ export default async function NewBoardPage({ searchParams }: PageProps<"/new">) 
   await requireUser(typeof template === "string" ? `/new?template=${encodeURIComponent(template)}` : "/new");
 
   if (typeof template !== "string") {
+    const helper = "key" in aiConfig();
+    const choices = helper ? listAllBoards().map((b) => ({ id: b.id, title: b.title, description: b.description, ownerName: b.ownerName })) : [];
     return (
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
@@ -21,6 +25,7 @@ export default async function NewBoardPage({ searchParams }: PageProps<"/new">) 
             A board is a few formulas that you can use in any direction. Start from one that is made, or from nothing.
           </p>
         </div>
+        {helper && <AiStarter availableBoards={choices} />}
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {TEMPLATES.map((t) => (
             <li key={t.id}>
