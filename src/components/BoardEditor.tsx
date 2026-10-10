@@ -613,7 +613,7 @@ function BoardEditorInner({
 
       <div>
         <button type="submit" disabled={pending || problems.length > 0} className="btn btn-primary">
-          {pending ? "Saving…" : suggesting ? "Send suggestion" : editing ? "Save changes" : "Save and get share link"}
+          {pending ? "Saving…" : suggesting ? "Send suggestion" : "Save"}
         </button>
       </div>
     </form>
