@@ -1,6 +1,5 @@
-import { useRef } from "react";
 import { vizType, type Visualization } from "@/lib/visualizations";
-import { SaveImageButton } from "./SaveImageButton";
+import { Figure } from "./charts/common";
 import { BarsChart, BreakdownBar, DependencyDiagram, GaugeChart, HeatMap, PieChart, SensitivityBars, SpreadChart, SweepChart } from "./charts";
 import { annulus, circle, donut, ellipse, polygon, rectangle, triangle } from "./shapes/flat";
 import { box, cone, cylinder, pyramid, sphere } from "./shapes/solid";
@@ -25,18 +24,9 @@ const DRAWINGS: Record<string, (v: Record<string, number>, t: (param: string) =>
   annulus,
 };
 
-// One drawing, from the values the board has right now. It follows them as they change.
-// One drawing or chart, with "Save image" under it once there is a picture to save.
+// One drawing or chart, from the values the board has right now. It follows them as they change.
 export function VisualizationView({ viz, values }: { viz: Visualization; values: VizValues }) {
-  const frame = useRef<HTMLDivElement>(null);
-  return (
-    <div ref={frame} className="flex flex-col gap-1 [&:not(:has(svg[role=img]))>.save-image]:hidden">
-      <VisualizationBody viz={viz} values={values} />
-      <div className="save-image flex justify-end">
-        <SaveImageButton target={frame} name={vizType(viz.type)?.label ?? "chart"} />
-      </div>
-    </div>
-  );
+  return <VisualizationBody viz={viz} values={values} />;
 }
 
 function VisualizationBody({ viz, values }: { viz: Visualization; values: VizValues }) {
@@ -72,8 +62,10 @@ function VisualizationBody({ viz, values }: { viz: Visualization; values: VizVal
   }
   const { svg, summary } = draw(numbers, (param) => (viz.map[param] ? values.text(viz.map[param]) : ""), viz.options ?? {});
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Drawing: ${summary}`} className="mx-auto block w-full max-w-sm">
-      {svg}
-    </svg>
+    <Figure caption={type.label}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Drawing: ${summary}`} className="mx-auto block w-full max-w-sm">
+        {svg}
+      </svg>
+    </Figure>
   );
 }

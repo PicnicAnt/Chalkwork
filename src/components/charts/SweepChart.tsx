@@ -80,7 +80,19 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
   const yTicks = [lo + pad, (lo + hi) / 2, hi - pad];
 
   return (
-    <Figure caption={`${values.name(yName)} against ${values.name(xName)}`}>
+    <Figure
+      caption={`${values.name(yName)} against ${values.name(xName)}`}
+      actions={[
+        {
+          label: "Download CSV",
+          onClick: () =>
+            downloadCsv(`${fileNameOf(values.name(yName))}-against-${fileNameOf(values.name(xName))}.csv`, [
+              [withUnit(values, xName), withUnit(values, yName)],
+              ...line.points.map((p) => [p.x, p.y ?? ""]),
+            ]),
+        },
+      ]}
+    >
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Chart of ${values.name(yName)} against ${values.name(xName)}`} className="mx-auto block w-full max-w-md">
         <rect x={m.l} y={m.t} width={W - m.l - m.r} height={H - m.t - m.b} fill="none" stroke={FAINT} strokeWidth={1.5} />
         {xTicks.map((t, i) => (
@@ -146,20 +158,7 @@ export function SweepChart({ viz, values }: { viz: Visualization; values: VizVal
         </text>
       </svg>
       <p className="text-center text-base text-ink-muted">
-        Now: {values.text(xName)} gives {values.text(yName)}. Drag the dot to change {values.name(xName)}.{" "}
-        <button
-          type="button"
-          className="link"
-          onClick={() =>
-            downloadCsv(`${fileNameOf(values.name(yName))}-against-${fileNameOf(values.name(xName))}.csv`, [
-              [withUnit(values, xName), withUnit(values, yName)],
-              ...line.points.map((p) => [p.x, p.y ?? ""]),
-            ])
-          }
-        >
-          Download CSV
-        </button>
-      </p>
+        Now: {values.text(xName)} gives {values.text(yName)}. Drag the dot to change {values.name(xName)}.      </p>
     </Figure>
   );
 }
