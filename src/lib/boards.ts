@@ -252,7 +252,7 @@ function aggregateFormula(agg: Aggregate | "count", terms: { on: string; value: 
 // The collections of a board: for each group of boards, a total of every variable it asks for, and for each board a
 // switch (alias.equipped, 1 or 0) that takes it in or leaves it out of the totals. They are ordinary variables and
 // formulas, so the totals work in any direction like everything else.
-function groupSums(included: readonly IncludedBundle[], collections: readonly Collection[] = [], needs: readonly AggregateNeed[] = []) {
+function groupSums(included: readonly IncludedBundle[], collections: readonly Collection[] = [], needs: readonly AggregateNeed[] = [], referenced: ReadonlyMap<string, ReadonlySet<string>> = new Map()) {
   const out = {
     names: [] as string[],
     formulas: [] as string[],
@@ -293,7 +293,12 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
     };
 
     const declared = (collections.find((c) => c.name === group)?.stats ?? []).map(parseStat);
-    const listed = declared.length > 0 ? declared : [...new Set(owned.flatMap((o) => o.names))].map((name) => ({ name, agg: "sum" as Aggregate }));
+    // The variables that get a total: those listed (older boards), every variable the boards have, and those formulas use.
+    const listed = [...declared];
+    // (A collection that lists its variables, as older boards do, only totals those and the ones formulas use.)
+    for (const name of [...(declared.length === 0 ? owned.flatMap((o) => o.names) : []), ...(referenced.get(group) ?? [])]) {
+      if (!listed.some((l) => l.name === name)) listed.push({ name, agg: "sum" });
+    }
     for (const { name, agg } of listed) {
       const terms = termsFor(name);
       const total = withAlias(group, name);
@@ -339,7 +344,14 @@ export function flatten(
     needs.push(...out.needs);
     return out.text;
   });
-  const sums = groupSums(included, collections, needs);
+  // Every collection.variable a formula mentions is a total, even when no board has the variable yet (then it is 0).
+  const referenced = new Map<string, Set<string>>();
+  for (const formula of rewritten) {
+    for (const m of formula.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\.)/g)) {
+      if (groupNames.has(m[1]) && m[2] !== "count") referenced.set(m[1], new Set([...(referenced.get(m[1]) ?? []), m[2]]));
+    }
+  }
+  const sums = groupSums(included, collections, needs, referenced);
   const aliases = [...included.map((i) => i.alias), ...sums.names];
   const ownErrors: { index: number; message: string }[] = [];
   const ownFormulas = rewritten.map((formula, index) => {

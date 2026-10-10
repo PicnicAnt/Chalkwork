@@ -229,3 +229,27 @@ describe("averages, smallest and largest over a collection", () => {
     expect([display.typical, display.low]).toEqual(["0", "0"]);
   });
 });
+
+describe("a collection needs no list of variables", () => {
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [] as Table[], order: [] };
+
+  it("totals what the formulas use, even before any board is added", () => {
+    const { bundle, ownErrors } = flatten({ ...own, formulas: ["power = weapons.damage * 2 + avg(weapons.speed)"], collections: [{ name: "weapons", stats: [] }] }, []);
+    expect(ownErrors).toEqual([]);
+    expect(bundle.formulas).toContain("weapons$damage = 0");
+    expect(bundle.formulas).toContain("weapons$speed$avg = 0");
+    const a = analyzeFormulas(bundle.formulas, bundle.tables);
+    expect(compute(a, bundle.values, []).display.power).toBe("0");
+  });
+
+  it("totals every variable of the boards that are added", () => {
+    const item = flatten({ ...own, formulas: ["damage", "speed"], values: { damage: "5", speed: "2" } }, []).bundle;
+    const { bundle } = flatten(
+      { ...own, formulas: ["power = weapons.damage + weapons.speed"], collections: [{ name: "weapons", stats: [] }] },
+      [{ alias: "item1", board: "i", title: "Item", group: "weapons", bundle: item }],
+    );
+    const a = analyzeFormulas(bundle.formulas, bundle.tables);
+    const all = { ...bundle.values };
+    expect(compute(a, all, Object.keys(all)).display.power).toBe("7");
+  });
+});

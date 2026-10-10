@@ -41,7 +41,7 @@ export function ItemControls({ collection: c, boards, extras, onChange }: { coll
   return (
     <div className="flex flex-col gap-2" aria-label={`Boards in ${c.title}`}>
       <p className="text-base text-ink-muted">
-        Add boards here: {c.stats.length > 0 ? c.stats.join(", ") : "their variables"} are added up into {c.name}.&lt;variable&gt;, and each board has an Included switch (1 counts it, 0 leaves it out).
+        Add boards here. Their variables are added up as {c.name}.&lt;variable&gt; (also avg(), min(), max() and count() in formulas), and each board has an Included switch (1 counts it, 0 leaves it out).
       </p>
       {count > 0 && (
         <ul className="flex flex-col gap-1 text-lg">
