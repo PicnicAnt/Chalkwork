@@ -105,7 +105,9 @@ export function validateDraft(
   if (title.length > LIMITS.title) errors.push(`Title must be at most ${LIMITS.title} characters.`);
   if (description.length > LIMITS.description)
     errors.push(`Description must be at most ${LIMITS.description} characters.`);
-  if (formulas.length === 0) errors.push("Write at least one formula.");
+  // A board can be nothing but the boards it uses or its collections, so it needs formulas only when it has neither.
+  const hasParts = included.length > 0 || (Array.isArray(r.collections) && r.collections.length > 0);
+  if (formulas.length === 0 && !hasParts) errors.push("Write at least one formula, use another board, or add a collection.");
   if (formulas.length > LIMITS.formulas) errors.push(`At most ${LIMITS.formulas} formulas.`);
   if (formulas.some((f) => f.length > LIMITS.formula))
     errors.push(`Each formula must be at most ${LIMITS.formula} characters.`);

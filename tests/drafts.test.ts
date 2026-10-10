@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateDraft, splitFormulas, type BoardDraft } from "@/lib/board-draft";
 import { diffDrafts } from "@/lib/change-suggestions";
+import { flatten } from "@/lib/boards";
 import { parseVisualizations, renameInVisualizations, dropFromVisualizations } from "@/lib/visualizations";
 
 const base: BoardDraft = {
@@ -29,6 +30,13 @@ describe("checking a board before it is saved", () => {
   it("wants a title and at least one formula", () => {
     expect(validateDraft({ ...base, title: " " }).errors.join(" ")).toMatch(/title/i);
     expect(validateDraft({ ...base, formulas: [] }).errors.join(" ")).toMatch(/formula/i);
+  });
+
+  it("allows a board with no formulas when it uses a board or has a collection", () => {
+    expect(validateDraft({ ...base, formulas: [] }).errors.join(" ")).toMatch(/formula/i);
+    expect(validateDraft({ ...base, formulas: [], collections: [{ name: "parts", stats: ["weight"] }] }).errors).toEqual([]);
+    const used = [{ alias: "part", board: "abcdef12", title: "Part", bundle: flatten({ values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [], order: [], formulas: ["weight"] }, []).bundle }];
+    expect(validateDraft({ ...base, formulas: [], includes: [{ board: "abcdef12", alias: "part" }] }, used).errors).toEqual([]);
   });
 
   it("refuses a formula that can't make sense", () => {
