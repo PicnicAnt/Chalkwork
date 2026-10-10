@@ -2,6 +2,7 @@
 
 import { BOARD_LIMITS, checkAlias, type Collection } from "@/lib/boards";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
+import { SearchSelect } from "./ui/SearchSelect";
 
 /** A collection as it is typed: the stats are one line of text until they are read. */
 export type CollectionDraft = { name: string; stats: string; boards: string[] };
@@ -76,19 +77,13 @@ export function CollectionsEditor({
                     </button>
                   </span>
                 ))}
-                <select
+                <SearchSelect
                   value=""
-                  className="max-w-[14rem] cursor-pointer bg-transparent text-lg"
-                  aria-label={`Allow a board in ${d.name || `collection ${i + 1}`}`}
-                  onChange={(e) => e.target.value && update(i, { boards: [...d.boards, e.target.value] })}
-                >
-                  <option value="">Allow a board…</option>
-                  {available.filter((b) => !d.boards.includes(b.id)).map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.title}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => id && update(i, { boards: [...d.boards, id] })}
+                  placeholder="Allow a board…"
+                  ariaLabel={`Allow a board in ${d.name || `collection ${i + 1}`}`}
+                  options={available.filter((b) => !d.boards.includes(b.id)).map((b) => ({ value: b.id, label: b.title }))}
+                />
               </div>
               {problem && <span className="w-full text-sm text-danger">{problem}</span>}
             </div>

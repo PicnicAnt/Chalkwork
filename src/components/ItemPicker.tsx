@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { presetsOf } from "@/app/actions/boards";
+import { SearchSelect } from "./ui/SearchSelect";
 import type { ExtraItem } from "@/lib/resolve-boards";
 
 export type CollectionView = {
@@ -46,7 +47,7 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
   const [presets, setPresets] = useState<{ board: string; names: string[] } | null>(null);
   const [preset, setPreset] = useState("");
   useEffect(() => {
-    if (!pick) return;
+    if (!pick || (c.choices && c.choices.length > 0)) return;
     let cancelled = false;
     presetsOf(pick).then((names) => {
       if (!cancelled) setPresets({ board: pick, names });
@@ -54,7 +55,7 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
     return () => {
       cancelled = true;
     };
-  }, [pick]);
+  }, [pick, c.choices]);
   const names = presets?.board === pick ? presets.names : [];
   const count = c.fixed.length + c.added.length;
   return (
@@ -84,14 +85,13 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
       )}
       {c.choices && c.choices.length > 0 ? (
         <div className="flex flex-wrap items-baseline gap-3">
-          <select value={pick} onChange={(e) => setPick(e.target.value)} className="min-w-0 max-w-full cursor-pointer bg-transparent text-lg" aria-label={`Item to add to ${c.title}`}>
-            <option value="">Choose an item…</option>
-            {c.choices.map((ch, i) => (
-              <option key={i} value={String(i)}>
-                {ch.title}
-              </option>
-            ))}
-          </select>
+          <SearchSelect
+            value={pick}
+            onChange={setPick}
+            placeholder="Choose an item…"
+            ariaLabel={`Item to add to ${c.title}`}
+            options={(c.choices ?? []).map((ch, i) => ({ value: String(i), label: ch.title }))}
+          />
           <button
             type="button"
             className="btn"
@@ -107,19 +107,16 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
         </div>
       ) : boards.length > 0 ? (
         <div className="flex flex-wrap items-baseline gap-3">
-          <select
+          <SearchSelect
             value={pick}
-            onChange={(e) => {
-              setPick(e.target.value);
+            onChange={(id) => {
+              setPick(id);
               setPreset("");
-            }} className="min-w-0 max-w-full cursor-pointer bg-transparent text-lg" aria-label={`Board to add to ${c.title}`}>
-            <option value="">Choose a board…</option>
-            {boards.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.title}
-              </option>
-            ))}
-          </select>
+            }}
+            placeholder="Choose a board…"
+            ariaLabel={`Board to add to ${c.title}`}
+            options={boards.map((b) => ({ value: b.id, label: b.title }))}
+          />
           {names.length > 0 && (
             <select value={preset} onChange={(e) => setPreset(e.target.value)} className="cursor-pointer bg-transparent text-lg" aria-label="Preset to start from">
               <option value="">as it is</option>
