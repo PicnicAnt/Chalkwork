@@ -20,6 +20,7 @@ type Row = {
   board_tags: string;
   variable_order: string;
   board_collections: string;
+  board_presets: string;
   variable_labels: string;
   variable_hidden: string;
   board_includes: string;
@@ -34,9 +35,9 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_order, board_collections, variable_labels,
+       variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_order, board_collections, board_presets, variable_labels,
        variable_hidden, board_includes, variable_links, visualizations, owner_id)
-     VALUES (${Array(19).fill("?").join(", ")})`,
+     VALUES (${Array(20).fill("?").join(", ")})`,
   ).run(id, ...fieldsOf(draft), ownerId);
   recordVersion(id, draft, ownerId);
   return id;
@@ -56,6 +57,7 @@ const fieldsOf = (draft: BoardDraft) => [
   JSON.stringify(draft.tags),
   JSON.stringify(draft.order),
   JSON.stringify(draft.collections ?? []),
+  JSON.stringify(draft.presets ?? []),
   JSON.stringify(draft.labels),
   JSON.stringify(draft.hidden),
   JSON.stringify(draft.includes),
@@ -70,7 +72,7 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
          variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?,
-         board_tags = ?, variable_order = ?, board_collections = ?, variable_labels = ?, variable_hidden = ?,
+         board_tags = ?, variable_order = ?, board_collections = ?, board_presets = ?, variable_labels = ?, variable_hidden = ?,
          board_includes = ?, variable_links = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
@@ -95,6 +97,7 @@ const parse = (row: Row): Board => ({
   tags: JSON.parse(row.board_tags || "[]"),
   order: JSON.parse(row.variable_order || "[]"),
   collections: JSON.parse(row.board_collections || "[]"),
+  presets: JSON.parse(row.board_presets || "[]"),
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
   links: JSON.parse(row.variable_links || "{}"),

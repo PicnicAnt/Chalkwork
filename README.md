@@ -76,6 +76,10 @@ Two buttons use an AI model, and only appear when the server has a key: **Descri
 - **Used by:** a board page shows which boards use it (signed-in people only).
 - **Inbox:** there is no email. `/notifications` and the count in the header list suggested changes and answers to them, and changes to boards that a user's own boards use. Several unread notifications of one kind on one board are merged into one.
 
+## Presets
+
+In the editor, the "Try it" section can save the numbers on screen as a named **preset** (Shortsword, Longsword, Bow). Presets are saved with the board and shown to everyone using it as a row of buttons above the variables; a click loads one. A board used inside another can start from one of its presets ("starts from" in the Boards section), and when someone adds a board to an item collection they can pick a preset too (kept in the address as `?items=gear:<board id>@Longsword`). Only the typed (locked) values of a preset are applied to an item.
+
 ## Items in a group
 
 A board can have **item collections** (the "Item collections" section of the editor): a name such as `gear` and the stats to add up (`strength, armor`). People using the board pick existing boards from a list and add them as items; the items are kept in the address (`?items=gear:<board id>`), so a link shares them. Each stat gets a total `gear.strength`, usable in formulas, and each item gets an **Equipped** variable (1 or 0) that counts it or leaves it out. With no items the totals are 0. The creator can also put used boards in a collection (the "item in the group" field of a used board). An item is just a board, so it can have its own formulas, and the same item can be used on any number of boards. Totals are ordinary formulas, so they work in any direction.

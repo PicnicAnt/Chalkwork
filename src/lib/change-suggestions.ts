@@ -45,6 +45,7 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
     const now = nextUse.get(alias);
     if (!now || now.board !== inc.board) out.push(`Stops using a board as ${alias}`);
     else if ((now.name ?? "") !== (inc.name ?? "")) out.push(`Board ${alias} is now named ${show(now.name)}`);
+    else if ((now.preset ?? "") !== (inc.preset ?? "")) out.push(`Board ${alias} ${now.preset ? `starts from the preset ${now.preset}` : "no longer starts from a preset"}`);
     else if ((now.group ?? "") !== (inc.group ?? "")) out.push(`Board ${alias} ${now.group ? `is now in the group ${now.group}` : "is no longer in a group"}`);
     else if ((now.version ?? 0) !== (inc.version ?? 0)) out.push(now.version ? `Board ${alias} is pinned to version ${now.version}` : `Board ${alias} follows the latest version`);
   }
@@ -64,6 +65,7 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
   const hiddenOnly = (h: Record<string, boolean>) => Object.fromEntries(Object.entries(h).filter(([, v]) => v));
   compareMap(out, (n) => `${n} hidden`, hiddenOnly(base.hidden), hiddenOnly(next.hidden), (v) => (v ? "yes" : "no"));
   compareMap(out, (n) => `Link of ${n}`, base.links, next.links, (v) => (v === undefined ? "none" : displayName(v)));
+  if (JSON.stringify(base.presets ?? []) !== JSON.stringify(next.presets ?? [])) out.push("Presets changed");
   if (JSON.stringify(base.collections ?? []) !== JSON.stringify(next.collections ?? [])) out.push("Collections changed");
   if ((base.order ?? []).join(",") !== (next.order ?? []).join(",")) out.push("Order of the variables changed");
   if ((base.tags ?? []).join(",") !== (next.tags ?? []).join(",")) out.push(`Tags: ${(base.tags ?? []).join(", ") || "none"} → ${(next.tags ?? []).join(", ") || "none"}`);
@@ -89,6 +91,7 @@ export function draftOf(c: BoardDraft): BoardDraft {
     tags: c.tags,
     order: c.order,
     collections: c.collections,
+    presets: c.presets,
     includes: c.includes,
     links: c.links,
     visualizations: c.visualizations,

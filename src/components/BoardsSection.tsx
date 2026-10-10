@@ -21,6 +21,7 @@ export function BoardsSection({
   onAlias,
   onName,
   onGroup,
+  onPreset,
   onPin,
   onRemove,
 }: {
@@ -35,6 +36,7 @@ export function BoardsSection({
   onAlias: (from: string, to: string) => void;
   onName: (alias: string, name: string) => void;
   onGroup: (alias: string, group: string) => void;
+  onPreset: (alias: string, preset: string) => void;
   onPin: (alias: string, version: number | undefined) => void;
   onRemove: (alias: string) => void;
 }) {
@@ -75,6 +77,8 @@ export function BoardsSection({
                 }}
                 onName={(name) => onName(inc.alias, name)}
                 onGroup={(group) => onGroup(inc.alias, group)}
+                presetNames={Object.keys(included.find((i) => i.alias === inc.alias)?.presetValues ?? {})}
+                onPreset={(preset) => onPreset(inc.alias, preset)}
                 groups={[...new Set(includes.flatMap((i) => (i.group ? [i.group] : [])))]}
                 onPin={(version) => onPin(inc.alias, version)}
                 onRemove={() => onRemove(inc.alias)}

@@ -6,7 +6,7 @@ import type { Bundle } from "@/lib/boards";
 import { compute, initialLocks, shownValues } from "@/lib/calculator";
 import { downloadCsv, fileNameOf } from "@/lib/export";
 import { analyzeFormulas, displayName, formatNumber, parseValue } from "@/lib/formulas";
-import type { Scenario, ScenarioSnapshot } from "@/lib/scenarios";
+import type { Preset, Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
 import { encodeItems } from "@/lib/items-param";
 import type { ExtraItem } from "@/lib/resolve-boards";
@@ -30,6 +30,7 @@ export function SharedCalculator({
   title = "board",
   publicId,
   collections = [],
+  presets = [],
   boardChoices = [],
   extras = [],
 }: {
@@ -49,6 +50,8 @@ export function SharedCalculator({
   publicId?: string;
   /** The collections of items of this board, and what is in them now. */
   collections?: CollectionView[];
+  /** Scenarios the creator saved on the board. */
+  presets?: Preset[];
   /** The boards that can be added as items. */
   boardChoices?: { id: string; title: string }[];
   /** The items someone using the board has added. */
@@ -145,6 +148,21 @@ export function SharedCalculator({
           </button>
         )}
       </div>
+      {view === "board" && presets.length > 0 && (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2" role="group" aria-label="Presets">
+          <span className="text-lg text-ink-muted">Presets</span>
+          {presets.map((p) => (
+            <button
+              key={p.name}
+              type="button"
+              className="btn px-3 py-1 text-base"
+              onClick={() => load({ values: { ...flat.values, ...p.values }, locked: p.locked })}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
       {view === "board" && collections.length > 0 && (
         <ItemPicker
           collections={collections}

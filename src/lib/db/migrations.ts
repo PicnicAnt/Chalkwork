@@ -240,4 +240,10 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN board_collections TEXT NOT NULL DEFAULT '[]';`);
     db.pragma("user_version = 22");
   }
+  if (version < 23) {
+    // Presets: scenarios the creator saved on the board, as JSON: [{ "name": "Longsword", "values": {...}, "locked": [...] }].
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "board_presets");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN board_presets TEXT NOT NULL DEFAULT '[]';`);
+    db.pragma("user_version = 23");
+  }
 }

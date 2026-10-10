@@ -1,4 +1,5 @@
 // Shared types and validation for calculations. Safe to import from client and server.
+import { parsePresets, type Preset } from "./scenarios";
 import { parseTags } from "./tags";
 import { parseTables, type Table } from "./tables";
 import { checkAlias, flatten, type Collection, type Include, type IncludedBundle, type Range } from "./boards";
@@ -30,6 +31,8 @@ export type BoardDraft = {
   tables: Table[];
   // The order variables are listed in, by name. Variables not named come after, in the order they appear.
   order: string[];
+  // Scenarios the creator saved on the board, which everyone using it sees (and can use as the starting point of an item).
+  presets?: Preset[];
   // Collections of items that people using the board can add boards to; their stats are added up.
   collections?: Collection[];
   // Short labels that make the board easier to find, such as finance or game.
@@ -76,12 +79,13 @@ export function splitFormulas(text: string): string[] {
 // `included` is the boards this one uses, already loaded by the server (see resolve-boards.ts). They
 // are part of the system of formulas, so their variables can be named, noted and linked here too.
 // What is saved of a used board: which board, its alias, the name shown for it and the version it is pinned to.
-export const includeOf = (i: { board: string; alias: string; name?: string; version?: number; group?: string }): Include => ({
+export const includeOf = (i: { board: string; alias: string; name?: string; version?: number; group?: string; preset?: string }): Include => ({
   board: i.board,
   alias: i.alias,
   ...(i.name ? { name: i.name } : {}),
   ...(i.version ? { version: i.version } : {}),
   ...(i.group ? { group: i.group } : {}),
+  ...(i.preset ? { preset: i.preset } : {}),
 });
 
 export function validateDraft(
@@ -229,6 +233,9 @@ export function validateDraft(
     if (range.min !== undefined || range.max !== undefined) ranges[variable.name] = range;
   }
 
+  const parsedPresets = parsePresets(r.presets, known);
+  errors.push(...parsedPresets.errors);
+
   const parsedViz = parseVisualizations(r.visualizations, known, true);
   errors.push(...parsedViz.errors);
 
@@ -248,6 +255,7 @@ export function validateDraft(
           ranges,
           tables,
           collections,
+          presets: parsedPresets.presets,
           order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),
           tags: parseTags(r.tags),
           includes: included.map(includeOf),

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { createBoard, loadBoardToUse, updateBoard } from "@/app/actions/boards";
 import { reviseBoard, type ReviseOutcome } from "@/app/actions/ai";
+import { MAX_PRESETS, SCENARIO_LIMITS, type Preset } from "@/lib/scenarios";
+import { initialLocks } from "@/lib/calculator";
 import { createSuggestion } from "@/app/actions/suggestions";
 import {
   defaultAlias,
@@ -142,6 +144,12 @@ function BoardEditorInner({
     }
     return out;
   }, [rangeText]);
+  // Presets: scenarios saved on the board for everyone to use. `locks` is what the panel last said was locked.
+  const [presets, setPresets] = useState<Preset[]>(initial?.presets ?? []);
+  const [presetName, setPresetName] = useState("");
+  const [locks, setLocks] = useState<string[] | null>(null);
+  const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(undefined);
+  const [panelKey, setPanelKey] = useState(0);
   // Collections of items, held as typed.
   const [collectionDrafts, setCollectionDrafts] = useState<CollectionDraft[]>(() =>
     (initial?.collections ?? []).map((c) => ({ name: c.name, stats: c.stats.join(", ") })),
@@ -221,6 +229,7 @@ function BoardEditorInner({
           title: result.title,
           latest: result.latest,
           bundle: result.bundle,
+          presetValues: result.presetValues,
         },
       ]);
     });
@@ -237,7 +246,7 @@ function BoardEditorInner({
         setBoardError(result.error);
         return;
       }
-      setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, version, latest: result.latest, bundle: result.bundle } : i)));
+      setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, version, latest: result.latest, bundle: result.bundle, presetValues: result.presetValues } : i)));
     });
   }
 
@@ -272,7 +281,7 @@ function BoardEditorInner({
   }
 
   // What the editor holds now, as a draft.
-  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
+  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
 
   // The writing helper changes the board as asked; the editor then starts again from the result.
   const [aiText, setAiText] = useState("");
@@ -294,7 +303,7 @@ function BoardEditorInner({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, tags: parseTags(tagText), includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, tags: parseTags(tagText), includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -440,6 +449,7 @@ function BoardEditorInner({
         onAlias={renameAlias}
         onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
         onGroup={(alias, group) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, group: group || undefined } : i)))}
+        onPreset={(alias, preset) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, preset: preset || undefined } : i)))}
         onPin={pinBoard}
         onRemove={(alias) => {
           setIncluded((list) => list.filter((i) => i.alias !== alias));
@@ -504,9 +514,12 @@ function BoardEditorInner({
           </p>
         </div>
         <CalculatorPanel
+          key={panelKey}
           analysis={analysis}
           values={flat.bundle.values}
           onChange={setValues}
+          initialLocked={loadedLocks}
+          onLocks={setLocks}
           descriptions={flat.bundle.descriptions}
           units={flat.bundle.units}
           labels={flat.bundle.labels}
@@ -519,6 +532,60 @@ function BoardEditorInner({
           groups={flat.bundle.groups}
           visualizations={flat.bundle.visualizations}
         />
+        <div className="flex flex-col gap-2">
+          <h3 className="text-xl">Presets</h3>
+          <p className="text-base text-ink-muted">
+            Save the numbers above as a named preset, such as Shortsword or Longsword. Everyone using the board sees its presets and can load one, and a board used as an item
+            can start from one.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <input
+              className="field min-w-[12rem] flex-1 text-xl"
+              value={presetName}
+              maxLength={SCENARIO_LIMITS.name}
+              placeholder="Name of the preset"
+              onChange={(e) => setPresetName(e.target.value)}
+              aria-label="Name of the preset"
+            />
+            <button
+              type="button"
+              className="btn"
+              disabled={!presetName.trim() || presets.length >= MAX_PRESETS}
+              onClick={() => {
+                const name = presetName.trim().replace(/\s+/g, " ");
+                const snapshot = { name, values: { ...flat.bundle.values }, locked: locks ?? initialLocks(analysis, flat.bundle.values) };
+                setPresets((list) => [...list.filter((p) => p.name !== name), snapshot]);
+                setPresetName("");
+              }}
+            >
+              Save these values as a preset
+            </button>
+          </div>
+          {presets.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {presets.map((p) => (
+                <li key={p.name} className="flex flex-wrap items-baseline gap-x-4 text-xl">
+                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                  <button
+                    type="button"
+                    className="link text-base"
+                    onClick={() => {
+                      setValues({ ...flat.bundle.values, ...p.values });
+                      setLocks(p.locked);
+                      setLoadedLocks(p.locked);
+                      setPanelKey((k) => k + 1);
+                    }}
+                  >
+                    Load
+                  </button>
+                  <button type="button" className="link text-base text-danger" aria-label={`Remove the preset ${p.name}`} onClick={() => setPresets((list) => list.filter((x) => x.name !== p.name))}>
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
 
       {errors.length > 0 && (

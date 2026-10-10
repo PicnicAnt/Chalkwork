@@ -2,6 +2,7 @@ import "server-only";
 import { BOARD_LIMITS, flatten, type Bundle, type Include, type IncludedBundle, type OwnData } from "./boards";
 import type { Board } from "./board-draft";
 import { getBoard, getVersion, latestVersion } from "./db";
+import { presetValues } from "./scenarios";
 
 // Loading the boards a board uses. Boards use boards by id and are read when needed, so a change to
 // a used board shows up in every board that uses it. The two things that can go wrong are boards
@@ -65,7 +66,8 @@ function resolveWithBudget(
   for (const inc of includes) {
     const found = bundleOf(inc.board, visiting, budget, inc.version);
     if ("error" in found) return found;
-    included.push({ alias: inc.alias, board: inc.board, title: found.title, name: inc.name, version: inc.version, group: inc.group, latest: latestVersion(inc.board), bundle: found.bundle });
+    const presets = getBoard(inc.board)?.presets ?? [];
+    included.push({ alias: inc.alias, board: inc.board, title: found.title, name: inc.name, version: inc.version, group: inc.group, preset: inc.preset, presetValues: Object.fromEntries(presets.map((p) => [p.name, presetValues(p)])), latest: latestVersion(inc.board), bundle: found.bundle });
   }
   return { included };
 }
@@ -89,7 +91,7 @@ export function resolveBoard(boardId: string, selfId?: string, version?: number)
 
 // A board together with the boards it uses, as the one system of formulas to show.
 // An item someone using the board added to one of its collections (it is not saved on the board).
-export type ExtraItem = { group: string; board: string };
+export type ExtraItem = { group: string; board: string; preset?: string };
 
 // The groups a board has: its collections, and those its creator put included boards in.
 export const groupsOf = (calc: Board): string[] => [...new Set([...(calc.collections ?? []).map((c) => c.name), ...calc.includes.flatMap((i) => (i.group ? [i.group] : []))])];
@@ -103,7 +105,7 @@ export function resolveForView(calc: Board, extras: readonly ExtraItem[] = []): 
       let alias = `item${n + 1}`;
       while (taken.has(alias)) alias += "_";
       taken.add(alias);
-      return { board: e.board, alias, group: e.group };
+      return { board: e.board, alias, group: e.group, ...(e.preset ? { preset: e.preset } : {}) };
     });
   const resolved = resolveIncludes([...calc.includes, ...added], calc.id);
   if ("error" in resolved) return resolved;

@@ -157,3 +157,36 @@ describe("collections people add items to", () => {
     expect(compute(a, bundle.values, Object.keys(bundle.values)).display.power).toBe("47");
   });
 });
+
+describe("presets", () => {
+  it("reads presets, drops unknown variables and refuses repeats", async () => {
+    const { parsePresets } = await import("@/lib/scenarios");
+    const out = parsePresets(
+      [
+        { name: "Longsword", values: { damage: "12", nothing: "1" }, locked: ["damage", "nothing"] },
+        { name: "Longsword", values: {}, locked: [] },
+        { name: " ", values: {}, locked: [] },
+      ],
+      new Set(["damage"]),
+    );
+    expect(out.presets).toEqual([{ name: "Longsword", values: { damage: "12" }, locked: ["damage"] }]);
+    expect(out.errors.length).toBe(2);
+  });
+
+  it("a board used from a preset starts with its typed values", () => {
+    const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [] as Table[], order: [] };
+    const sword = flatten({ ...own, formulas: ["damage", "strength"], values: { damage: "5", strength: "1" } }, []).bundle;
+    const { bundle } = flatten(
+      { ...own, formulas: ["power = gear.damage"], collections: [{ name: "gear", stats: ["damage"] }] },
+      [{ alias: "item1", board: "s", title: "Sword", group: "gear", preset: "Long", presetValues: { Long: { damage: "12" } }, bundle: sword }],
+    );
+    expect(bundle.values.item1$damage).toBe("12");
+    expect(bundle.values.item1$strength).toBe("1");
+  });
+
+  it("items in the address can name a preset", async () => {
+    const { parseItems, encodeItems } = await import("@/lib/items-param");
+    const items = [{ group: "gear", board: "abc123", preset: "Long sword, +1" }];
+    expect(parseItems(encodeItems(items))).toEqual(items);
+  });
+});

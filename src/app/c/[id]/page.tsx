@@ -50,7 +50,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     title: humanize(name),
     stats: (full.collections ?? []).find((c) => c.name === name)?.stats ?? [],
     fixed: full.includes.filter((i) => i.group === name).map((i) => ({ title: i.name || getBoard(i.board)?.title || "A board" })),
-    added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: getBoard(e.board)?.title ?? "A board" }] : [])),
+    added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
   }));
   const boardChoices = user && known.length > 0 ? listAllBoards().filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
 
@@ -96,8 +96,9 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
         </p>
       ) : (
         <SharedCalculator
-          key={usedExtras.map((e) => `${e.group}:${e.board}`).join(",")}
+          key={usedExtras.map((e) => `${e.group}:${e.board}:${e.preset ?? ""}`).join(",")}
           collections={collections}
+          presets={full.presets ?? []}
           boardChoices={boardChoices}
           extras={usedExtras}
           flat={resolved.bundle}

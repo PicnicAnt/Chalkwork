@@ -8,6 +8,10 @@ export type Scenario = { id: string; name: string } & ScenarioSnapshot;
 
 export const SCENARIO_LIMITS = { name: 40, perBoard: 20, variables: 300, text: 50 };
 
+/** A preset: a scenario the creator of a board saved on the board itself, so everyone using the board sees it. */
+export type Preset = { name: string } & ScenarioSnapshot;
+export const MAX_PRESETS = 20;
+
 // What a scenario shows on this board as it is now: the board is solved again with the values kept
 // where they were locked, so a change to the board since shows up. `shown` is rounded as the board does,
 // `numbers` has the full precision, for working out differences.
@@ -58,4 +62,41 @@ export function parseSnapshot(raw: unknown): ScenarioSnapshot | null {
   }
   const locked = r.locked.filter((n): n is string => typeof n === "string" && n in values);
   return { values, locked };
+}
+
+// Reads the presets sent for saving. Names of variables that the board doesn't have are dropped.
+export function parsePresets(raw: unknown, known?: ReadonlySet<string>): { presets: Preset[]; errors: string[] } {
+  const errors: string[] = [];
+  const presets: Preset[] = [];
+  if (raw === undefined || raw === null) return { presets, errors };
+  if (!Array.isArray(raw)) return { presets, errors: ["The presets couldn't be read."] };
+  if (raw.length > MAX_PRESETS) errors.push(`At most ${MAX_PRESETS} presets.`);
+  for (const item of raw.slice(0, MAX_PRESETS)) {
+    const name = typeof item?.name === "string" ? item.name.trim().replace(/\s+/g, " ") : "";
+    if (!name || name.length > SCENARIO_LIMITS.name) {
+      errors.push(`A preset needs a name of at most ${SCENARIO_LIMITS.name} characters.`);
+      continue;
+    }
+    if (presets.some((p) => p.name === name)) {
+      errors.push(`Two presets are called ${name}.`);
+      continue;
+    }
+    const snapshot = parseSnapshot(item);
+    if (!snapshot) {
+      errors.push(`The preset ${name} couldn't be read.`);
+      continue;
+    }
+    const keep = (n: string) => !known || known.has(n);
+    presets.push({
+      name,
+      values: Object.fromEntries(Object.entries(snapshot.values).filter(([n]) => keep(n))),
+      locked: snapshot.locked.filter(keep),
+    });
+  }
+  return { presets, errors };
+}
+
+// A preset's typed values, to be put on a board's own starting values when it is used as an item.
+export function presetValues(preset: Preset): Record<string, string> {
+  return Object.fromEntries(preset.locked.flatMap((n) => (n in preset.values ? [[n, preset.values[n]]] : [])));
 }

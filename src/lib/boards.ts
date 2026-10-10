@@ -29,6 +29,8 @@ export type Include = {
   /** Pinned to this version of the board; without it the latest is used. */
   version?: number;
   group?: string;
+  /** The name of one of that board's presets, whose values the board starts with here. */
+  preset?: string;
 };
 
 // Everything one board contributes to a bigger system, with all its variables named in its own
@@ -79,6 +81,9 @@ export type IncludedBundle = {
   version?: number;
   /** The collection it is an item of, if any. */
   group?: string;
+  /** The preset of the board it starts from, if any, and the typed values of each preset the board has, by name. */
+  preset?: string;
+  presetValues?: Record<string, Record<string, string>>;
   /** The newest version of the board, to say when a pinned one is behind. */
   latest?: number;
   bundle: Bundle;
@@ -113,9 +118,10 @@ export function parseIncludes(raw: unknown): { includes: Include[]; errors: stri
       const name = typeof item?.name === "string" ? item.name.trim().slice(0, BOARD_LIMITS.name) : "";
       const version = Number.isInteger(item?.version) && item.version >= 1 ? (item.version as number) : undefined;
       const group = typeof item?.group === "string" ? item.group.trim() : "";
+      const preset = typeof item?.preset === "string" ? item.preset.trim().slice(0, 40) : "";
       const groupProblem = group ? checkAlias(group) : null;
       if (groupProblem) errors.push(`The group "${group}" can't be used: ${groupProblem}.`);
-      includes.push({ board, alias, ...(name ? { name } : {}), ...(version ? { version } : {}), ...(group && !groupProblem ? { group } : {}) });
+      includes.push({ board, alias, ...(name ? { name } : {}), ...(version ? { version } : {}), ...(group && !groupProblem ? { group } : {}), ...(preset ? { preset } : {}) });
     }
   }
   // A group can't have the name of a used board: both are written before a dot in formulas.
@@ -248,7 +254,12 @@ export function flatten(
     return text;
   });
 
-  const parts = included.map((i) => ({ i, bundle: prefixBundle(i.bundle, i.alias) }));
+  // A board used from one of its presets starts with that preset's typed values.
+  const startingFrom = (i: IncludedBundle): Bundle => {
+    const typed = i.preset ? i.presetValues?.[i.preset] : undefined;
+    return typed ? { ...i.bundle, values: { ...i.bundle.values, ...typed } } : i.bundle;
+  };
+  const parts = included.map((i) => ({ i, bundle: prefixBundle(startingFrom(i), i.alias) }));
   const merge = <T>(pick: (b: Bundle) => Record<string, T>, ownMap: Record<string, T>): Record<string, T> =>
     Object.assign({}, ...parts.map((p) => pick(p.bundle)), ownMap);
 

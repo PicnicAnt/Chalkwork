@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { presetsOf } from "@/app/actions/boards";
 import type { ExtraItem } from "@/lib/resolve-boards";
 
 export type CollectionView = {
@@ -39,6 +40,20 @@ export function ItemPicker({
 
 function Collection({ collection: c, boards, extras, onChange }: { collection: CollectionView; boards: { id: string; title: string }[]; extras: ExtraItem[]; onChange: (extras: ExtraItem[]) => void }) {
   const [pick, setPick] = useState("");
+  // The presets of the chosen board (a Shortsword, a Bow), so an item can be added as one of them.
+  const [presets, setPresets] = useState<{ board: string; names: string[] } | null>(null);
+  const [preset, setPreset] = useState("");
+  useEffect(() => {
+    if (!pick) return;
+    let cancelled = false;
+    presetsOf(pick).then((names) => {
+      if (!cancelled) setPresets({ board: pick, names });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pick]);
+  const names = presets?.board === pick ? presets.names : [];
   const count = c.fixed.length + c.added.length;
   return (
     <section className="sketch-box flex flex-col gap-2 px-4 py-3" aria-label={`Items of ${c.title}`}>
@@ -67,7 +82,12 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
       )}
       {boards.length > 0 ? (
         <div className="flex flex-wrap items-baseline gap-3">
-          <select value={pick} onChange={(e) => setPick(e.target.value)} className="min-w-0 max-w-full cursor-pointer bg-transparent text-lg" aria-label={`Board to add to ${c.title}`}>
+          <select
+            value={pick}
+            onChange={(e) => {
+              setPick(e.target.value);
+              setPreset("");
+            }} className="min-w-0 max-w-full cursor-pointer bg-transparent text-lg" aria-label={`Board to add to ${c.title}`}>
             <option value="">Choose a board…</option>
             {boards.map((b) => (
               <option key={b.id} value={b.id}>
@@ -75,13 +95,24 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
               </option>
             ))}
           </select>
+          {names.length > 0 && (
+            <select value={preset} onChange={(e) => setPreset(e.target.value)} className="cursor-pointer bg-transparent text-lg" aria-label="Preset to start from">
+              <option value="">as it is</option>
+              {names.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
             className="btn"
             disabled={!pick}
             onClick={() => {
-              onChange([...extras, { group: c.name, board: pick }]);
+              onChange([...extras, { group: c.name, board: pick, ...(preset ? { preset } : {}) }]);
               setPick("");
+              setPreset("");
             }}
           >
             Add item

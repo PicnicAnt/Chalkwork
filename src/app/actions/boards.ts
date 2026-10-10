@@ -5,6 +5,7 @@ import type { Bundle } from "@/lib/boards";
 import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard } from "@/lib/db";
 import { resolveBoard } from "@/lib/resolve-boards";
 import { notifyBoardChanged } from "./notify";
+import { presetValues } from "@/lib/scenarios";
 import { prepare } from "./prepare";
 
 // What a board's owner (and anyone signed in) does with boards. Every action checks who is asking.
@@ -35,7 +36,7 @@ export async function updateBoard(id: string, payload: unknown): Promise<SaveRes
   return { ok: true, id };
 }
 
-export type BoardToUse = { ok: true; board: string; title: string; latest: number; bundle: Bundle } | { ok: false; error: string };
+export type BoardToUse = { ok: true; board: string; title: string; latest: number; bundle: Bundle; presetValues: Record<string, Record<string, string>> } | { ok: false; error: string };
 
 // Loads a board so the editor can add it to the board being built. `selfId` is that board, if it
 // already exists, so that boards can't end up using each other in a loop.
@@ -45,7 +46,7 @@ export async function loadBoardToUse(boardId: string, selfId?: string, version?:
   const found = resolveBoard(boardId, typeof selfId === "string" ? selfId : undefined, Number.isInteger(version) ? version : undefined);
   return "error" in found
     ? { ok: false, error: found.error }
-    : { ok: true, board: boardId, title: found.title, latest: found.latest, bundle: found.bundle };
+    : { ok: true, board: boardId, title: found.title, latest: found.latest, bundle: found.bundle, presetValues: Object.fromEntries((getBoard(boardId)?.presets ?? []).map((p) => [p.name, presetValues(p)])) };
 }
 
 // Changes only the links of a board, which is what the Connections view edits. Everything else on
@@ -82,4 +83,10 @@ export async function deleteBoard(id: string): Promise<DeleteResult> {
   }
   if (!removeBoard(id, user.id)) return { ok: false, error: "Only the owner can delete this board." };
   return { ok: true };
+}
+
+// The names of the presets a board has, so someone adding it as an item can pick one.
+export async function presetsOf(boardId: unknown): Promise<string[]> {
+  if (!(await getCurrentUser()) || typeof boardId !== "string") return [];
+  return (getBoard(boardId)?.presets ?? []).map((p) => p.name);
 }
