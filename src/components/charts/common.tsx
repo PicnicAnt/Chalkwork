@@ -54,11 +54,11 @@ export function Figure({ caption, actions = [], children }: { caption: string; a
           {open ? "▴" : "▾"}
         </button>
         {open && (
-          <span role="menu" className="sketch-box absolute right-0 top-full z-20 mt-1 flex min-w-[10rem] flex-col bg-[var(--board)] py-1 text-left">
+          <span role="menu" className="sketch-box absolute inset-x-0 top-0 z-20 flex flex-col bg-[var(--board)] py-1 text-center">
             <button
               type="button"
               role="menuitem"
-              className="px-3 py-1 text-left text-base text-ink hover:bg-[var(--board-edge)]"
+              className="px-3 py-1 text-center text-base text-ink hover:bg-[var(--board-edge)]"
               onClick={async () => {
                 setOpen(false);
                 const svg = figure.current?.querySelector<SVGSVGElement>("svg[role=img]");
@@ -78,7 +78,7 @@ export function Figure({ caption, actions = [], children }: { caption: string; a
                 key={item.label}
                 type="button"
                 role="menuitem"
-                className="px-3 py-1 text-left text-base text-ink hover:bg-[var(--board-edge)]"
+                className="px-3 py-1 text-center text-base text-ink hover:bg-[var(--board-edge)]"
                 onClick={() => {
                   setOpen(false);
                   item.onClick();
@@ -87,6 +87,9 @@ export function Figure({ caption, actions = [], children }: { caption: string; a
                 {item.label}
               </button>
             ))}
+            <button type="button" role="menuitem" className="px-3 py-1 text-center text-sm text-ink-muted hover:bg-[var(--board-edge)]" onClick={() => setOpen(false)}>
+              Close
+            </button>
           </span>
         )}
       </figcaption>
