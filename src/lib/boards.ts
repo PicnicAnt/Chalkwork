@@ -61,7 +61,14 @@ export type Bundle = {
   visualizations: BundleVisualization[];
 };
 
-export type OwnData = Omit<Bundle, "groups" | "visualizations"> & { visualizations: Visualization[] };
+/**
+ * A collection: a named group of items (boards) whose stats are added up. Items can be put in it by the board's creator
+ * (an included board with that group) and by whoever uses the board. `stats` are the variables that are totalled; with
+ * none listed, every variable the items have is.
+ */
+export type Collection = { name: string; stats: string[] };
+
+export type OwnData = Omit<Bundle, "groups" | "visualizations"> & { visualizations: Visualization[]; collections?: Collection[] };
 
 export type IncludedBundle = {
   alias: string;
@@ -176,7 +183,7 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
 // The collections of a board: for each group of items, a total of every variable the items have, and for each item a
 // switch (alias.equipped, 1 or 0) that takes it in or leaves it out of the totals. They are ordinary variables and
 // formulas, so the totals work in any direction like everything else.
-function groupSums(included: readonly IncludedBundle[]) {
+function groupSums(included: readonly IncludedBundle[], collections: readonly Collection[] = []) {
   const out = {
     names: [] as string[],
     formulas: [] as string[],
@@ -189,6 +196,7 @@ function groupSums(included: readonly IncludedBundle[]) {
     groups: {} as Record<string, { title: string; board: string }>,
   };
   const byGroup = new Map<string, IncludedBundle[]>();
+  for (const c of collections) byGroup.set(c.name, []);
   for (const i of included) if (i.group) byGroup.set(i.group, [...(byGroup.get(i.group) ?? []), i]);
   for (const [group, items] of byGroup) {
     out.names.push(group);
@@ -207,15 +215,17 @@ function groupSums(included: readonly IncludedBundle[]) {
       out.decimals[key] = 0;
       out.ranges[key] = { min: 0, max: 1 };
     }
-    const names = [...new Set(owned.flatMap((o) => o.names))];
+    const declared = collections.find((c) => c.name === group)?.stats ?? [];
+    const names = declared.length > 0 ? declared : [...new Set(owned.flatMap((o) => o.names))];
     for (const name of names) {
       const having = owned.filter((o) => o.names.includes(name));
       const total = withAlias(group, name);
-      out.formulas.push(`${total} = ${having.map((o) => `${withAlias(o.item.alias, "equipped")} * ${withAlias(o.item.alias, name)}`).join(" + ")}`);
-      const first = having[0].item.bundle;
-      out.labels[total] = first.labels[name] || humanize(name);
-      if (first.units[name]) out.units[total] = first.units[name];
-      if (first.decimals[name] !== undefined) out.decimals[total] = first.decimals[name];
+      // With no item that has the stat the total is 0, so formulas that use it still work.
+      out.formulas.push(`${total} = ${having.length ? having.map((o) => `${withAlias(o.item.alias, "equipped")} * ${withAlias(o.item.alias, name)}`).join(" + ") : "0"}`);
+      const first = having[0]?.item.bundle;
+      out.labels[total] = first?.labels[name] || humanize(name);
+      if (first?.units[name]) out.units[total] = first.units[name];
+      if (first?.decimals[name] !== undefined) out.decimals[total] = first.decimals[name];
     }
   }
   return out;
@@ -229,7 +239,7 @@ export function flatten(
   included: readonly IncludedBundle[],
 ): { bundle: Bundle; ownErrors: { index: number; message: string }[] } {
   // Items put in a group are summed: group.variable is the total over the items that are switched on.
-  const sums = groupSums(included);
+  const sums = groupSums(included, own.collections ?? []);
   const aliases = [...included.map((i) => i.alias), ...sums.names];
   const ownErrors: { index: number; message: string }[] = [];
   const ownFormulas = own.formulas.map((formula, index) => {

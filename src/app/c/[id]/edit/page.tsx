@@ -40,6 +40,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
     tables: calculation.tables,
     tags: calculation.tags,
     order: calculation.order,
+    collections: calculation.collections,
     includes: calculation.includes,
     links: calculation.links,
     visualizations: calculation.visualizations,

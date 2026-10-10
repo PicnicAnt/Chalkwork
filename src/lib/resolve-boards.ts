@@ -23,6 +23,7 @@ const ownData = (calc: Board): OwnData => ({
   ranges: calc.ranges,
   tables: calc.tables,
   order: calc.order ?? [],
+  collections: calc.collections ?? [],
   links: calc.links,
   visualizations: calc.visualizations,
 });
@@ -87,8 +88,24 @@ export function resolveBoard(boardId: string, selfId?: string, version?: number)
 }
 
 // A board together with the boards it uses, as the one system of formulas to show.
-export function resolveForView(calc: Board): { bundle: Bundle } | Failure {
-  const resolved = resolveIncludes(calc.includes, calc.id);
+// An item someone using the board added to one of its collections (it is not saved on the board).
+export type ExtraItem = { group: string; board: string };
+
+// The groups a board has: its collections, and those its creator put included boards in.
+export const groupsOf = (calc: Board): string[] => [...new Set([...(calc.collections ?? []).map((c) => c.name), ...calc.includes.flatMap((i) => (i.group ? [i.group] : []))])];
+
+export function resolveForView(calc: Board, extras: readonly ExtraItem[] = []): { bundle: Bundle } | Failure {
+  const groups = groupsOf(calc);
+  const taken = new Set(calc.includes.map((i) => i.alias));
+  const added: Include[] = extras
+    .filter((e) => groups.includes(e.group) && e.board !== calc.id)
+    .map((e, n) => {
+      let alias = `item${n + 1}`;
+      while (taken.has(alias)) alias += "_";
+      taken.add(alias);
+      return { board: e.board, alias, group: e.group };
+    });
+  const resolved = resolveIncludes([...calc.includes, ...added], calc.id);
   if ("error" in resolved) return resolved;
   return { bundle: flatten(ownData(calc), resolved.included).bundle };
 }

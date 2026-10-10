@@ -5,11 +5,13 @@ import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { boardsUsing, getBoard, listScenarios } from "@/lib/db";
+import { boardsUsing, getBoard, listAllBoards, listScenarios } from "@/lib/db";
 import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
-import { resolveForView } from "@/lib/resolve-boards";
+import { groupsOf, resolveForView } from "@/lib/resolve-boards";
+import { parseItems } from "@/lib/items-param";
+import { humanize } from "@/lib/formulas";
 import { decodeState } from "@/lib/share-state";
 
 async function load(id: string) {
@@ -28,15 +30,29 @@ export async function generateMetadata({ params }: PageProps<"/c/[id]">): Promis
 export default async function BoardPage({ params, searchParams }: PageProps<"/c/[id]">) {
   const full = await load((await params).id);
   // A link can carry someone's typed values (see lib/share-state.ts).
-  const { state } = await searchParams;
+  const { state, items } = await searchParams;
+  // Items people using the board added to its collections (kept in the address).
+  const extras = parseItems(typeof items === "string" ? items : undefined);
   const initialState = decodeState(typeof state === "string" ? state : undefined);
   const { ownerId, ...calculation } = full;
   // The board together with the boards it uses.
-  const resolved = resolveForView(full);
+  const resolved = resolveForView(full, extras);
   const user = await getCurrentUser();
   const isOwner = user !== null && user.id === ownerId;
   // Anyone else signed in can suggest a change (if there is an owner). The owner finds suggestions under Suggestions.
   const canSuggest = user !== null && !isOwner && ownerId !== null;
+
+  // The collections of the board and what is in them, for the "add an item" boxes.
+  const known = groupsOf(full);
+  const usedExtras = extras.filter((e) => known.includes(e.group) && e.board !== full.id);
+  const collections = known.map((name) => ({
+    name,
+    title: humanize(name),
+    stats: (full.collections ?? []).find((c) => c.name === name)?.stats ?? [],
+    fixed: full.includes.filter((i) => i.group === name).map((i) => ({ title: i.name || getBoard(i.board)?.title || "A board" })),
+    added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: getBoard(e.board)?.title ?? "A board" }] : [])),
+  }));
+  const boardChoices = user && known.length > 0 ? listAllBoards().filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
 
   return (
     <>
@@ -80,6 +96,10 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
         </p>
       ) : (
         <SharedCalculator
+          key={usedExtras.map((e) => `${e.group}:${e.board}`).join(",")}
+          collections={collections}
+          boardChoices={boardChoices}
+          extras={usedExtras}
           flat={resolved.bundle}
           formulas={calculation.formulas}
           initialState={initialState ?? undefined}

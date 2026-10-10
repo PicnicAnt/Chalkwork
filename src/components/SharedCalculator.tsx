@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { Bundle } from "@/lib/boards";
 import { compute, initialLocks, shownValues } from "@/lib/calculator";
@@ -7,6 +8,9 @@ import { downloadCsv, fileNameOf } from "@/lib/export";
 import { analyzeFormulas, displayName, formatNumber, parseValue } from "@/lib/formulas";
 import type { Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
+import { encodeItems } from "@/lib/items-param";
+import type { ExtraItem } from "@/lib/resolve-boards";
+import { ItemPicker, type CollectionView } from "./ItemPicker";
 import { ShareMenu } from "./ShareMenu";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
@@ -25,6 +29,9 @@ export function SharedCalculator({
   initialState,
   title = "board",
   publicId,
+  collections = [],
+  boardChoices = [],
+  extras = [],
 }: {
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
@@ -40,7 +47,14 @@ export function SharedCalculator({
   title?: string;
   /** The board's id, to show how to use it from outside. */
   publicId?: string;
+  /** The collections of items of this board, and what is in them now. */
+  collections?: CollectionView[];
+  /** The boards that can be added as items. */
+  boardChoices?: { id: string; title: string }[];
+  /** The items someone using the board has added. */
+  extras?: ExtraItem[];
 }) {
+  const router = useRouter();
   const analysis = useMemo(() => analyzeFormulas(flat.formulas, flat.tables), [flat.formulas, flat.tables]);
   const [values, setValues] = useState(() => (initialState ? { ...flat.values, ...initialState.values } : flat.values));
   // Bumping the key remounts the panel, which also forgets the edit history.
@@ -54,6 +68,13 @@ export function SharedCalculator({
   const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(initialState?.locked);
   // The unit each variable is shown in. Kept here so the scenarios are compared in the same units.
   const [shownUnits, setShownUnits] = useState<Record<string, string>>({});
+
+  // The address of this board with the numbers on screen and these items.
+  const linkWith = (items: ExtraItem[]) => {
+    const params = new URLSearchParams({ state: encodeState({ values, locked: locks ?? initialLocks(analysis, values) }) });
+    if (items.length > 0) params.set("items", encodeItems(items));
+    return `${location.origin}${location.pathname}?${params}`;
+  };
 
   // Puts a set of values and locks on the board, as if they had been typed.
   const load = (snapshot: ScenarioSnapshot) => {
@@ -98,7 +119,7 @@ export function SharedCalculator({
               .slice(0, 2)
               .map((v) => ({ name: displayName(v.name), value: String(parseValue(flat.values[v.name])) }))}
             variables={analysis.variables.filter((v) => flat.hidden[v.name] !== true).map((v) => displayName(v.name))}
-            valuesLink={() => `${location.origin}${location.pathname}?state=${encodeState({ values, locked: locks ?? initialLocks(analysis, values) })}`}
+            valuesLink={() => linkWith(extras)}
             onDownloadCsv={() => {
               const out = compute(analysis, values, locks ?? initialLocks(analysis, values));
               const shown = shownValues(out.display, out.plan.held, flat.decimals);
@@ -124,6 +145,17 @@ export function SharedCalculator({
           </button>
         )}
       </div>
+      {view === "board" && collections.length > 0 && (
+        <ItemPicker
+          collections={collections}
+          boards={boardChoices}
+          extras={extras}
+          onChange={(next) => {
+            const url = new URL(linkWith(next));
+            router.replace(`${url.pathname}${url.search}`);
+          }}
+        />
+      )}
       {view === "strings" && usesBoards ? (
         <ConnectionsView analysis={analysis} flat={flat} editable={editable} />
       ) : (

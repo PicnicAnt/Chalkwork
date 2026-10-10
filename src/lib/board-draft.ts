@@ -1,7 +1,7 @@
 // Shared types and validation for calculations. Safe to import from client and server.
 import { parseTags } from "./tags";
 import { parseTables, type Table } from "./tables";
-import { flatten, type Include, type IncludedBundle, type Range } from "./boards";
+import { checkAlias, flatten, type Collection, type Include, type IncludedBundle, type Range } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems, isVariableName } from "./formulas";
 import { parseVisualizations, type Visualization } from "./visualizations";
 
@@ -30,6 +30,8 @@ export type BoardDraft = {
   tables: Table[];
   // The order variables are listed in, by name. Variables not named come after, in the order they appear.
   order: string[];
+  // Collections of items that people using the board can add boards to; their stats are added up.
+  collections?: Collection[];
   // Short labels that make the board easier to find, such as finance or game.
   tags: string[];
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
@@ -107,11 +109,23 @@ export function validateDraft(
 
   // What this board and the boards it uses make up together, before anything is overridden. Links
   // are left out here: they can only join variables that exist, so these are found first.
+  const collections: Collection[] = [];
+  for (const item of Array.isArray(r.collections) ? (r.collections as unknown[]).slice(0, 6) : []) {
+    const c = item as { name?: unknown; stats?: unknown } | null;
+    const name = typeof c?.name === "string" ? c.name.trim() : "";
+    const problem = checkAlias(name);
+    if (problem) errors.push(`The collection "${name}" can't be used: ${problem}.`);
+    else if (collections.some((x) => x.name === name) || included.some((i) => i.alias === name)) errors.push(`The collection "${name}" has the same name as another collection or a used board.`);
+    else {
+      const stats = (Array.isArray(c?.stats) ? (c!.stats as unknown[]) : []).filter((x): x is string => typeof x === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(x.trim())).map((x) => x.trim());
+      collections.push({ name, stats: [...new Set(stats)].slice(0, 20) });
+    }
+  }
   const parsedTables = parseTables(r.tables);
   errors.push(...parsedTables.errors);
   const tables = parsedTables.tables;
   const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], links: {}, visualizations: [] };
-  const { bundle: inherited, ownErrors } = flatten({ formulas, ...none, tables }, included);
+  const { bundle: inherited, ownErrors } = flatten({ formulas, ...none, tables, collections }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
   const analysis = analyzeFormulas(inherited.formulas, inherited.tables);
   for (const t of tables) {
@@ -132,7 +146,7 @@ export function validateDraft(
   // Problems with the formulas, the links and the used boards together. They are numbered formulas
   // first, then links, then the formulas of the used boards.
   const linkList = Object.entries(links);
-  const flatSystem = flatten({ formulas, ...none, links, tables }, included).bundle;
+  const flatSystem = flatten({ formulas, ...none, links, tables, collections }, included).bundle;
   const system = analyzeFormulas(flatSystem.formulas, flatSystem.tables);
   for (const problem of formulaProblems(system)) {
     const link = linkList[problem.line - formulas.length - 1];
@@ -233,6 +247,7 @@ export function validateDraft(
           decimals,
           ranges,
           tables,
+          collections,
           order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),
           tags: parseTags(r.tags),
           includes: included.map(includeOf),

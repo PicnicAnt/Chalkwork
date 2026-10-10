@@ -129,3 +129,31 @@ describe("items in a group are summed", () => {
     expect(parseIncludes([{ board: "a", alias: "x", group: "gear" }]).includes[0].group).toBe("gear");
   });
 });
+
+describe("collections people add items to", () => {
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [] as Table[], order: [] };
+  const board = (collections: { name: string; stats: string[] }[], items: { alias: string; formulas: string[]; values: Record<string, string> }[]) =>
+    flatten(
+      { ...own, formulas: ["power = gear.strength * 10 + base"], values: { base: "7" }, collections },
+      items.map((i) => ({ alias: i.alias, board: i.alias, title: i.alias, group: "gear", bundle: flatten({ ...own, formulas: i.formulas, values: i.values }, []).bundle })),
+    );
+
+  it("has totals of 0 while there are no items, so formulas still work", () => {
+    const { bundle, ownErrors } = board([{ name: "gear", stats: ["strength"] }], []);
+    expect(ownErrors).toEqual([]);
+    expect(bundle.formulas).toContain("gear$strength = 0");
+    const a = analyzeFormulas(bundle.formulas, bundle.tables);
+    expect(compute(a, bundle.values, ["base"]).display.power).toBe("7");
+  });
+
+  it("adds up only the listed stats of the items", () => {
+    const { bundle } = board(
+      [{ name: "gear", stats: ["strength"] }],
+      [{ alias: "item1", formulas: ["strength", "luck"], values: { strength: "4", luck: "9" } }, { alias: "item2", formulas: ["luck"], values: { luck: "1" } }],
+    );
+    expect(bundle.formulas).toContain("gear$strength = item1$equipped * item1$strength");
+    expect(bundle.formulas.some((f) => f.startsWith("gear$luck"))).toBe(false);
+    const a = analyzeFormulas(bundle.formulas, bundle.tables);
+    expect(compute(a, bundle.values, Object.keys(bundle.values)).display.power).toBe("47");
+  });
+});

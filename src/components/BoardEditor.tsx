@@ -29,6 +29,7 @@ import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
 import { readTableDrafts, TablesEditor, type TableDraft } from "./TablesEditor";
+import { CollectionsEditor, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
 import { rowsToText } from "@/lib/tables";
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
@@ -141,6 +142,11 @@ function BoardEditorInner({
     }
     return out;
   }, [rangeText]);
+  // Collections of items, held as typed.
+  const [collectionDrafts, setCollectionDrafts] = useState<CollectionDraft[]>(() =>
+    (initial?.collections ?? []).map((c) => ({ name: c.name, stats: c.stats.join(", ") })),
+  );
+  const collections = useMemo(() => collectionsOf(collectionDrafts), [collectionDrafts]);
   // The order variables are listed in (by name).
   const [order, setOrder] = useState<string[]>(initial?.order ?? []);
   // Lookup tables, held as typed (the rows are text until they are read).
@@ -161,8 +167,8 @@ function BoardEditorInner({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, links, visualizations }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, links, visualizations, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, links, visualizations }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, links, visualizations, included],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas, flat.bundle.tables), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
@@ -266,7 +272,7 @@ function BoardEditorInner({
   }
 
   // What the editor holds now, as a draft.
-  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
+  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
 
   // The writing helper changes the board as asked; the editor then starts again from the result.
   const [aiText, setAiText] = useState("");
@@ -288,7 +294,7 @@ function BoardEditorInner({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, tags: parseTags(tagText), includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, tags: parseTags(tagText), includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -444,6 +450,8 @@ function BoardEditorInner({
       />
 
       <TablesEditor drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} />
+
+      <CollectionsEditor drafts={collectionDrafts} usedNames={included.map((i) => i.alias)} onChange={setCollectionDrafts} />
 
       <VariableEditor
         analysis={analysis}

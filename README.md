@@ -78,7 +78,7 @@ Two buttons use an AI model, and only appear when the server has a key: **Descri
 
 ## Items in a group
 
-A used board can be put in a group (the "item in the group" field of a used board, for example `gear`). Boards in the same group are added up: for every variable the items have there is a total `gear.variable`, usable in formulas like any other variable (`power = gear.strength * 10 + base`). Each item also gets an **Equipped** variable (1 or 0) that counts it in the totals or leaves it out. An item is just a board, so it can have its own formulas, and the same item can be used on any number of boards. Totals are ordinary formulas, so they work in any direction. A group cannot have the name of a used board.
+A board can have **item collections** (the "Item collections" section of the editor): a name such as `gear` and the stats to add up (`strength, armor`). People using the board pick existing boards from a list and add them as items; the items are kept in the address (`?items=gear:<board id>`), so a link shares them. Each stat gets a total `gear.strength`, usable in formulas, and each item gets an **Equipped** variable (1 or 0) that counts it or leaves it out. With no items the totals are 0. The creator can also put used boards in a collection (the "item in the group" field of a used board). An item is just a board, so it can have its own formulas, and the same item can be used on any number of boards. Totals are ordinary formulas, so they work in any direction.
 
 ## Conditions and tables
 

@@ -234,4 +234,10 @@ export function migrate(db: Database.Database) {
     db.exec("DROP TABLE IF EXISTS comments;");
     db.pragma("user_version = 21");
   }
+  if (version < 22) {
+    // Collections of items that people using a board can add boards to, as JSON: [{ "name": "gear", "stats": ["strength"] }].
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "board_collections");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN board_collections TEXT NOT NULL DEFAULT '[]';`);
+    db.pragma("user_version = 22");
+  }
 }
