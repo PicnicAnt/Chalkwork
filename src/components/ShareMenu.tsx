@@ -27,6 +27,9 @@ export function ShareMenu({
   onDownloadCsv: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  // Which edge of the button the menu lines up with: it opens towards the side that has room (the button can be at
+  // the left of a wrapped header on a phone).
+  const [alignLeft, setAlignLeft] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [showCode, setShowCode] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -66,11 +69,16 @@ export function ShareMenu({
   if (!target) return null;
   return createPortal(
     <div ref={box} className="relative shrink-0">
-      <button type="button" className="btn btn-primary" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="btn btn-primary" aria-haspopup="true" aria-expanded={open} onClick={(e) => {
+          const room = e.currentTarget.getBoundingClientRect().right;
+          setAlignLeft(room < Math.min(window.innerWidth * 0.92, 480));
+          setOpen((o) => !o);
+        }}
+      >
         Share ▾
       </button>
       {open && (
-        <div role="menu" className="sketch-box absolute right-0 z-30 mt-2 flex w-[min(92vw,30rem)] flex-col bg-[var(--board)] py-1 shadow-lg">
+        <div role="menu" className={`sketch-box absolute z-30 mt-2 flex w-[min(86vw,30rem)] max-w-[calc(100vw-1.5rem)] flex-col bg-[var(--board)] py-1 shadow-lg ${alignLeft ? "left-0" : "right-0"}`}>
           <button type="button" role="menuitem" className={item} onClick={() => copy("link", `${location.origin}/c/${boardId}`)}>
             {done === "link" ? "Link copied ✓" : "Copy link to this board"}
           </button>
