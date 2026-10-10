@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { Chevron } from "./Chevron";
 
 // A section of the editor that is folded away until it is asked for. The body stays mounted while it is
 // folded, so a half-typed field isn't lost. The description comes first in the body; a list of foldable
@@ -31,9 +32,11 @@ export function CollapsibleSection({
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls={bodyId}
-          className="link text-base"
+          aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          title={open ? "Collapse" : "Expand"}
+          className="shrink-0 p-1 text-accent"
         >
-          {open ? "Collapse" : "Expand"}
+          <Chevron open={open} />
         </button>
       </div>
       <div id={bodyId} className={open ? "flex flex-col gap-4" : "hidden"}>

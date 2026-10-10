@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, type ReactNode } from "react";
+import { Chevron } from "./Chevron";
 
 // One row of a list that can be folded: a header line that says what it is, and fields underneath that
 // show when it is unfolded. The fields stay mounted while folded, so a half-typed name isn't lost.
@@ -34,7 +35,9 @@ export function Foldable({
           {summary}
           {hint && <span className="text-base text-ink-muted">{hint}</span>}
         </span>
-        <span className="shrink-0 text-base text-accent">{expanded ? "Collapse" : "Expand"}</span>
+        <span className="shrink-0 text-accent" title={expanded ? "Collapse" : "Expand"}>
+          <Chevron open={expanded} />
+        </span>
       </button>
       {actions}
       </div>

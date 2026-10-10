@@ -6,6 +6,7 @@ import { compute, initialLocks, shownValues, type Computed } from "@/lib/calcula
 import { decidedBy, displayName, formatDecimals, formatNumber, parseValue, type Analysis } from "@/lib/formulas";
 import { alternatives, ratio as unitRatio } from "@/lib/units";
 import type { BundleVisualization } from "@/lib/visualizations";
+import { Chevron } from "./ui/Chevron";
 import { VariableRow } from "./VariableRow";
 import { VisualizationView } from "./Visualization";
 import { makeVizValues, type VizValues } from "./viz-values";
@@ -285,8 +286,15 @@ export function CalculatorPanel({
               )}
               {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
             </h3>
-            <button type="button" className="link shrink-0 text-base" aria-expanded={!closed} onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
-              {closed ? "Expand" : "Collapse"}
+            <button
+              type="button"
+              className="shrink-0 p-1 text-accent"
+              aria-expanded={!closed}
+              aria-label={`${closed ? "Expand" : "Collapse"} ${group.title}`}
+              title={closed ? "Expand" : "Collapse"}
+              onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}
+            >
+              <Chevron open={!closed} />
             </button>
           </div>
         )}

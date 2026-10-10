@@ -5,6 +5,7 @@ import { sectionsByBoard } from "@/lib/boards";
 import { displayName, type Analysis } from "@/lib/formulas";
 import { checkVariableName } from "@/lib/rename";
 import { VariableLine } from "./VariableLine";
+import { Chevron } from "./ui/Chevron";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
 import { ExpandAllBar, useFold } from "./ui/Foldable";
 
@@ -127,8 +128,15 @@ export function VariableEditor({
                     (used as {section.key}; its names can&apos;t be changed here, but everything else can)
                   </span>
                 </h3>
-                <button type="button" className="link shrink-0 text-base" aria-expanded={!closed[section.key]} onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
-                  {closed[section.key] ? "Expand" : "Collapse"}
+                <button
+                  type="button"
+                  className="shrink-0 p-1 text-accent"
+                  aria-expanded={!closed[section.key]}
+                  aria-label={`${closed[section.key] ? "Expand" : "Collapse"} ${groups[section.key].title}`}
+                  title={closed[section.key] ? "Expand" : "Collapse"}
+                  onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}
+                >
+                  <Chevron open={!closed[section.key]} />
                 </button>
               </div>
             )}
