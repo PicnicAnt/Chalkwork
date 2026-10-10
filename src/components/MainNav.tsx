@@ -26,9 +26,12 @@ export async function MainNav() {
           Inbox{unread > 0 ? ` (${unread})` : ""}
         </Link>
       )}
-      <span className="ml-auto">
-        <ThemeToggle />
-      </span>
+      {/* Signed in, the board switch is in the account menu. */}
+      {!user && (
+        <span className="ml-auto">
+          <ThemeToggle />
+        </span>
+      )}
     </nav>
   );
 }

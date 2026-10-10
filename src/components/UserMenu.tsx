@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { signOutAction } from "@/app/login/actions";
 import { getCurrentUser } from "@/lib/auth";
+import { AccountMenu } from "./AccountMenu";
 
-// Who is signed in, with a way to sign out, or a way to sign in. Sits in the top right corner.
+// Who is signed in, as one button with the account options under it, or a way to sign in. Sits in the top right corner.
 export async function UserMenu() {
   const user = await getCurrentUser();
   if (!user) {
@@ -12,14 +13,5 @@ export async function UserMenu() {
       </Link>
     );
   }
-  return (
-    <form action={signOutAction} className="flex items-baseline gap-2">
-      <span className="max-w-[9rem] truncate text-lg sm:max-w-[16rem]" title={user.name}>
-        {user.name}
-      </span>
-      <button type="submit" className="link text-base">
-        Sign out
-      </button>
-    </form>
-  );
+  return <AccountMenu name={user.name} signOut={signOutAction} />;
 }
