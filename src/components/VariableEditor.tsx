@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { sectionsByBoard } from "@/lib/boards";
 import { displayName, type Analysis } from "@/lib/formulas";
 import { checkVariableName } from "@/lib/rename";
@@ -66,6 +67,8 @@ export function VariableEditor({
   onOrder: (names: string[]) => void;
 }) {
   const fold = useFold();
+  // Used boards that are folded away in this list.
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
   if (analysis.variables.length === 0) return null;
 
   const sections = sectionsByBoard(analysis.variables, groups, order);
@@ -117,13 +120,19 @@ export function VariableEditor({
         {sections.map((section) => (
           <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
             {section.key && groups[section.key] && (
-              <h3 className="group-title">
-                {groups[section.key].title}{" "}
-                <span className="text-base text-ink-faint">
-                  (used as {section.key}; its names can&apos;t be changed here, but everything else can)
-                </span>
-              </h3>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="group-title">
+                  {groups[section.key].title}{" "}
+                  <span className="text-base text-ink-faint">
+                    (used as {section.key}; its names can&apos;t be changed here, but everything else can)
+                  </span>
+                </h3>
+                <button type="button" className="link shrink-0 text-base" aria-expanded={!closed[section.key]} onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
+                  {closed[section.key] ? "Expand" : "Collapse"}
+                </button>
+              </div>
             )}
+            <div className={section.key && closed[section.key] ? "hidden" : "flex flex-col gap-4"}>
             {section.variables.map((v, index) => (
               <VariableLine
                 key={v.name}
@@ -168,6 +177,7 @@ export function VariableEditor({
                 onRange={(end, text) => onRange(v.name, end, text)}
               />
             ))}
+            </div>
           </div>
         ))}
       </div>

@@ -58,7 +58,7 @@ export type Bundle = {
    */
   links: Record<string, string>;
   /** The included boards behind the variables, by alias path (weapon, weapon$sub), for headings. */
-  groups: Record<string, { title: string; board: string }>;
+  groups: Record<string, { title: string; board: string; /** The collection a used board is in, if any. */ collection?: string }>;
   /** The drawings of this board and of the boards it uses (those say which board they belong to). */
   visualizations: BundleVisualization[];
 };
@@ -291,7 +291,7 @@ export function flatten(
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],
       groups: Object.assign(
         {},
-        ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.name || p.i.title, board: p.i.board } })),
+        ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.name || p.i.title, board: p.i.board, ...(p.i.group ? { collection: p.i.group } : {}) } })),
         sums.groups,
       ),
     },

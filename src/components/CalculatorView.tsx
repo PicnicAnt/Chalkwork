@@ -50,7 +50,7 @@ export function CalculatorPanel({
   /** Variables linked to another variable, by name, shown under the variable. */
   links?: Record<string, string>;
   /** The boards behind variables that come from boards in use, by alias, for the headings. */
-  groups?: Record<string, { title: string; board: string }>;
+  groups?: Record<string, { title: string; board: string; collection?: string }>;
   /** Decimals to show per variable name for calculated values. Display only. */
   decimals?: Record<string, number>;
   /** The values each variable should stay within, by name: a warning outside them, a slider between them. */
@@ -76,6 +76,8 @@ export function CalculatorPanel({
   // A field that was just cleared (or holds half a number like "-") keeps what was typed while it
   // has focus, instead of being refilled by a calculated value mid-edit.
   const [draft, setDraft] = useState<{ name: string; text: string } | null>(null);
+  // Used boards (and collections) that are folded away. They stay mounted, so nothing typed is lost.
+  const [folded, setFolded] = useState<Record<string, boolean>>({});
 
   // An edit already computes its result to decide whether to accept it. Remember that, so the
   // render that follows doesn't solve the same thing a second time.
@@ -261,34 +263,46 @@ export function CalculatorPanel({
     );
   }
 
+  // A section: a used board, or a collection, with the boards in it nested inside.
+  function renderSection(section: (typeof sections)[number], nested = false): React.ReactNode {
+    const key = section.key;
+    const rows = section.variables.map((v) => row(v, key)).filter(Boolean);
+    const members = key ? sections.filter((m) => m.key && groups?.[m.key]?.collection === key) : [];
+    if (rows.length === 0 && members.length === 0) return null;
+    const group = key ? groups?.[key] : undefined;
+    const closed = key !== null && folded[key] === true;
+    return (
+      <div key={key ?? "own"} className={`flex flex-col gap-4 ${nested ? "fold-box" : sections.length > 1 ? "group-box" : ""}`}>
+        {key && group && (
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="group-title">
+              {group.board ? (
+                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link">
+                  {group.title}
+                </a>
+              ) : (
+                group.title
+              )}
+              {members.length > 0 && <span className="text-base font-normal text-ink-muted"> · {members.length} {members.length === 1 ? "board" : "boards"}</span>}
+            </h3>
+            <button type="button" className="link shrink-0 text-base" aria-expanded={!closed} onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
+              {closed ? "Expand" : "Collapse"}
+            </button>
+          </div>
+        )}
+        <div className={closed ? "hidden" : "flex flex-col gap-4"}>
+          {drawingsOf(key)}
+          {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
+          {members.map((m) => renderSection(m, true))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      {sections.map((section) => {
-        const rows = section.variables.map((v) => row(v, section.key)).filter(Boolean);
-        if (rows.length === 0) return null;
-        return (
-          <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
-            {section.key && groups?.[section.key] && (
-              <h3 className="group-title">
-                {groups[section.key].board ? (
-                  <a
-                    href={`/c/${groups[section.key].board}`}
-                    target={revealHidden ? "_blank" : undefined}
-                    rel="noopener"
-                    className="link"
-                  >
-                    {groups[section.key].title}
-                  </a>
-                ) : (
-                  groups[section.key].title
-                )}
-              </h3>
-            )}
-            {drawingsOf(section.key)}
-            <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>
-          </div>
-        );
-      })}      {broken.length > 0 && (
+      {sections.filter((section) => !section.key || !groups?.[section.key]?.collection).map((section) => renderSection(section))}
+      {broken.length > 0 && (
         <ul className="sketch-box px-4 py-3 text-danger">
           {broken.map((f) => (
             <li key={f.line}>{f.text} doesn&apos;t hold with these values.</li>
