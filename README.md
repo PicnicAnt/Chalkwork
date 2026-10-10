@@ -89,6 +89,8 @@ The **Find the best** section on a board picks a result to make as high or as lo
 
 ## Boards as a service
 
+Everything for getting a board out is in the **Share** menu on the board page: copy the link, copy a link with the numbers on screen, download CSV, and the embed and web service examples.
+
 - **Web API:** `GET /api/boards/<id>?width=5&area=20` or `POST` with `{"inputs": {...}}` returns every value the board works out. Inputs are held like numbers typed on the board and the rest is solved in any direction, so a result can be an input. Values typed into the board stay fixed unless you name them in the request, which decides what gets calculated when you solve backwards. Names are written as shown (`alias.variable`). 120 requests per minute per address, CORS open, no login.
 - **Embed:** `/embed/<id>` shows just the board for an iframe. `?theme=light|dark` and `?state=` (from "Copy link with these values") are supported.
 - **Export:** "Save image" under drawings and charts (PNG), "Download CSV" for the variables, scenarios and sweep charts.

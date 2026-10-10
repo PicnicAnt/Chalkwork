@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
-import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
 import { boardsUsing, getBoard, listComments, listScenarios, listSuggestionsForBoard } from "@/lib/db";
@@ -79,7 +78,6 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
             {isOwner ? "Edit" : "Make a copy"}
           </Link>
           {isOwner && <DeleteBoardButton id={calculation.id} title={calculation.title} />}
-          <CopyLinkButton />
         </div>
       </div>
       {"error" in resolved ? (

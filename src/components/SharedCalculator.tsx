@@ -7,7 +7,7 @@ import { downloadCsv, fileNameOf } from "@/lib/export";
 import { analyzeFormulas, displayName, formatNumber, parseValue } from "@/lib/formulas";
 import type { Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
-import { ApiHint } from "./ApiHint";
+import { ShareMenu } from "./ShareMenu";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
 import { ConnectionsView } from "./ConnectionsView";
@@ -52,7 +52,6 @@ export function SharedCalculator({
   // A loaded scenario starts the panel over with its own locks.
   const [locks, setLocks] = useState<string[] | null>(initialState?.locked ?? null);
   const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(initialState?.locked);
-  const [copied, setCopied] = useState(false);
   // The unit each variable is shown in. Kept here so the scenarios are compared in the same units.
   const [shownUnits, setShownUnits] = useState<Record<string, string>>({});
 
@@ -91,31 +90,16 @@ export function SharedCalculator({
         ) : (
           <span />
         )}
-        {view === "board" && (
-          <button
-            type="button"
-            onClick={async () => {
-              const link = `${location.origin}${location.pathname}?state=${encodeState({ values, locked: locks ?? initialLocks(analysis, values) })}`;
-              try {
-                await navigator.clipboard.writeText(link);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              } catch {
-                window.prompt("Copy this link:", link);
-              }
-            }}
-            className="link text-base"
-            title="A link that opens this board with the numbers you have typed"
-          >
-            {copied ? "Link copied ✓" : "Copy link with these values"}
-          </button>
-        )}
-        {view === "board" && (
-          <button
-            type="button"
-            className="link text-base"
-            title="The values on screen as a spreadsheet file"
-            onClick={() => {
+        {view === "board" && publicId && (
+          <ShareMenu
+            boardId={publicId}
+            inputs={analysis.variables
+              .filter((v) => flat.hidden[v.name] !== true && parseValue(flat.values[v.name]) !== undefined)
+              .slice(0, 2)
+              .map((v) => ({ name: displayName(v.name), value: String(parseValue(flat.values[v.name])) }))}
+            variables={analysis.variables.filter((v) => flat.hidden[v.name] !== true).map((v) => displayName(v.name))}
+            valuesLink={() => `${location.origin}${location.pathname}?state=${encodeState({ values, locked: locks ?? initialLocks(analysis, values) })}`}
+            onDownloadCsv={() => {
               const out = compute(analysis, values, locks ?? initialLocks(analysis, values));
               const shown = shownValues(out.display, out.plan.held, flat.decimals);
               downloadCsv(`${fileNameOf(title)}.csv`, [
@@ -123,9 +107,7 @@ export function SharedCalculator({
                 ...analysis.variables.filter((v) => flat.hidden[v.name] !== true).map((v) => [flat.labels[v.name] || displayName(v.name), displayName(v.name), shown[v.name] ?? "", flat.units[v.name] ?? ""]),
               ]);
             }}
-          >
-            Download CSV
-          </button>
+          />
         )}
         {!sameValues(values, flat.values) && view === "board" && (
           <button
@@ -188,16 +170,6 @@ export function SharedCalculator({
           locked={locks ?? initialLocks(analysis, values)}
           boardId={boardId}
           onApply={load}
-        />
-      )}
-      {view === "board" && publicId && (
-        <ApiHint
-          boardId={publicId}
-          inputs={analysis.variables
-            .filter((v) => flat.hidden[v.name] !== true && parseValue(flat.values[v.name]) !== undefined)
-            .slice(0, 2)
-            .map((v) => ({ name: displayName(v.name), value: String(parseValue(flat.values[v.name])) }))}
-          variables={analysis.variables.filter((v) => flat.hidden[v.name] !== true).map((v) => displayName(v.name))}
         />
       )}
       {view === "board" && flat.tables.length > 0 && (
