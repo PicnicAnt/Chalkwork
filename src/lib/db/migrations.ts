@@ -246,4 +246,10 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN board_presets TEXT NOT NULL DEFAULT '[]';`);
     db.pragma("user_version = 23");
   }
+  if (version < 24) {
+    // The type of a variable, as JSON: { "armor_on": "boolean" }. Variables without an entry are numbers.
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "variable_types");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_types TEXT NOT NULL DEFAULT '{}';`);
+    db.pragma("user_version = 24");
+  }
 }

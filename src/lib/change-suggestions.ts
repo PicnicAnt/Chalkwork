@@ -58,6 +58,7 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
   compareMap(out, (n) => `Display name of ${n}`, base.labels, next.labels);
   compareMap(out, (n) => `Unit of ${n}`, base.units, next.units);
   compareMap(out, (n) => `Note on ${n}`, base.descriptions, next.descriptions);
+  compareMap(out, (n) => `Type of ${n}`, base.types ?? {}, next.types ?? {}, (v) => (v === undefined ? "number" : v));
   compareMap(out, (n) => `Decimals of ${n}`, base.decimals, next.decimals, (v) => (v === undefined ? "automatic" : String(v)));
   const rangeText = (v: { min?: number; max?: number } | undefined) => (v ? `${v.min ?? "…"} to ${v.max ?? "…"}` : "none");
   compareMap(out, (n) => `Range of ${n}`, base.ranges ?? {}, next.ranges ?? {}, rangeText);
@@ -92,6 +93,7 @@ export function draftOf(c: BoardDraft): BoardDraft {
     order: c.order,
     collections: c.collections,
     presets: c.presets,
+    types: c.types,
     includes: c.includes,
     links: c.links,
     visualizations: c.visualizations,

@@ -2,7 +2,7 @@
 import { parsePresets, type Preset } from "./scenarios";
 import { parseTags } from "./tags";
 import { parseTables, type Table } from "./tables";
-import { checkAlias, flatten, type Collection, type Include, type IncludedBundle, type Range } from "./boards";
+import { checkAlias, flatten, type Collection, type Include, type IncludedBundle, type Range, type VarType } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems, isVariableName } from "./formulas";
 import { parseVisualizations, type Visualization } from "./visualizations";
 
@@ -33,6 +33,8 @@ export type BoardDraft = {
   order: string[];
   // Scenarios the creator saved on the board, which everyone using it sees (and can use as the starting point of an item).
   presets?: Preset[];
+  // The type of a variable, keyed by variable name: number (the default, not stored) or boolean (yes/no).
+  types?: Record<string, VarType>;
   // Collections of items that people using the board can add boards to; their stats are added up.
   collections?: Collection[];
   // Short labels that make the board easier to find, such as finance or game.
@@ -236,6 +238,12 @@ export function validateDraft(
     if (range.min !== undefined || range.max !== undefined) ranges[variable.name] = range;
   }
 
+  const rawTypes = typeof r.types === "object" && r.types !== null ? (r.types as Record<string, unknown>) : {};
+  const types: Record<string, VarType> = {};
+  for (const variable of analysis.variables) {
+    if (rawTypes[variable.name] === "boolean") types[variable.name] = "boolean";
+  }
+
   const parsedPresets = parsePresets(r.presets, known);
   errors.push(...parsedPresets.errors);
 
@@ -258,6 +266,7 @@ export function validateDraft(
           ranges,
           tables,
           collections,
+          types,
           presets: parsedPresets.presets,
           order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),
           tags: parseTags(r.tags),

@@ -22,7 +22,7 @@ export function CollapsibleSection({
   const bodyId = useId();
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex cursor-pointer items-baseline justify-between gap-3" onClick={() => setOpen((o) => !o)}>
+      <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setOpen((o) => !o)}>
         <h2 className="text-2xl font-bold">
           {title}
           {count !== undefined && <span className="text-lg font-normal text-ink-muted"> ({count})</span>}

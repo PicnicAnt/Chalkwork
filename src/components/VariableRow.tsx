@@ -27,6 +27,7 @@ export const VariableRow = memo(function VariableRow({
   range,
   current,
   places,
+  isBoolean = false,
 }: {
   name: string;
   description?: string;
@@ -57,6 +58,8 @@ export const VariableRow = memo(function VariableRow({
   current?: number;
   /** Decimals the variable is set to show: the slider then moves by that much (0 decimals: one at a time). */
   places?: number;
+  /** A yes/no variable: shown as a tick box (1 is yes, 0 is no). */
+  isBoolean?: boolean;
 }) {
   const id = `var-${name}`;
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
@@ -72,7 +75,7 @@ export const VariableRow = memo(function VariableRow({
           ? `Above the highest value, ${formatNumber(range.max * ratio)}`
           : null
       : null;
-  const slidable = !readOnly && range?.min !== undefined && range.max !== undefined && range.max > range.min;
+  const slidable = !isBoolean && !readOnly && range?.min !== undefined && range.max !== undefined && range.max > range.min;
   const shownText = typed && typed.unit === unit ? typed.text : value;
   return (
     <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
@@ -88,6 +91,18 @@ export const VariableRow = memo(function VariableRow({
         {/* The field is only as wide as its text, so the unit follows the value directly and the double line of a
             fixed value sits under the value alone. */}
         <span className="flex min-w-0 flex-1 items-baseline">
+        {isBoolean ? (
+          <input
+            id={id}
+            ref={(el) => register(name, el)}
+            type="checkbox"
+            className="h-6 w-6 cursor-pointer self-center accent-[var(--accent)]"
+            checked={(parseValue(value) ?? 0) !== 0}
+            disabled={readOnly}
+            onChange={(e) => onEdit(name, e.target.checked ? "1" : "0")}
+            onBlur={() => onBlur(name)}
+          />
+        ) : (
         <input
           id={id}
           ref={(el) => register(name, el)}
@@ -116,7 +131,8 @@ export const VariableRow = memo(function VariableRow({
             onBlur(name);
           }}
         />
-        {unit &&
+        )}
+        {unit && !isBoolean &&
           (unitOptions && unitOptions.length > 1 ? (
             <select
               value={unit}

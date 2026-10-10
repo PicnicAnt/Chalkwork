@@ -178,6 +178,7 @@ export function SharedCalculator({
           decimals={flat.decimals}
           ranges={flat.ranges}
           order={flat.order}
+          types={flat.types}
           links={flat.links}
           groups={flat.groups}
           sectionExtras={Object.fromEntries(

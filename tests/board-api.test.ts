@@ -17,7 +17,7 @@ describe("using a board from code", () => {
     expect(out.ok).toBe(true);
     if (!out.ok) return;
     expect(out.inputs).toEqual({ width: 5, height: 6 });
-    expect(out.results.area).toEqual({ value: 30, unit: "m²", label: "Area", fixed: false });
+    expect(out.results.area).toEqual({ value: 30, unit: "m²", label: "Area", fixed: false, type: "number" });
     expect(out.results.perimeter.value).toBe(22);
     expect(out.results.width.fixed).toBe(true);
   });
@@ -30,6 +30,13 @@ describe("using a board from code", () => {
   it("solves backwards: an output can be an input", () => {
     const out = solveBoard(rectangle, { area: 20, width: 4 });
     expect(out.ok && out.results.height.value).toBe(5);
+  });
+
+  it("takes true and false for a yes/no variable and says which variables are yes/no", () => {
+    const flag = bundleOf(["fee = if(rush, 20, 5)"], { values: { rush: "0" } });
+    const out = solveBoard({ ...flag, types: { rush: "boolean" } }, { rush: true });
+    expect(out.ok && out.results.fee.value).toBe(20);
+    expect(out.ok && out.results.rush.type).toBe("boolean");
   });
 
   it("refuses names it doesn't have and values that aren't numbers", () => {

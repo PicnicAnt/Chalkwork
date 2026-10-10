@@ -29,7 +29,7 @@ export function Foldable({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-baseline justify-between gap-3 text-left text-xl"
+        className="flex w-full items-center justify-between gap-3 text-left text-xl"
       >
         <span className="min-w-0 truncate">
           {summary}

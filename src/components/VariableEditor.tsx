@@ -28,6 +28,8 @@ export function VariableEditor({
   ranges,
   order,
   onOrder,
+  types,
+  onType,
   onRename,
   onDescribe,
   onUnit,
@@ -66,6 +68,9 @@ export function VariableEditor({
   order: string[];
   /** Gives the new order of one list of variables (those shown together), by name. */
   onOrder: (names: string[]) => void;
+  /** What each variable holds (a variable with no entry is a number). */
+  types: Record<string, "number" | "boolean">;
+  onType: (name: string, type: "number" | "boolean") => void;
 }) {
   const fold = useFold();
   // Used boards that are folded away in this list.
@@ -121,7 +126,7 @@ export function VariableEditor({
         {sections.map((section) => (
           <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
             {section.key && groups[section.key] && (
-              <div className="flex cursor-pointer items-baseline justify-between gap-3" onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
+              <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
                 <h3 className="group-title">
                   {groups[section.key].title}{" "}
                   <span className="text-base text-ink-faint">
@@ -186,6 +191,8 @@ export function VariableEditor({
                 min={ranges[v.name]?.min ?? ""}
                 max={ranges[v.name]?.max ?? ""}
                 onRange={(end, text) => onRange(v.name, end, text)}
+                type={types[v.name] ?? "number"}
+                onType={(type) => onType(v.name, type)}
               />
             ))}
             </div>

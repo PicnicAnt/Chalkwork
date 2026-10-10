@@ -30,6 +30,7 @@ export function CalculatorPanel({
   decimals,
   ranges,
   order,
+  types,
   visualizations,
   initialLocked,
   onLocks,
@@ -61,6 +62,8 @@ export function CalculatorPanel({
   ranges?: Record<string, Range>;
   /** The order variables are listed in, by name. */
   order?: string[];
+  /** The type of each variable; a variable with no entry is a number. */
+  types?: Record<string, "number" | "boolean">;
   /** Drawings that follow the variables: the board's own come first, those of used boards go with their board. */
   visualizations?: BundleVisualization[];
   /** Starts with these variables locked instead of working it out from the values (a loaded scenario). */
@@ -261,6 +264,7 @@ export function CalculatorPanel({
         onBlur={endDraft}
         register={register}
         range={ranges?.[v.name]}
+        isBoolean={types?.[v.name] === "boolean"}
         places={decimals?.[v.name]}
         current={parseValue(display[v.name])}
       />
@@ -279,17 +283,18 @@ export function CalculatorPanel({
     return (
       <div key={key ?? "own"} className={`flex flex-col gap-4 ${nested ? "fold-box" : sections.length > 1 ? "group-box" : ""}`}>
         {key && group && (
-          <div className="flex cursor-pointer items-baseline justify-between gap-3" onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
-            <h3 className="group-title">
-              {group.board ? (
-                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link" onClick={(e) => e.stopPropagation()}>
-                  {group.title}
+          <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
+              <h3 className="group-title">
+                {group.title}
+                {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
+              </h3>
+              {group.board && (
+                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link text-base" onClick={(e) => e.stopPropagation()} title={`Open ${group.title}`}>
+                  Open board
                 </a>
-              ) : (
-                group.title
               )}
-              {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
-            </h3>
+            </div>
             <button
               type="button"
               className="shrink-0 p-1 text-accent"

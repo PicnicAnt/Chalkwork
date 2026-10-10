@@ -62,6 +62,10 @@ Each variable can have a lowest and a highest value (in the variable editor). A 
 
 A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
 
+## Variable types
+
+A variable is a number, or a **yes/no**. In the variable editor each variable has a type. A yes/no variable is a tick box on the board; in formulas it is 1 (yes) and 0 (no), so `if(rush, 20, 5)` and `heavy = weight > 10` work, and a comparison can be a yes/no result. The web service takes `true` and `false` for yes/no variables and says which results are yes/no. The Included switch of a board in a collection is a yes/no variable.
+
 ## Order of variables
 
 In the variable editor each variable has up and down arrows. The order is saved with the board and used on the board page too; variables that were never moved keep the order they first appear in. Variables of a used board are ordered within their own group.

@@ -6,7 +6,7 @@ import { analyzeFormulas, displayName, parseValue } from "./formulas";
 // given (like numbers typed on the board), and the rest is solved from them, in whatever direction the formulas
 // need, so an output can be an input too. Names are written the way they are shown (alias.variable).
 
-export type ApiVariable = { value: number | null; unit: string; label: string; fixed: boolean };
+export type ApiVariable = { value: number | null; unit: string; label: string; fixed: boolean; type: "number" | "boolean" };
 export type ApiResult =
   | { ok: true; inputs: Record<string, number>; results: Record<string, ApiVariable> }
   | { ok: false; status: 400 | 422; error: string };
@@ -24,7 +24,7 @@ export function solveBoard(bundle: Bundle, rawInputs: Record<string, unknown>): 
       unknown.push(key);
       continue;
     }
-    const n = typeof raw === "number" ? raw : typeof raw === "string" ? parseValue(raw) : undefined;
+    const n = typeof raw === "number" ? raw : typeof raw === "boolean" ? (raw ? 1 : 0) : typeof raw === "string" ? (raw === "true" ? 1 : raw === "false" ? 0 : parseValue(raw)) : undefined;
     if (n === undefined || !Number.isFinite(n)) return { ok: false, status: 400, error: `"${key}" must be a number.` };
     inputs[name] = String(n);
   }
@@ -55,6 +55,7 @@ export function solveBoard(bundle: Bundle, rawInputs: Record<string, unknown>): 
       unit: bundle.units[name] ?? "",
       label: bundle.labels[name] || displayName(name),
       fixed: out.plan.held.includes(name),
+      type: bundle.types?.[name] === "boolean" ? "boolean" : "number",
     };
   }
   return { ok: true, inputs: Object.fromEntries(Object.entries(inputs).map(([k, v]) => [displayName(k), Number(v)])), results };

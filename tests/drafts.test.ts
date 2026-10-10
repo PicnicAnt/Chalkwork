@@ -49,6 +49,12 @@ describe("checking a board before it is saved", () => {
     expect(validateDraft({ ...base, ranges: { width: { min: "x" as unknown as number } } }).errors.join(" ")).toMatch(/must be a number/);
   });
 
+  it("keeps the yes/no type of a variable and treats everything else as a number", () => {
+    const out = validateDraft({ ...base, types: { width: "boolean", height: "number", nothing: "boolean", area: "text" } });
+    expect(out.errors).toEqual([]);
+    expect(out.draft?.types).toEqual({ width: "boolean" });
+  });
+
   it("keeps a collection with the boards that can be added to it", () => {
     const out = validateDraft({ ...base, collections: [{ name: "items", stats: ["damage", "bad name"], boards: ["abcdef12", "x", 5] }] });
     expect(out.errors).toEqual([]);

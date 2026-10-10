@@ -38,6 +38,9 @@ export type Include = {
 /** The values a variable is meant to stay within; either end can be left open. */
 export type Range = { min?: number; max?: number };
 
+/** What a variable holds: a number, or a yes/no (shown as a tick box; true is 1 and false is 0 in the maths). */
+export type VarType = "number" | "boolean";
+
 export type Bundle = {
   formulas: string[];
   values: Record<string, string>;
@@ -47,6 +50,8 @@ export type Bundle = {
   hidden: Record<string, boolean>;
   decimals: Record<string, number>;
   ranges: Record<string, Range>;
+  /** The type of a variable; a variable with no entry is a number. */
+  types?: Record<string, VarType>;
   /** Lookup tables the formulas can call like functions. Those of a used board are named alias$table. */
   tables: Table[];
   /** The order variables are listed in, by name; those not named come after, in the order they appear. */
@@ -176,6 +181,7 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
     hidden: keys(bundle.hidden),
     decimals: keys(bundle.decimals),
     ranges: keys(bundle.ranges),
+    types: keys(bundle.types ?? {}),
     // A link joins two variables of the same board, so both ends get the alias.
     links: Object.fromEntries(
       Object.entries(bundle.links).map(([from, to]) => [withAlias(alias, from), withAlias(alias, to)]),
@@ -262,6 +268,7 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
     labels: {} as Record<string, string>,
     decimals: {} as Record<string, number>,
     ranges: {} as Record<string, Range>,
+    types: {} as Record<string, VarType>,
     groups: {} as Record<string, { title: string; board: string }>,
   };
   const byGroup = new Map<string, IncludedBundle[]>();
@@ -283,6 +290,7 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
       out.descriptions[key] = "1 counts this board in the totals, 0 leaves it out.";
       out.decimals[key] = 0;
       out.ranges[key] = { min: 0, max: 1 };
+      out.types[key] = "boolean";
     }
     const termsFor = (name: string) =>
       owned.filter((o) => o.names.includes(name)).map((o) => ({ on: withAlias(o.item.alias, "equipped"), value: withAlias(o.item.alias, name), bundle: o.item.bundle }));
@@ -387,6 +395,7 @@ export function flatten(
       hidden: merge((b) => b.hidden, own.hidden),
       decimals: { ...sums.decimals, ...merge((b) => b.decimals, own.decimals) },
       ranges: { ...sums.ranges, ...merge((b) => b.ranges, own.ranges) },
+      types: { ...sums.types, ...merge((b) => b.types ?? {}, own.types ?? {}) },
       tables: [...own.tables, ...parts.flatMap((p) => p.bundle.tables)],
       order: [...own.order, ...parts.flatMap((p) => p.bundle.order)],
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],

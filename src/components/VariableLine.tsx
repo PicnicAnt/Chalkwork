@@ -33,6 +33,8 @@ export function VariableLine({
   min,
   max,
   onRange,
+  type,
+  onType,
 }: {
   name: string;
   expanded: boolean;
@@ -66,6 +68,9 @@ export function VariableLine({
   min: string;
   max: string;
   onRange: (end: "min" | "max", text: string) => void;
+  /** What the variable holds, and a way to change it. */
+  type: "number" | "boolean";
+  onType: (type: "number" | "boolean") => void;
 }) {
   // Applied when the field is left, so half-typed names never rewrite the formulas. After a rename the line
   // is replaced under its new name, so this component starts over with a clean draft.
@@ -95,7 +100,7 @@ export function VariableLine({
           </span>
         )
       }
-      hint={`${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
+      hint={`${type === "boolean" ? " · yes/no" : ""}${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
         {fixedName !== undefined ? (
@@ -122,6 +127,10 @@ export function VariableLine({
         />
       </div>
       <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+        <select value={type} onChange={(e) => onType(e.target.value as "number" | "boolean")} className="cursor-pointer bg-transparent text-lg" aria-label={`Type of ${name}`} title="A number, or a yes/no shown as a tick box (1 and 0 in the formulas)">
+          <option value="number">number</option>
+          <option value="boolean">yes / no</option>
+        </select>
         <input
           className="field w-24 text-lg"
           value={unit}
