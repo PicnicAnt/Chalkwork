@@ -21,7 +21,7 @@ export function AiStarter({ availableBoards }: { availableBoards: BoardChoice[] 
         <p className="sketch-box px-4 py-3 text-ink-muted">
           This is a draft written by an AI helper from “{text.trim()}”. Check the formulas and numbers before you rely on it.
         </p>
-        <BoardEditor availableBoards={availableBoards} initial={draft} />
+        <BoardEditor availableBoards={availableBoards} initial={draft} aiEnabled />
       </div>
     );
   }

@@ -53,5 +53,5 @@ export default async function NewBoardPage({ searchParams }: PageProps<"/new">) 
     description: b.description,
     ownerName: b.ownerName,
   }));
-  return <BoardEditor availableBoards={availableBoards} initial={templateById(template)?.draft} />;
+  return <BoardEditor availableBoards={availableBoards} initial={templateById(template)?.draft} aiEnabled={"key" in aiConfig()} />;
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
+import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import { getBoard, listAllBoards } from "@/lib/db";
 import { resolveIncludes } from "@/lib/resolve-boards";
@@ -65,6 +66,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
   if (isOwner) {
     return (
       <BoardEditor
+        aiEnabled={"key" in aiConfig()}
         initial={draft}
         editing={{ id }}
         heading={`Edit ${draft.title}`}
@@ -81,6 +83,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
         makes your own copy with a new link.
       </p>
       <BoardEditor
+        aiEnabled={"key" in aiConfig()}
         initial={{ ...draft, title: `${draft.title} (copy)` }}
         heading={`Copy ${draft.title}`}
         availableBoards={availableBoards}

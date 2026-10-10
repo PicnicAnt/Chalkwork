@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { createBoard, loadBoardToUse, updateBoard } from "@/app/actions/boards";
+import { reviseBoard, type ReviseOutcome } from "@/app/actions/ai";
 import { createSuggestion } from "@/app/actions/suggestions";
 import {
   defaultAlias,
@@ -32,14 +33,7 @@ import { rowsToText } from "@/lib/tables";
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
 // existing one (which the signed-in user owns); with `initial` but no `editing`, it saves a new copy.
-export function BoardEditor({
-  initial,
-  editing,
-  suggesting,
-  heading = "New board",
-  availableBoards = [],
-  initialIncluded = [],
-}: {
+type EditorProps = {
   initial?: BoardDraft;
   editing?: { id: string };
   /** Set when the board is someone else's: saving sends the owner a suggestion instead of saving. */
@@ -49,7 +43,64 @@ export function BoardEditor({
   availableBoards?: BoardChoice[];
   /** The boards `initial` already uses, loaded by the server. */
   initialIncluded?: IncludedBundle[];
-}) {
+  /** Show "Ask for a change", which has the writing helper change the board as asked. */
+  aiEnabled?: boolean;
+};
+
+type Applied = { n: number; draft: BoardDraft | undefined; included: IncludedBundle[] | undefined; changes: string[]; before: { draft: BoardDraft; included: IncludedBundle[] } | null };
+
+// The editor. When the writing helper changes the board, the editor is started again from the changed board, with a
+// list of what changed and a way back to what it was. Nothing is saved until the person saves.
+export function BoardEditor(props: EditorProps) {
+  const [applied, setApplied] = useState<Applied | null>(null);
+  return (
+    <>
+      {applied && applied.changes.length > 0 && (
+        <div className="sketch-box mb-6 flex flex-col gap-2 px-4 py-3">
+          <p className="text-xl">The helper changed the board. Nothing is saved until you save.</p>
+          <ul className="list-disc pl-6 text-base text-ink-muted">
+            {applied.changes.slice(0, 12).map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+            {applied.changes.length > 12 && <li>…and {applied.changes.length - 12} more</li>}
+          </ul>
+          {applied.before && (
+            <div>
+              <button
+                type="button"
+                className="link text-base"
+                onClick={() => {
+                  const before = applied.before!;
+                  setApplied({ n: applied.n + 1, draft: before.draft, included: before.included, changes: [], before: null });
+                }}
+              >
+                Go back to how it was
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      <BoardEditorInner
+        key={applied?.n ?? 0}
+        {...props}
+        initial={applied?.draft ?? props.initial}
+        initialIncluded={applied?.included ?? props.initialIncluded}
+        onRevised={(out, before) => setApplied({ n: (applied?.n ?? 0) + 1, draft: out.draft, included: out.included, changes: out.changes, before })}
+      />
+    </>
+  );
+}
+
+function BoardEditorInner({
+  initial,
+  editing,
+  suggesting,
+  heading = "New board",
+  availableBoards = [],
+  initialIncluded = [],
+  aiEnabled = false,
+  onRevised,
+}: EditorProps & { onRevised: (out: Extract<ReviseOutcome, { ok: true }>, before: { draft: BoardDraft; included: IncludedBundle[] }) => void }) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -214,6 +265,26 @@ export function BoardEditor({
     setVisualizations((vs) => renameInVisualizations(vs, (name) => (name === from ? to : name)));
   }
 
+  // What the editor holds now, as a draft.
+  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
+
+  // The writing helper changes the board as asked; the editor then starts again from the result.
+  const [aiText, setAiText] = useState("");
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiPending, aiStart] = useTransition();
+  function askHelper() {
+    setAiError(null);
+    aiStart(async () => {
+      const before = currentDraft();
+      const out = await reviseBoard(editing?.id ?? suggesting?.boardId ?? null, before, aiText);
+      if (!out.ok) {
+        setAiError(out.error);
+        return;
+      }
+      onRevised(out, { draft: before as BoardDraft, included });
+    });
+  }
+
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
@@ -282,6 +353,37 @@ export function BoardEditor({
           spellCheck={false}
         />
       </section>
+
+      {aiEnabled && (
+        // Not a form of its own: the editor is one form already, and forms can't be nested.
+        <div className="sketch-box flex flex-col gap-2 px-4 py-3">
+          <label htmlFor="ai-change" className="text-2xl">
+            Ask for a change
+          </label>
+          <span className="text-base text-ink-muted">
+            Say what to change in a sentence, such as &ldquo;add a 20% VAT and show the price with it&rdquo; or &ldquo;use the Rectangle board for the base and add a Box drawing&rdquo;. An AI model
+            changes this board; you see what changed and can go back before you save.
+          </span>
+          <textarea
+            id="ai-change"
+            className="field w-full text-xl"
+            rows={2}
+            maxLength={500}
+            value={aiText}
+            onChange={(e) => setAiText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && aiText.trim() && !aiPending) askHelper();
+            }}
+            placeholder="What should be different?"
+          />
+          <div className="flex flex-wrap items-baseline gap-3">
+            <button type="button" className="btn" disabled={aiPending || !aiText.trim()} onClick={askHelper}>
+              {aiPending ? "Changing…" : "Make the change"}
+            </button>
+            {aiError && <span className="text-danger">{aiError}</span>}
+          </div>
+        </div>
+      )}
 
       <section className="flex flex-col gap-3">
         <div>

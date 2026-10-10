@@ -123,18 +123,12 @@ const EXPLAIN_SYSTEM = `You explain a Chalkwork board to someone who has just op
 
 export type DraftResult = { ok: true; draft: Record<string, unknown> } | { ok: false; error: string };
 
-// Asks for a draft and checks it with `check` (the same validation as a saved board). If the check finds problems
-// the model gets one chance to fix them.
-export async function draftFrom(
-  ask: Ask,
-  description: string,
-  check: (payload: unknown) => { ok: true } | { ok: false; errors: string[] },
-  catalog = "",
-): Promise<DraftResult> {
-  const system = catalog ? `${DRAFT_SYSTEM}\n\n${catalog}` : DRAFT_SYSTEM;
-  const text = description.trim().slice(0, AI_LIMITS.description);
-  if (!text) return { ok: false, error: "Describe what you want to calculate first." };
-  let prompt = `Draft a board for this: ${text}`;
+type Check = (payload: unknown) => { ok: true } | { ok: false; errors: string[] };
+
+// Asks until the reply is a JSON object that passes `check` (the same validation as a saved board). If the reply is
+// not usable the model gets one chance to fix it.
+async function askUntilValid(ask: Ask, system: string, first: string, check: Check, failure: string): Promise<DraftResult> {
+  let prompt = first;
   for (let attempt = 0; attempt < 2; attempt++) {
     let reply: string;
     try {
@@ -144,14 +138,53 @@ export async function draftFrom(
     }
     const json = extractJson(reply);
     if (!json || typeof json !== "object") {
-      prompt = `${prompt}\n\nYour last reply was not a single JSON object. Reply with only the JSON object.`;
+      prompt = `${first}
+
+Your last reply was not a single JSON object. Reply with only the JSON object.`;
       continue;
     }
     const result = check(json);
     if (result.ok) return { ok: true, draft: json as Record<string, unknown> };
-    prompt = `${prompt}\n\nYour last draft had these problems: ${result.errors.slice(0, 5).join(" ")}\nReply with a corrected JSON object.`;
+    prompt = `${first}
+
+Your last answer had these problems: ${result.errors.slice(0, 5).join(" ")}
+Reply with a corrected JSON object.`;
   }
-  return { ok: false, error: "The helper couldn't produce a draft that works. Try describing it differently." };
+  return { ok: false, error: failure };
+}
+
+export async function draftFrom(ask: Ask, description: string, check: Check, catalog = ""): Promise<DraftResult> {
+  const system = catalog ? `${DRAFT_SYSTEM}
+
+${catalog}` : DRAFT_SYSTEM;
+  const text = description.trim().slice(0, AI_LIMITS.description);
+  if (!text) return { ok: false, error: "Describe what you want to calculate first." };
+  return askUntilValid(ask, system, `Draft a board for this: ${text}`, check, "The helper couldn't produce a draft that works. Try describing it differently.");
+}
+
+const REVISE_SYSTEM = `You change an existing "board" for Chalkwork, a tool where formulas work in every direction, as the person asks.
+You are given the current board as one JSON object and a request. Reply with ONE JSON object and nothing else: the complete updated board, with every key of the current board kept (title, description, formulas, values, units, labels, descriptions, hidden, decimals, ranges, tables, order, tags, includes, links, visualizations), changed only where the request needs it.
+Rules:
+- Keep the names of existing variables, and everything the request doesn't touch, exactly as it is.
+- "formulas" are strings "name = expression" (lower snake_case names; + - * / ^, parentheses, functions such as sqrt, min, max, round, abs, if(condition, a, b)). A line that is only a name declares a variable.
+- Give a sensible starting value (a string) in "values" for any new input variable, and units, labels and notes for new variables like the existing ones have.
+- "includes" are existing boards used by this one: {"board": "<id>", "alias": "<short name>"}; their variables are written alias.variable in formulas and alias$variable in "visualizations" and "values". Only use boards from the list below. A board must not use itself.
+- "visualizations" are drawings: {"type": "<id>", "map": {"<param>": "<variable>"}, "lists": {...}, "options": {...}}, using the drawing types listed below.
+- If the request can't be done as asked, change as much as makes sense and say nothing else; the reply is only the JSON object.`;
+
+// Asks for the current board changed as requested, checked like a saved board.
+export async function reviseFrom(ask: Ask, current: unknown, instruction: string, check: Check, catalog = ""): Promise<DraftResult> {
+  const text = instruction.trim().slice(0, AI_LIMITS.description);
+  if (!text) return { ok: false, error: "Say what to change first." };
+  const json = JSON.stringify(current);
+  if (json.length > 12000) return { ok: false, error: "This board is too big for the helper to change in one go." };
+  const system = catalog ? `${REVISE_SYSTEM}
+
+${catalog}` : REVISE_SYSTEM;
+  return askUntilValid(ask, system, `Current board:
+${json}
+
+Request: ${text}`, check, "The helper couldn't make that change in a way that works. Try asking differently.");
 }
 
 export function explainWith(ask: Ask, board: { title: string; description: string; formulas: string[]; labels: Record<string, string>; units: Record<string, string> }): Promise<string> {

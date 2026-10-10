@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
+import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import { getBoard, listAllBoards } from "@/lib/db";
 import { resolveIncludes } from "@/lib/resolve-boards";
@@ -48,6 +49,7 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
         changes on the board until {board.ownerName ?? "the owner"} approves it.
       </p>
       <BoardEditor
+        aiEnabled={"key" in aiConfig()}
         initial={draftOf(board)}
         suggesting={{ boardId: id }}
         heading={`Suggest a change to ${board.title}`}

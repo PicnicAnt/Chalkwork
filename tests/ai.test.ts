@@ -108,3 +108,25 @@ describe("offering boards and drawings to the helper", () => {
     expect(system).toMatch(/"includes"/);
   });
 });
+
+describe("changing an existing board", () => {
+  it("sends the current board and the request, and returns the checked change", async () => {
+    const { reviseFrom } = await import("@/lib/ai");
+    let seen = "";
+    const out = await reviseFrom(
+      async (_s, user) => ((seen = user), '{"title":"T","formulas":["a = b * 2","c = a + 1"]}'),
+      { title: "T", formulas: ["a = b * 2"] },
+      "add c",
+      () => ({ ok: true }),
+    );
+    expect(out.ok).toBe(true);
+    expect(seen).toMatch(/"formulas":\["a = b \* 2"\]/);
+    expect(seen).toMatch(/Request: add c/);
+  });
+
+  it("refuses an empty request and a board that is too big", async () => {
+    const { reviseFrom } = await import("@/lib/ai");
+    expect((await reviseFrom(async () => "{}", {}, "  ", () => ({ ok: true }))).ok).toBe(false);
+    expect((await reviseFrom(async () => "{}", { x: "a".repeat(13000) }, "do", () => ({ ok: true }))).ok).toBe(false);
+  });
+});
