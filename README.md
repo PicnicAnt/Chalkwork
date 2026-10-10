@@ -68,7 +68,7 @@ In the variable editor each variable has up and down arrows. The order is saved 
 
 ## Writing helper
 
-Two buttons use an AI model, and only appear when the server has a key: **Describe it** on the New page turns a sentence into a draft board (checked like any board, and opened in the editor, nothing saved until you save), and **Explain this board** on a board page writes a short explanation. Set `ANTHROPIC_API_KEY` in `.env.local` and restart. `CHALKWORK_AI_MODEL` picks the model (default `claude-haiku-5-5`) and `CHALKWORK_AI=0` turns it off. Each use costs tokens, so it is for signed-in people only and limited to 10 uses an hour per person (kept in memory, so a restart resets it).
+Two buttons use an AI model, and only appear when the server has a key: **Describe it** on the New page turns a sentence into a draft board (checked like any board, and opened in the editor, nothing saved until you save), and **Explain this board** on a board page writes a short explanation. Set `ANTHROPIC_API_KEY` in `.env.local` and restart. `CHALKWORK_AI_MODEL` picks the model (default `claude-haiku-5-5`) and `CHALKWORK_AI=0` turns it off. A draft can also use existing boards (the ones whose words fit the description are offered to the model) and add drawings where they fit. Each use costs tokens, so it is for signed-in people only and limited to 10 uses an hour per person (kept in memory, so a restart resets it).
 
 ## Finding boards, comments and the inbox
 

@@ -1,9 +1,11 @@
 "use server";
 
 import { getCurrentUser } from "@/lib/auth";
-import { AI_LIMITS, aiConfig, draftFrom, explainWith, makeLimiter, messagesAsk } from "@/lib/ai";
+import { AI_LIMITS, aiConfig, catalogText, draftFrom, explainWith, makeLimiter, messagesAsk, relevantBoards, type CatalogBoard } from "@/lib/ai";
+import { analyzeFormulas, displayName } from "@/lib/formulas";
+import { VIZ_TYPES } from "@/lib/visualizations";
 import type { BoardDraft } from "@/lib/board-draft";
-import { getBoard } from "@/lib/db";
+import { getBoard, listAllBoards } from "@/lib/db";
 import { prepare } from "./prepare";
 
 // The writing helper. Every use is paid for in tokens, so each action checks who is asking and how often.
@@ -18,6 +20,26 @@ export async function helperAvailable(): Promise<boolean> {
   return "key" in aiConfig();
 }
 
+// The boards worth offering for a description, with their variables, so the draft can use them.
+function boardCatalog(description: string): CatalogBoard[] {
+  return relevantBoards(listAllBoards(), description).flatMap((b) => {
+    const board = getBoard(b.id);
+    if (!board) return [];
+    const variables = analyzeFormulas(board.formulas, board.tables)
+      .variables.filter((v) => board.hidden[v.name] !== true)
+      .map((v) => displayName(v.name));
+    return [{ id: b.id, title: b.title, description: b.description, variables }];
+  });
+}
+
+const DRAWINGS = VIZ_TYPES.map((t) => ({
+  id: t.id,
+  label: t.label,
+  params: t.params.map((p) => ({ key: p.key, label: p.label, optional: p.optional })),
+  lists: (t.lists ?? []).map((l) => ({ key: l.key, label: l.label })),
+  options: (t.options ?? []).map((o) => ({ key: o.key, label: o.label })),
+}));
+
 export async function draftBoard(description: unknown): Promise<DraftOutcome> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in to use the writing helper." };
@@ -29,7 +51,7 @@ export async function draftBoard(description: unknown): Promise<DraftOutcome> {
   const result = await draftFrom(messagesAsk(config), description, (payload) => {
     const prepared = prepare(payload);
     return "errors" in prepared ? { ok: false, errors: prepared.errors } : { ok: true };
-  });
+  }, catalogText(boardCatalog(description), DRAWINGS));
   if (!result.ok) return result;
   const prepared = prepare(result.draft);
   if ("errors" in prepared) return { ok: false, error: "The draft didn't pass the checks." };

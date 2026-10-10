@@ -4,7 +4,7 @@
 //
 // What the model returns is never trusted: a draft goes through the same checks as any saved board.
 
-export const AI_LIMITS = { description: 500, perHour: 10, maxTokens: 1500 };
+export const AI_LIMITS = { description: 500, perHour: 10, maxTokens: 2500 };
 
 export type Ask = (system: string, user: string) => Promise<string>;
 
@@ -65,7 +65,59 @@ Reply with ONE JSON object and nothing else, with these keys:
 - "units": object, a unit label for variables where one fits (m, m², kg, %, $, h, ...)
 - "labels": object, a friendly display name for each variable
 - "descriptions": object, a short note for variables that need one
-Use only variable names that appear in the formulas. Percentages are written as numbers like 5 for 5% and divided by 100 in the formulas.`;
+Use only variable names that appear in the formulas. Percentages are written as numbers like 5 for 5% and divided by 100 in the formulas.
+
+Optionally the object can also have:
+- "includes": array of {"board": "<id of one of the existing boards listed below>", "alias": "<short lower-case name>"}. Use an existing board when it already works out part of what is asked for (a box can use a rectangle for its base). The variables of a used board are written alias.variable in formulas, such as "volume = base.area * height", and can be set equal to your own variables ("base.width = width"). Do not repeat a used board's formulas. Use only boards from the list, and only when it clearly fits.
+- "visualizations": array of drawings that follow the variables, each {"type": "<drawing id from the list below>", "map": {"<parameter key>": "<variable>"}, "lists": {"<list key>": ["<variable>", ...]}, "options": {"<option key>": <number>}}. Add a drawing when one fits the subject (a Box for a box, a Circle for a circle, a Sweep chart of a result against an input), at most 3. Every parameter named for the drawing type is needed unless it says optional. In "map" and "lists" a variable of your own board is written by its plain name and a variable of a used board as alias$variable (a dollar sign, not a dot).`;
+
+export type CatalogBoard = { id: string; title: string; description: string; variables: string[] };
+export type CatalogDrawing = {
+  id: string;
+  label: string;
+  params: { key: string; label: string; optional?: boolean }[];
+  lists: { key: string; label: string }[];
+  options: { key: string; label: string }[];
+};
+
+// The existing boards and the drawing types, as plain text for the model to choose from.
+export function catalogText(boards: readonly CatalogBoard[], drawings: readonly CatalogDrawing[]): string {
+  const boardLines = boards.map((b) => {
+    const about = b.description ? ` (${b.description.replace(/\s+/g, " ").slice(0, 100)})` : "";
+    return `- id ${b.id}: "${b.title}"${about}; variables: ${b.variables.slice(0, 14).join(", ")}`;
+  });
+  const drawingLines = drawings.map((d) => {
+    const parts = [
+      ...d.params.map((p) => `${p.key}${p.optional ? " (optional)" : ""}: ${p.label}`),
+      ...d.lists.map((l) => `list ${l.key}: ${l.label}`),
+      ...d.options.map((o) => `option ${o.key}: ${o.label}`),
+    ];
+    return `- ${d.id} (${d.label}): ${parts.join("; ")}`;
+  });
+  return [
+    boardLines.length ? `Existing boards that can be used:\n${boardLines.join("\n")}` : 'There are no existing boards to use; leave out "includes".',
+    `Drawing types:\n${drawingLines.join("\n")}`,
+  ].join("\n\n");
+}
+
+// Which boards to offer: the ones whose words overlap the description most, so the list stays short.
+export function relevantBoards<T extends { title: string; description: string; keywords: string; tags: string[] }>(boards: readonly T[], description: string, limit = 12): T[] {
+  const words = description
+    .toLocaleLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length > 2);
+  const score = (b: T) => {
+    const text = `${b.title} ${b.description} ${b.tags.join(" ")} ${b.keywords}`.toLocaleLowerCase();
+    const title = b.title.toLocaleLowerCase();
+    return words.reduce((n, w) => n + (text.includes(w) ? (title.includes(w) ? 3 : 1) : 0), 0);
+  };
+  return boards
+    .map((b) => ({ b, n: score(b) }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, limit)
+    .map((x) => x.b);
+}
 
 const EXPLAIN_SYSTEM = `You explain a Chalkwork board to someone who has just opened it. Chalkwork boards are formulas that work in every direction: any variable can be typed and the others adjust. In plain language and at most 150 words: say what the board calculates, name the main inputs and results, and mention one thing worth trying (for example typing a result to solve for an input). No headings and no formulas repeated word for word.`;
 
@@ -77,14 +129,16 @@ export async function draftFrom(
   ask: Ask,
   description: string,
   check: (payload: unknown) => { ok: true } | { ok: false; errors: string[] },
+  catalog = "",
 ): Promise<DraftResult> {
+  const system = catalog ? `${DRAFT_SYSTEM}\n\n${catalog}` : DRAFT_SYSTEM;
   const text = description.trim().slice(0, AI_LIMITS.description);
   if (!text) return { ok: false, error: "Describe what you want to calculate first." };
   let prompt = `Draft a board for this: ${text}`;
   for (let attempt = 0; attempt < 2; attempt++) {
     let reply: string;
     try {
-      reply = await ask(DRAFT_SYSTEM, prompt);
+      reply = await ask(system, prompt);
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : "The helper couldn't be reached." };
     }

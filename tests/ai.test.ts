@@ -81,3 +81,30 @@ describe("the writing helper", () => {
     expect(sent).toMatch(/area = w \* h/);
   });
 });
+
+describe("offering boards and drawings to the helper", () => {
+  const boards = [
+    { title: "Rectangle", description: "Area and perimeter", keywords: "area = width * height", tags: ["geometry"] },
+    { title: "Loan payment", description: "Monthly payment", keywords: "payment", tags: ["finance"] },
+  ];
+
+  it("offers the boards whose words fit the description", async () => {
+    const { relevantBoards } = await import("@/lib/ai");
+    expect(relevantBoards(boards, "a box with width, height and depth").map((b) => b.title)).toEqual(["Rectangle"]);
+    expect(relevantBoards(boards, "something unrelated")).toEqual([]);
+  });
+
+  it("writes the catalog as text and puts it in the system prompt", async () => {
+    const { catalogText } = await import("@/lib/ai");
+    const text = catalogText(
+      [{ id: "abc", title: "Rectangle", description: "Area", variables: ["width", "height"] }],
+      [{ id: "box", label: "Box", params: [{ key: "width", label: "Width" }], lists: [], options: [] }],
+    );
+    expect(text).toMatch(/id abc: "Rectangle"/);
+    expect(text).toMatch(/box \(Box\): width: Width/);
+    let system = "";
+    await draftFrom(async (s) => ((system = s), '{"title":"x"}'), "a box", () => ({ ok: true }), text);
+    expect(system).toMatch(/Existing boards that can be used/);
+    expect(system).toMatch(/"includes"/);
+  });
+});

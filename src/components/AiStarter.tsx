@@ -43,7 +43,7 @@ export function AiStarter({ availableBoards }: { availableBoards: BoardChoice[] 
         Describe it
       </label>
       <span className="text-base text-ink-muted">
-        Write what you want to calculate in a sentence and get a draft board with formulas, units and notes. It uses an AI model, so it takes a few seconds and is limited to {AI_LIMITS.perHour} uses an hour.
+        Write what you want to calculate in a sentence and get a draft board with formulas, units and notes. It can also use boards that already exist and add drawings where they fit. It uses an AI model, so it takes a few seconds and is limited to {AI_LIMITS.perHour} uses an hour.
       </span>
       <textarea
         id="ai-description"
