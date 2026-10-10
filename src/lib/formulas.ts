@@ -168,13 +168,21 @@ function symbolsUsed(node: MathNode): string[] {
 // A formula can call the board's tables as functions, such as tax_rate(income).
 export function analyzeFormulas(lines: string[], tables: readonly Table[] = []): Analysis {
   const functions = tableFunctions(tables);
-  const formulas: Formula[] = lines.map((text, i) => {
+  // A line that is only a name declares that variable: it is listed and can be used, but no equation defines it.
+  // That makes a board a list of variables that other boards can use.
+  const declarations: { line: number; name: string }[] = [];
+  const parsed: (Formula | null)[] = lines.map((text, i) => {
     const base = { line: i + 1, text, name: `result_${i + 1}`, vars: [] as string[] };
     let node: MathNode;
     try {
       node = parse(removeThousandsSeparators(text));
     } catch (e) {
       return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
+    }
+
+    if (isSymbolNode(node) && isVariableName(node.name)) {
+      declarations.push({ line: i + 1, name: node.name });
+      return null;
     }
 
     // A line without "name =" still gets a variable, so its value can be shown.
@@ -214,9 +222,11 @@ export function analyzeFormulas(lines: string[], tables: readonly Table[] = []):
     }
   });
 
+  const formulas = parsed.filter((f): f is Formula => f !== null);
   const variables: Variable[] = [];
-  for (const f of formulas) {
-    for (const name of f.vars) {
+  const listed = [...formulas.map((f) => ({ line: f.line, names: f.vars })), ...declarations.map((d) => ({ line: d.line, names: [d.name] }))].sort((a, b) => a.line - b.line);
+  for (const item of listed) {
+    for (const name of item.names) {
       if (!variables.some((v) => v.name === name)) variables.push({ name, label: humanize(name) });
     }
   }

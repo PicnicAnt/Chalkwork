@@ -94,3 +94,19 @@ describe("reading numbers", () => {
     expect(parseValue("abc")).toBeUndefined();
   });
 });
+
+describe("a line that is only a name", () => {
+  it("declares the variable without making a result of it", () => {
+    const a = analyzeFormulas(["speed", "trip = speed * hours", "weight"]);
+    expect(a.variables.map((v) => v.name)).toEqual(["speed", "trip", "hours", "weight"]);
+    expect(a.formulas).toHaveLength(1);
+    expect(a.variables.some((v) => v.name.startsWith("result_"))).toBe(false);
+    expect(formulaProblems(a)).toEqual([]);
+  });
+
+  it("a board that only declares variables has no problems", () => {
+    const a = analyzeFormulas(["width", "height"]);
+    expect(a.variables.map((v) => v.name)).toEqual(["width", "height"]);
+    expect(formulaProblems(a)).toEqual([]);
+  });
+});

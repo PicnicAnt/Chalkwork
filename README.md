@@ -58,6 +58,10 @@ Every save of a board is kept as a numbered version (`board_versions`: the whole
 
 Each variable can have a lowest and a highest value (in the variable editor). A value outside them gets a warning, and a variable with both gets a slider under it. The **Spread** chart draws the inputs at random between their ranges (most often near the value they have now), solves the board for each draw and shows how the result could turn out: a histogram with the 5% and 95% marks. The draws are seeded, so a board shows the same picture every time.
 
+## Variables on their own
+
+A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
+
 ## Order of variables
 
 In the variable editor each variable has up and down arrows. The order is saved with the board and used on the board page too; variables that were never moved keep the order they first appear in. Variables of a used board are ordered within their own group.
