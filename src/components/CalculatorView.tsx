@@ -255,6 +255,7 @@ export function CalculatorPanel({
         onBlur={endDraft}
         register={register}
         range={ranges?.[v.name]}
+        places={decimals?.[v.name]}
         current={parseValue(display[v.name])}
       />
     );

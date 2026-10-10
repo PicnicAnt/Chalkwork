@@ -26,6 +26,7 @@ export const VariableRow = memo(function VariableRow({
   register,
   range,
   current,
+  places,
 }: {
   name: string;
   description?: string;
@@ -54,6 +55,8 @@ export const VariableRow = memo(function VariableRow({
   range?: Range;
   /** The value now, in the unit it is written in. */
   current?: number;
+  /** Decimals the variable is set to show: the slider then moves by that much (0 decimals: one at a time). */
+  places?: number;
 }) {
   const id = `var-${name}`;
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
@@ -145,7 +148,8 @@ export const VariableRow = memo(function VariableRow({
           className="slider mt-1 w-full"
           min={range.min}
           max={range.max}
-          step="any"
+          // With decimals set the slider moves by the last digit shown (and only in the unit it is written in).
+          step={places !== undefined && ratio === 1 ? 10 ** -places : "any"}
           value={Math.min(range.max!, Math.max(range.min!, current ?? range.min!))}
           onChange={(e) => {
             setTyped(null);
