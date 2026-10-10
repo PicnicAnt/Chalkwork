@@ -122,7 +122,8 @@ export function validateDraft(
     else if (collections.some((x) => x.name === name) || included.some((i) => i.alias === name)) errors.push(`The collection "${name}" has the same name as another collection or a used board.`);
     else {
       const stats = (Array.isArray(c?.stats) ? (c!.stats as unknown[]) : []).filter((x): x is string => typeof x === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(x.trim())).map((x) => x.trim());
-      collections.push({ name, stats: [...new Set(stats)].slice(0, 20) });
+      const allowed = (Array.isArray((c as { boards?: unknown })?.boards) ? ((c as { boards: unknown[] }).boards) : []).filter((b): b is string => typeof b === "string" && /^[A-Za-z0-9_-]{6,24}$/.test(b));
+      collections.push({ name, stats: [...new Set(stats)].slice(0, 20), ...(allowed.length ? { boards: [...new Set(allowed)].slice(0, 30) } : {}) });
     }
   }
   const parsedTables = parseTables(r.tables);

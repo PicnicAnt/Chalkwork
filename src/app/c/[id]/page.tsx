@@ -9,7 +9,7 @@ import { boardsUsing, getBoard, listAllBoards, listScenarios } from "@/lib/db";
 import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
-import { groupsOf, resolveForView } from "@/lib/resolve-boards";
+import { acceptedExtras, groupsOf, resolveForView } from "@/lib/resolve-boards";
 import { parseItems } from "@/lib/items-param";
 import { humanize } from "@/lib/formulas";
 import { decodeState } from "@/lib/share-state";
@@ -44,15 +44,22 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
 
   // The collections of the board and what is in them, for the "add an item" boxes.
   const known = groupsOf(full);
-  const usedExtras = extras.filter((e) => known.includes(e.group) && e.board !== full.id);
+  const usedExtras = acceptedExtras(full, extras);
   const collections = known.map((name) => ({
     name,
     title: humanize(name),
     stats: (full.collections ?? []).find((c) => c.name === name)?.stats ?? [],
     fixed: full.includes.filter((i) => i.group === name).map((i) => ({ title: i.name || getBoard(i.board)?.title || "A board" })),
+    choices: (full.collections ?? [])
+      .find((c) => c.name === name)
+      ?.boards?.flatMap((id) => {
+        const b = getBoard(id);
+        if (!b || b.id === full.id) return [];
+        return [{ board: id, title: b.title }, ...(b.presets ?? []).map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}` }))];
+      }),
     added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
   }));
-  const boardChoices = user && known.length > 0 ? listAllBoards().filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
+  const boardChoices = user && known.some((n) => !(full.collections ?? []).find((c) => c.name === n)?.boards?.length) ? listAllBoards().filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
 
   return (
     <>

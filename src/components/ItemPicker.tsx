@@ -13,6 +13,8 @@ export type CollectionView = {
   fixed: { title: string }[];
   /** Items added by whoever is using the board. */
   added: { index: number; title: string }[];
+  /** When the creator listed the boards that can be added: each one, and each of its presets, as a choice. */
+  choices?: { board: string; preset?: string; title: string }[];
 };
 
 // Where people using a board add existing boards to its collections (items of a character, say). Each item's stats
@@ -80,7 +82,30 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
           ))}
         </ul>
       )}
-      {boards.length > 0 ? (
+      {c.choices && c.choices.length > 0 ? (
+        <div className="flex flex-wrap items-baseline gap-3">
+          <select value={pick} onChange={(e) => setPick(e.target.value)} className="min-w-0 max-w-full cursor-pointer bg-transparent text-lg" aria-label={`Item to add to ${c.title}`}>
+            <option value="">Choose an item…</option>
+            {c.choices.map((ch, i) => (
+              <option key={i} value={String(i)}>
+                {ch.title}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn"
+            disabled={pick === ""}
+            onClick={() => {
+              const ch = c.choices![Number(pick)];
+              if (ch) onChange([...extras, { group: c.name, board: ch.board, ...(ch.preset ? { preset: ch.preset } : {}) }]);
+              setPick("");
+            }}
+          >
+            Add item
+          </button>
+        </div>
+      ) : boards.length > 0 ? (
         <div className="flex flex-wrap items-baseline gap-3">
           <select
             value={pick}

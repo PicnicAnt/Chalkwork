@@ -68,7 +68,12 @@ export type Bundle = {
  * (an included board with that group) and by whoever uses the board. `stats` are the variables that are totalled; with
  * none listed, every variable the items have is.
  */
-export type Collection = { name: string; stats: string[] };
+export type Collection = {
+  name: string;
+  stats: string[];
+  /** The boards (by id) that can be added to it. With none listed, any board can. */
+  boards?: string[];
+};
 
 export type OwnData = Omit<Bundle, "groups" | "visualizations"> & { visualizations: Visualization[]; collections?: Collection[] };
 

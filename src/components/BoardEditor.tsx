@@ -152,7 +152,7 @@ function BoardEditorInner({
   const [panelKey, setPanelKey] = useState(0);
   // Collections of items, held as typed.
   const [collectionDrafts, setCollectionDrafts] = useState<CollectionDraft[]>(() =>
-    (initial?.collections ?? []).map((c) => ({ name: c.name, stats: c.stats.join(", ") })),
+    (initial?.collections ?? []).map((c) => ({ name: c.name, stats: c.stats.join(", "), boards: c.boards ?? [] })),
   );
   const collections = useMemo(() => collectionsOf(collectionDrafts), [collectionDrafts]);
   // The order variables are listed in (by name).
@@ -461,7 +461,7 @@ function BoardEditorInner({
 
       <TablesEditor drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} />
 
-      <CollectionsEditor drafts={collectionDrafts} usedNames={included.map((i) => i.alias)} onChange={setCollectionDrafts} />
+      <CollectionsEditor drafts={collectionDrafts} usedNames={included.map((i) => i.alias)} available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))} onChange={setCollectionDrafts} />
 
       <VariableEditor
         analysis={analysis}

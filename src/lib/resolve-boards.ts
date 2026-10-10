@@ -96,11 +96,20 @@ export type ExtraItem = { group: string; board: string; preset?: string };
 // The groups a board has: its collections, and those its creator put included boards in.
 export const groupsOf = (calc: Board): string[] => [...new Set([...(calc.collections ?? []).map((c) => c.name), ...calc.includes.flatMap((i) => (i.group ? [i.group] : []))])];
 
-export function resolveForView(calc: Board, extras: readonly ExtraItem[] = []): { bundle: Bundle } | Failure {
+// The extra items that this board takes: in a group it has, and (when the collection lists which boards can be
+// added) one of those boards.
+export function acceptedExtras(calc: Board, extras: readonly ExtraItem[]): ExtraItem[] {
   const groups = groupsOf(calc);
+  return extras.filter((e) => {
+    if (!groups.includes(e.group) || e.board === calc.id) return false;
+    const allowed = (calc.collections ?? []).find((c) => c.name === e.group)?.boards ?? [];
+    return allowed.length === 0 || allowed.includes(e.board);
+  });
+}
+
+export function resolveForView(calc: Board, extras: readonly ExtraItem[] = []): { bundle: Bundle } | Failure {
   const taken = new Set(calc.includes.map((i) => i.alias));
-  const added: Include[] = extras
-    .filter((e) => groups.includes(e.group) && e.board !== calc.id)
+  const added: Include[] = acceptedExtras(calc, extras)
     .map((e, n) => {
       let alias = `item${n + 1}`;
       while (taken.has(alias)) alias += "_";

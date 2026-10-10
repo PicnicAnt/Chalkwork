@@ -41,6 +41,13 @@ describe("checking a board before it is saved", () => {
     expect(validateDraft({ ...base, ranges: { width: { min: "x" as unknown as number } } }).errors.join(" ")).toMatch(/must be a number/);
   });
 
+  it("keeps a collection with the boards that can be added to it", () => {
+    const out = validateDraft({ ...base, collections: [{ name: "items", stats: ["damage", "bad name"], boards: ["abcdef12", "x", 5] }] });
+    expect(out.errors).toEqual([]);
+    expect(out.draft?.collections).toEqual([{ name: "items", stats: ["damage"], boards: ["abcdef12"] }]);
+    expect(validateDraft({ ...base, collections: [{ name: "1bad", stats: [] }] }).errors.length).toBeGreaterThan(0);
+  });
+
   it("refuses decimals that aren't whole numbers from 0 to 10", () => {
     expect(validateDraft({ ...base, decimals: { area: 2.5 } }).errors.length).toBeGreaterThan(0);
     expect(validateDraft({ ...base, decimals: { area: 2 } }).draft?.decimals).toEqual({ area: 2 });
