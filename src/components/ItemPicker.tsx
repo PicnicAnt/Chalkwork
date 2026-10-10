@@ -61,7 +61,7 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
   return (
     <section className="sketch-box flex flex-col gap-2 px-4 py-3" aria-label={`Boards in ${c.title}`}>
       <h2 className="text-xl">
-        {c.title} <span className="text-base text-ink-muted">({count} {count === 1 ? "board" : "boards"})</span>
+        {c.title} <span className="text-lg font-normal text-ink-muted">({count})</span>
       </h2>
       <p className="text-base text-ink-muted">
         Add boards here: {c.stats.length > 0 ? c.stats.join(", ") : "their variables"} are added up into {c.name}.&lt;variable&gt;, and each board has an Included switch (1 counts it, 0 leaves it out).

@@ -283,7 +283,7 @@ export function CalculatorPanel({
               ) : (
                 group.title
               )}
-              {members.length > 0 && <span className="text-base font-normal text-ink-muted"> · {members.length} {members.length === 1 ? "board" : "boards"}</span>}
+              {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
             </h3>
             <button type="button" className="link shrink-0 text-base" aria-expanded={!closed} onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
               {closed ? "Expand" : "Collapse"}
