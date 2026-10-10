@@ -64,7 +64,7 @@ export function OptimizerPanel({
   const [pending, start] = useTransition();
 
   const target = objective || visible.find((v) => !rangeable.some((r) => r.name === v.name))?.name || visible[0]?.name || "";
-  const varied = (picked ?? rangeable.map((v) => v.name)).filter((n) => n !== target && n !== limited && rangeable.some((v) => v.name === n)).slice(0, MAX_VARIED);
+  const varied = (picked ?? rangeable.map((v) => v.name)).filter((n) => n !== target && rangeable.some((v) => v.name === n)).slice(0, MAX_VARIED);
   const limitNumber = parseValue(limit);
 
   function run() {
@@ -182,13 +182,11 @@ export function OptimizerPanel({
             <span className="text-ink-muted">while</span>
             <select value={limited} onChange={(e) => setLimited(e.target.value)} className="cursor-pointer bg-transparent" aria-label="A result to keep within a limit">
               <option value="">(no limit)</option>
-              {visible
-                .filter((v) => v.name !== target)
-                .map((v) => (
-                  <option key={v.name} value={v.name}>
-                    {label(v.name)}
-                  </option>
-                ))}
+              {visible.map((v) => (
+                <option key={v.name} value={v.name}>
+                  {label(v.name)}
+                </option>
+              ))}
             </select>
             {limited && (
               <>
@@ -233,7 +231,7 @@ export function OptimizerPanel({
                 {label(n)} = {change(n, found)}
               </li>
             ))}
-            {found.constrained && <li className="text-ink-muted">{label(found.constrained)} = {change(found.constrained, found)}</li>}
+            {found.constrained && found.constrained !== found.objective && !found.varied.includes(found.constrained) && <li className="text-ink-muted">{label(found.constrained)} = {change(found.constrained, found)}</li>}
           </ul>
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
             <button type="button" className="btn" onClick={() => onApply(found.snapshot)}>

@@ -62,3 +62,26 @@ describe("finding the best settings", () => {
     expect(out.objective).toBeCloseTo(25, 1);
   });
 });
+
+describe("a limit on the result itself or on a changed variable", () => {
+  it("caps the result being maximized", () => {
+    const out = optimize({
+      bounds: { x: { min: 0, max: 10, start: 1 } },
+      evaluate: ({ x }) => ({ objective: x * 2, constraint: x * 2 }),
+      maximize: true,
+      constraint: { op: "<=", limit: 8 },
+    })!;
+    expect(out.feasible).toBe(true);
+    expect(out.objective).toBeCloseTo(8, 2);
+  });
+
+  it("keeps a changed variable above a floor", () => {
+    const out = optimize({
+      bounds: { x: { min: 0, max: 10, start: 5 } },
+      evaluate: ({ x }) => ({ objective: x, constraint: x }),
+      maximize: false,
+      constraint: { op: ">=", limit: 3 },
+    })!;
+    expect(out.x.x).toBeCloseTo(3, 2);
+  });
+});
