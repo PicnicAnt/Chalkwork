@@ -36,7 +36,7 @@ export function DeleteBoardButton({ id, title }: { id: string; title: string }) 
             setAsking(true);
           }}
           aria-haspopup="dialog"
-          className="link text-lg text-danger"
+          className="btn text-danger"
         >
           Delete
         </button>

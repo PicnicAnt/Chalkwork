@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { boardsUsing, getBoard, listScenarios, listSuggestionsForBoard } from "@/lib/db";
+import { boardsUsing, getBoard, listScenarios } from "@/lib/db";
 import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
@@ -35,8 +35,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
   const resolved = resolveForView(full);
   const user = await getCurrentUser();
   const isOwner = user !== null && user.id === ownerId;
-  // The owner sees how many suggestions wait; anyone else signed in can make one (if there is an owner).
-  const openSuggestions = isOwner ? listSuggestionsForBoard(calculation.id).filter((s) => s.status === "open").length : 0;
+  // Anyone else signed in can suggest a change (if there is an owner). The owner finds suggestions under Suggestions.
   const canSuggest = user !== null && !isOwner && ownerId !== null;
 
   return (
@@ -49,23 +48,18 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
             <p className="mt-2 whitespace-pre-line text-ink-muted">{calculation.description}</p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-4">
+        <div className="flex shrink-0 flex-wrap items-center gap-3">
           {isOwner && (
-            <Link href={`/c/${calculation.id}/history`} className="link text-lg">
+            <Link href={`/c/${calculation.id}/history`} className="btn">
               History
             </Link>
           )}
-          {isOwner && (
-            <Link href={`/suggestions`} className="link text-lg">
-              Suggestions{openSuggestions > 0 ? ` (${openSuggestions})` : ""}
-            </Link>
-          )}
           {canSuggest && (
-            <Link href={`/c/${calculation.id}/suggest`} className="link text-lg">
+            <Link href={`/c/${calculation.id}/suggest`} className="btn">
               Suggest a change
             </Link>
           )}
-          <Link href={`/c/${calculation.id}/edit`} className="link text-lg">
+          <Link href={`/c/${calculation.id}/edit`} className="btn btn-primary">
             {isOwner ? "Edit" : "Make a copy"}
           </Link>
           {isOwner && <DeleteBoardButton id={calculation.id} title={calculation.title} />}
