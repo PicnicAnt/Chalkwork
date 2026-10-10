@@ -114,7 +114,7 @@ describe("items in a group are summed", () => {
     expect(bundle.formulas).toContain("gear$armor = helm$equipped * helm$armor");
     expect(bundle.values.sword$equipped).toBe("1");
     expect(bundle.units.gear$damage).toBe("pts");
-    expect(bundle.groups.gear.title).toBe("Gear (total)");
+    expect(bundle.groups.gear.title).toBe("Gear");
     const a = analyzeFormulas(bundle.formulas, bundle.tables);
     const all = { ...bundle.values };
     expect(compute(a, all, Object.keys(all)).display.power).toBe("57");

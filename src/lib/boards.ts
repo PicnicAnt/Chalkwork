@@ -211,7 +211,7 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
   for (const i of included) if (i.group) byGroup.set(i.group, [...(byGroup.get(i.group) ?? []), i]);
   for (const [group, items] of byGroup) {
     out.names.push(group);
-    out.groups[group] = { title: `${humanize(group)} (total)`, board: "" };
+    out.groups[group] = { title: humanize(group), board: "" };
     const owned = items.map((i) => ({
       item: i,
       names: analyzeFormulas(i.bundle.formulas, i.bundle.tables)
