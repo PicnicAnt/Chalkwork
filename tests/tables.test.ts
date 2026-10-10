@@ -190,3 +190,42 @@ describe("presets", () => {
     expect(parseItems(encodeItems(items))).toEqual(items);
   });
 });
+
+describe("averages, smallest and largest over a collection", () => {
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [] as Table[], order: [] };
+  const part = (v: string) => flatten({ ...own, formulas: ["damage"], values: { damage: v }, units: { damage: "pts" } }, []).bundle;
+  const items = [
+    { alias: "a", board: "a", title: "A", group: "weapons", bundle: part("4") },
+    { alias: "b", board: "b", title: "B", group: "weapons", bundle: part("10") },
+    { alias: "c", board: "c", title: "C", group: "weapons", bundle: part("7") },
+  ];
+  const run = (formulas: string[], collections: { name: string; stats: string[] }[], values: Record<string, string> = {}) => {
+    const { bundle, ownErrors } = flatten({ ...own, formulas, collections }, items);
+    expect(ownErrors).toEqual([]);
+    const a = analyzeFormulas(bundle.formulas, bundle.tables);
+    const all = { ...bundle.values, ...values };
+    return { bundle, display: compute(a, all, Object.keys(all)).display };
+  };
+
+  it("avg, min, max, sum and count in formulas", () => {
+    const { display } = run(["typical = avg(weapons.damage)", "low = min(weapons.damage)", "high = max(weapons.damage)", "all = sum(weapons.damage)", "n = count(weapons)"], [{ name: "weapons", stats: ["damage"] }]);
+    expect([display.typical, display.low, display.high, display.all, display.n]).toEqual(["7", "4", "10", "21", "3"]);
+  });
+
+  it("leaves out boards that are switched off", () => {
+    const { display } = run(["typical = avg(weapons.damage)", "n = count(weapons)", "low = min(weapons.damage)"], [{ name: "weapons", stats: ["damage"] }], { b$equipped: "0" });
+    expect([display.typical, display.n, display.low]).toEqual(["5.5", "2", "4"]);
+  });
+
+  it("a variable listed with :avg is the average itself", () => {
+    const { bundle, display } = run(["best = weapons.damage"], [{ name: "weapons", stats: ["damage:max"] }]);
+    expect(display.best).toBe("10");
+    expect(bundle.labels.weapons$damage).toBe("Damage (max)");
+    expect(bundle.units.weapons$damage).toBe("pts");
+  });
+
+  it("is 0 rather than an error when nothing is switched on", () => {
+    const { display } = run(["typical = avg(weapons.damage)", "low = min(weapons.damage)"], [{ name: "weapons", stats: ["damage"] }], { a$equipped: "0", b$equipped: "0", c$equipped: "0" });
+    expect([display.typical, display.low]).toEqual(["0", "0"]);
+  });
+});

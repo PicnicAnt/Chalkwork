@@ -13,7 +13,7 @@ export type CollectionDraft = { name: string; stats: string; boards: string[] };
 export const collectionsOf = (drafts: readonly CollectionDraft[]): Collection[] =>
   drafts.flatMap((d) =>
     checkAlias(d.name.trim()) === null
-      ? [{ name: d.name.trim(), stats: [...new Set(d.stats.split(/[\s,;]+/).filter((s) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(s)))], ...(d.boards.length ? { boards: d.boards } : {}) }]
+      ? [{ name: d.name.trim(), stats: [...new Set(d.stats.split(/[\s,;]+/).filter((s) => /^[A-Za-z_][A-Za-z0-9_]*(:(sum|avg|min|max))?$/.test(s)))], ...(d.boards.length ? { boards: d.boards } : {}) }]
       : [],
   );
 
@@ -55,7 +55,7 @@ export function CollectionsEditor({
     <CollapsibleSection
       title="Collections"
       count={drafts.length}
-      description="A collection lets people using the board add existing boards to it, and adds up the variables you choose across them. Give it a name (parts), list the variables to add up (weight, cost), and choose which boards can be added (any, if none are chosen). A board with presets lets people pick a preset when adding it. Formulas can then use the totals as parts.weight, and each added board gets an Included switch (1 counts it, 0 leaves it out). Boards you use here can also be put in a collection from the Boards section."
+      description="A collection lets people using the board add existing boards to it, and adds up the variables you choose across them. Give it a name (parts), list the variables to add up (weight, cost), and choose which boards can be added (any, if none are chosen). A board with presets lets people pick a preset when adding it. Formulas can then use the totals as parts.weight, and each added board gets an Included switch (1 counts it, 0 leaves it out). A variable is added up unless you write :avg, :min or :max after it (damage:avg). Formulas can also ask for avg(parts.damage), min(...), max(...), sum(...) or count(parts). Boards you use here can also be put in a collection from the Boards section."
     >
       <div className="flex flex-col gap-4">
         {drafts.map((d, i) => {
@@ -79,7 +79,7 @@ export function CollectionsEditor({
                 value={d.stats}
                 onChange={(stats) => update(i, { stats })}
                 suggestions={suggestionsFor(d)}
-                placeholder="variables to add up: weight, cost"
+                placeholder="variables: weight, cost, damage:avg"
                 ariaLabel={`Variables ${d.name || `collection ${i + 1}`} adds up`}
               />
               <button type="button" className="link text-base text-danger" onClick={() => onChange(drafts.filter((_, j) => j !== i))}>

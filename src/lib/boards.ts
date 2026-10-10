@@ -191,10 +191,68 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
   };
 }
 
-// The collections of a board: for each group of items, a total of every variable the items have, and for each item a
+export const AGGREGATES = ["sum", "avg", "min", "max"] as const;
+export type Aggregate = (typeof AGGREGATES)[number];
+
+/** A stat of a collection as written: "weight" (added up) or "damage:avg" (also :sum, :min, :max). */
+export function parseStat(stat: string): { name: string; agg: Aggregate } {
+  const [name, agg] = stat.split(":");
+  return { name, agg: (AGGREGATES as readonly string[]).includes(agg) ? (agg as Aggregate) : "sum" };
+}
+
+// What a formula asked for with avg(parts.weight), min(...), max(...), sum(...) or count(parts).
+export type AggregateNeed = { group: string; name: string | null; agg: Aggregate | "count" };
+
+const FUNCTION_AGGREGATES: Record<string, Aggregate | "count"> = { sum: "sum", avg: "avg", mean: "avg", min: "min", max: "max", count: "count" };
+
+// Formulas may write avg(parts.weight): the average of that variable over the boards in the collection that are
+// switched on. It is replaced by the variable that holds it (parts.weight when the collection already works it out that
+// way, parts.weight.avg otherwise), and the variable is asked for.
+export function rewriteAggregates(formula: string, groups: ReadonlySet<string>, collections: readonly Collection[]): { text: string; needs: AggregateNeed[] } {
+  const needs: AggregateNeed[] = [];
+  const text = formula.replace(/\b(sum|avg|mean|min|max|count)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)(?:\s*\.\s*([A-Za-z_][A-Za-z0-9_]*))?\s*\)/g, (whole, fn: string, group: string, name?: string) => {
+    if (!groups.has(group)) return whole;
+    const agg = FUNCTION_AGGREGATES[fn];
+    if (agg === "count") {
+      if (name) return whole;
+      needs.push({ group, name: null, agg });
+      return `${group}.count`;
+    }
+    if (!name) return whole;
+    const stats = (collections.find((c) => c.name === group)?.stats ?? []).map(parseStat);
+    const declared = stats.find((s) => s.name === name)?.agg;
+    // The variable the collection already makes: its stat as listed, or (with no list) the plain total.
+    if (declared === agg || (stats.length === 0 && agg === "sum")) return `${group}.${name}`;
+    needs.push({ group, name, agg });
+    return `${group}.${name}.${agg}`;
+  });
+  return { text, needs };
+}
+
+// The formula for a total over the boards of a collection that are switched on. `terms` are the boards that have the
+// variable, each with its Included switch and its value. Nothing included gives 0, so formulas that use it still work.
+function aggregateFormula(agg: Aggregate | "count", terms: { on: string; value: string }[]): string {
+  if (terms.length === 0) return "0";
+  const sum = terms.map((t) => `${t.on} * ${t.value}`).join(" + ");
+  const n = terms.map((t) => t.on).join(" + ");
+  switch (agg) {
+    case "count":
+      return n;
+    case "sum":
+      return sum;
+    case "avg":
+      return `if((${n}) > 0, (${sum}) / (${n}), 0)`;
+    case "min":
+      return `if((${n}) > 0, min(${terms.map((t) => `if(${t.on} > 0, ${t.value}, 1e300)`).join(", ")}), 0)`;
+    case "max":
+      return `if((${n}) > 0, max(${terms.map((t) => `if(${t.on} > 0, ${t.value}, -1e300)`).join(", ")}), 0)`;
+  }
+}
+
+// The collections of a board: for each group of boards, a total of every variable it asks for, and for each board a
 // switch (alias.equipped, 1 or 0) that takes it in or leaves it out of the totals. They are ordinary variables and
 // formulas, so the totals work in any direction like everything else.
-function groupSums(included: readonly IncludedBundle[], collections: readonly Collection[] = []) {
+function groupSums(included: readonly IncludedBundle[], collections: readonly Collection[] = [], needs: readonly AggregateNeed[] = []) {
   const out = {
     names: [] as string[],
     formulas: [] as string[],
@@ -226,17 +284,39 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
       out.decimals[key] = 0;
       out.ranges[key] = { min: 0, max: 1 };
     }
-    const declared = collections.find((c) => c.name === group)?.stats ?? [];
-    const names = declared.length > 0 ? declared : [...new Set(owned.flatMap((o) => o.names))];
-    for (const name of names) {
-      const having = owned.filter((o) => o.names.includes(name));
+    const termsFor = (name: string) =>
+      owned.filter((o) => o.names.includes(name)).map((o) => ({ on: withAlias(o.item.alias, "equipped"), value: withAlias(o.item.alias, name), bundle: o.item.bundle }));
+    const describe = (target: string, name: string, bundle: Bundle | undefined, suffix: string) => {
+      out.labels[target] = `${bundle?.labels[name] || humanize(name)}${suffix}`;
+      if (bundle?.units[name]) out.units[target] = bundle.units[name];
+      if (bundle?.decimals[name] !== undefined) out.decimals[target] = bundle.decimals[name];
+    };
+
+    const declared = (collections.find((c) => c.name === group)?.stats ?? []).map(parseStat);
+    const listed = declared.length > 0 ? declared : [...new Set(owned.flatMap((o) => o.names))].map((name) => ({ name, agg: "sum" as Aggregate }));
+    for (const { name, agg } of listed) {
+      const terms = termsFor(name);
       const total = withAlias(group, name);
-      // With no item that has the stat the total is 0, so formulas that use it still work.
-      out.formulas.push(`${total} = ${having.length ? having.map((o) => `${withAlias(o.item.alias, "equipped")} * ${withAlias(o.item.alias, name)}`).join(" + ") : "0"}`);
-      const first = having[0]?.item.bundle;
-      out.labels[total] = first?.labels[name] || humanize(name);
-      if (first?.units[name]) out.units[total] = first.units[name];
-      if (first?.decimals[name] !== undefined) out.decimals[total] = first.decimals[name];
+      out.formulas.push(`${total} = ${aggregateFormula(agg, terms)}`);
+      describe(total, name, terms[0]?.bundle, agg === "sum" ? "" : ` (${agg})`);
+    }
+
+    // What formulas asked for beyond that, such as avg(group.variable) when the collection adds the variable up.
+    const done = new Set<string>();
+    for (const need of needs.filter((n) => n.group === group)) {
+      const key = `${need.name ?? ""}:${need.agg}`;
+      if (done.has(key)) continue;
+      done.add(key);
+      if (need.agg === "count" || need.name === null) {
+        out.formulas.push(`${withAlias(group, "count")} = ${owned.length ? owned.map((o) => withAlias(o.item.alias, "equipped")).join(" + ") : "0"}`);
+        out.labels[withAlias(group, "count")] = "Number of boards";
+        out.decimals[withAlias(group, "count")] = 0;
+        continue;
+      }
+      const terms = termsFor(need.name);
+      const target = `${withAlias(group, need.name)}${PATH_SEPARATOR}${need.agg}`;
+      out.formulas.push(`${target} = ${aggregateFormula(need.agg, terms)}`);
+      describe(target, need.name, terms[0]?.bundle, ` (${need.agg})`);
     }
   }
   return out;
@@ -249,11 +329,20 @@ export function flatten(
   own: OwnData,
   included: readonly IncludedBundle[],
 ): { bundle: Bundle; ownErrors: { index: number; message: string }[] } {
-  // Items put in a group are summed: group.variable is the total over the items that are switched on.
-  const sums = groupSums(included, own.collections ?? []);
+  // Boards put in a collection are added up: group.variable is the total over the boards that are switched on, or the
+  // average, minimum or maximum when the collection says so or the formula asks (avg(group.variable)).
+  const collections = own.collections ?? [];
+  const groupNames = new Set([...collections.map((c) => c.name), ...included.flatMap((i) => (i.group ? [i.group] : []))]);
+  const needs: AggregateNeed[] = [];
+  const rewritten = own.formulas.map((formula) => {
+    const out = rewriteAggregates(formula, groupNames, collections);
+    needs.push(...out.needs);
+    return out.text;
+  });
+  const sums = groupSums(included, collections, needs);
   const aliases = [...included.map((i) => i.alias), ...sums.names];
   const ownErrors: { index: number; message: string }[] = [];
-  const ownFormulas = own.formulas.map((formula, index) => {
+  const ownFormulas = rewritten.map((formula, index) => {
     const { text, error } = internalizeFormula(formula, aliases);
     if (error) ownErrors.push({ index, message: error });
     return text;
