@@ -43,17 +43,26 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold sm:text-4xl">{calculation.title}</h1>
-          {calculation.ownerName && <p className="mt-1 text-ink-muted">by {calculation.ownerName}</p>}
+          {(calculation.ownerName || isOwner) && (
+            <p className="mt-1 text-ink-muted">
+              {calculation.ownerName && <>by {calculation.ownerName}</>}
+              {isOwner && (
+                <>
+                  {calculation.ownerName && " · "}
+                  <Link href={`/c/${calculation.id}/history`} className="link">
+                    History
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
           {calculation.description && (
             <p className="mt-2 whitespace-pre-line text-ink-muted">{calculation.description}</p>
           )}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-3">
-          {isOwner && (
-            <Link href={`/c/${calculation.id}/history`} className="btn">
-              History
-            </Link>
-          )}
+          {/* The Share menu is put here by the board below, which knows the numbers on screen. */}
+          <div id="share-slot" />
           {canSuggest && (
             <Link href={`/c/${calculation.id}/suggest`} className="btn">
               Suggest a change

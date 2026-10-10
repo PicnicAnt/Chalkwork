@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 
 const noSubscription = () => () => {};
+// Where the board page's header keeps the button: the menu is drawn there, though it lives with the board.
+const slot = () => document.getElementById("share-slot");
 
 type Input = { name: string; value: string };
 
@@ -28,6 +31,7 @@ export function ShareMenu({
   const [showCode, setShowCode] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const origin = useSyncExternalStore(noSubscription, () => location.origin, () => "");
+  const target = useSyncExternalStore(noSubscription, slot, () => null);
 
   // Closes on a click elsewhere or Escape.
   useEffect(() => {
@@ -59,7 +63,8 @@ export function ShareMenu({
   const body = JSON.stringify({ inputs: Object.fromEntries(inputs.map((i) => [i.name, Number(i.value) || i.value])) });
   const item = "block w-full px-3 py-2 text-left text-lg hover:bg-[var(--board-edge)]";
 
-  return (
+  if (!target) return null;
+  return createPortal(
     <div ref={box} className="relative shrink-0">
       <button type="button" className="btn btn-primary" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         Share ▾
@@ -115,6 +120,7 @@ export function ShareMenu({
           )}
         </div>
       )}
-    </div>
+    </div>,
+    target,
   );
 }
