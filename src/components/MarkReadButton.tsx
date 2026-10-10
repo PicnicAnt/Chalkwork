@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { markAllRead } from "@/app/actions/discussion";
+import { markAllRead } from "@/app/actions/notifications";
 
 export function MarkReadButton() {
   const router = useRouter();

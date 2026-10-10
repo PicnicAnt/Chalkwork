@@ -70,12 +70,11 @@ In the variable editor each variable has up and down arrows. The order is saved 
 
 Two buttons use an AI model, and only appear when the server has a key: **Describe it** on the New page turns a sentence into a draft board (checked like any board, and opened in the editor, nothing saved until you save), and **Explain this board** on a board page writes a short explanation. Set `ANTHROPIC_API_KEY` in `.env.local` and restart. `CHALKWORK_AI_MODEL` picks the model (default `claude-haiku-5-5`) and `CHALKWORK_AI=0` turns it off. A draft can also use existing boards (the ones whose words fit the description are offered to the model) and add drawings where they fit. Each use costs tokens, so it is for signed-in people only and limited to 10 uses an hour per person (kept in memory, so a restart resets it).
 
-## Finding boards, comments and the inbox
+## Finding boards and the inbox
 
 - **Tags:** a board can have up to eight tags (lower case, letters and digits). They show in the board list, and the search box finds boards by title, description, tags, formulas and variable names.
 - **Used by:** a board page shows which boards use it (signed-in people only).
-- **Comments:** signed-in people can comment on a board or on one of its variables. The owner and earlier commenters are told. Comments can be removed by their author or the board owner. At most 20 comments an hour per person.
-- **Inbox:** there is no email. `/notifications` and the count in the header list comments, suggested changes and answers to them, and changes to boards that a user's own boards use. Several unread notifications of one kind on one board are merged into one.
+- **Inbox:** there is no email. `/notifications` and the count in the header list suggested changes and answers to them, and changes to boards that a user's own boards use. Several unread notifications of one kind on one board are merged into one.
 
 ## Conditions and tables
 

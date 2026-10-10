@@ -229,4 +229,9 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_order TEXT NOT NULL DEFAULT '[]';`);
     db.pragma("user_version = 20");
   }
+  if (version < 21) {
+    // Comments on boards were taken out again.
+    db.exec("DROP TABLE IF EXISTS comments;");
+    db.pragma("user_version = 21");
+  }
 }

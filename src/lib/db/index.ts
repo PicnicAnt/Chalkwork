@@ -4,4 +4,4 @@ export * from "./boards";
 export * from "./suggestions";
 export * from "./scenarios";
 export * from "./versions";
-export * from "./discussion";
+export * from "./notifications";

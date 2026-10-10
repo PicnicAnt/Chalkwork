@@ -22,7 +22,7 @@ export default async function NotificationsPage() {
         {unread > 0 && <MarkReadButton />}
       </div>
       {items.length === 0 ? (
-        <p className="text-ink-muted">Nothing yet. You are told here when someone comments on or suggests a change to one of your boards, and when a board you use is changed.</p>
+        <p className="text-ink-muted">Nothing yet. You are told here when someone suggests a change to one of your boards, when your suggestion is answered, and when a board you use is changed.</p>
       ) : (
         <ul className="flex flex-col gap-4">
           {items.map((n) => (
