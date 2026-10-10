@@ -26,6 +26,7 @@ export function CalculatorPanel({
   revealHidden = false,
   links,
   groups,
+  sectionExtras,
   decimals,
   ranges,
   order,
@@ -50,6 +51,8 @@ export function CalculatorPanel({
   revealHidden?: boolean;
   /** Variables linked to another variable, by name, shown under the variable. */
   links?: Record<string, string>;
+  /** Controls to show inside a used board's or collection's box, by its name (adding boards to a collection). */
+  sectionExtras?: Record<string, React.ReactNode>;
   /** The boards behind variables that come from boards in use, by alias, for the headings. */
   groups?: Record<string, { title: string; board: string; collection?: string }>;
   /** Decimals to show per variable name for calculated values. Display only. */
@@ -269,16 +272,17 @@ export function CalculatorPanel({
     const key = section.key;
     const rows = section.variables.map((v) => row(v, key)).filter(Boolean);
     const members = key ? sections.filter((m) => m.key && groups?.[m.key]?.collection === key) : [];
-    if (rows.length === 0 && members.length === 0) return null;
+    const extra = key ? sectionExtras?.[key] : undefined;
+    if (rows.length === 0 && members.length === 0 && !extra) return null;
     const group = key ? groups?.[key] : undefined;
     const closed = key !== null && folded[key] === true;
     return (
       <div key={key ?? "own"} className={`flex flex-col gap-4 ${nested ? "fold-box" : sections.length > 1 ? "group-box" : ""}`}>
         {key && group && (
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex cursor-pointer items-baseline justify-between gap-3" onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
             <h3 className="group-title">
               {group.board ? (
-                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link">
+                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link" onClick={(e) => e.stopPropagation()}>
                   {group.title}
                 </a>
               ) : (
@@ -292,13 +296,17 @@ export function CalculatorPanel({
               aria-expanded={!closed}
               aria-label={`${closed ? "Expand" : "Collapse"} ${group.title}`}
               title={closed ? "Expand" : "Collapse"}
-              onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}
+              onClick={(e) => {
+                e.stopPropagation();
+                setFolded((f) => ({ ...f, [key]: !f[key] }));
+              }}
             >
               <Chevron open={!closed} />
             </button>
           </div>
         )}
         <div className={closed ? "hidden" : "flex flex-col gap-4"}>
+          {extra}
           {drawingsOf(key)}
           {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
           {members.map((m) => renderSection(m, true))}
@@ -309,7 +317,15 @@ export function CalculatorPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      {sections.filter((section) => !section.key || !groups?.[section.key]?.collection).map((section) => renderSection(section))}
+      {[
+        ...sections,
+        // A collection with no variables yet still has its box, for adding boards to.
+        ...Object.keys(sectionExtras ?? {})
+          .filter((name) => !sections.some((s) => s.key === name))
+          .map((name) => ({ key: name as string | null, variables: [] as (typeof sections)[number]["variables"] })),
+      ]
+        .filter((section) => !section.key || !groups?.[section.key]?.collection)
+        .map((section) => renderSection(section))}
       {broken.length > 0 && (
         <ul className="sketch-box px-4 py-3 text-danger">
           {broken.map((f) => (

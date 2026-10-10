@@ -22,14 +22,17 @@ export function CollapsibleSection({
   const bodyId = useId();
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex cursor-pointer items-baseline justify-between gap-3" onClick={() => setOpen((o) => !o)}>
         <h2 className="text-2xl font-bold">
           {title}
           {count !== undefined && <span className="text-lg font-normal text-ink-muted"> ({count})</span>}
         </h2>
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((o) => !o);
+          }}
           aria-expanded={open}
           aria-controls={bodyId}
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}

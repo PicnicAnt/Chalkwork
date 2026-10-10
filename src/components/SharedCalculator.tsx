@@ -10,7 +10,7 @@ import type { Preset, Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
 import { encodeItems } from "@/lib/items-param";
 import type { ExtraItem } from "@/lib/resolve-boards";
-import { ItemPicker, type CollectionView } from "./ItemPicker";
+import { ItemControls, type CollectionView } from "./ItemPicker";
 import { ShareMenu } from "./ShareMenu";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
@@ -163,17 +163,6 @@ export function SharedCalculator({
           ))}
         </div>
       )}
-      {view === "board" && collections.length > 0 && (
-        <ItemPicker
-          collections={collections}
-          boards={boardChoices}
-          extras={extras}
-          onChange={(next) => {
-            const url = new URL(linkWith(next));
-            router.replace(`${url.pathname}${url.search}`);
-          }}
-        />
-      )}
       {view === "strings" && usesBoards ? (
         <ConnectionsView analysis={analysis} flat={flat} editable={editable} />
       ) : (
@@ -191,6 +180,21 @@ export function SharedCalculator({
           order={flat.order}
           links={flat.links}
           groups={flat.groups}
+          sectionExtras={Object.fromEntries(
+            collections.map((c) => [
+              c.name,
+              <ItemControls
+                key={c.name}
+                collection={c}
+                boards={boardChoices}
+                extras={extras}
+                onChange={(next) => {
+                  const url = new URL(linkWith(next));
+                  router.replace(`${url.pathname}${url.search}`);
+                }}
+              />,
+            ]),
+          )}
           visualizations={flat.visualizations}
           initialLocked={loadedLocks}
           onLocks={setLocks}

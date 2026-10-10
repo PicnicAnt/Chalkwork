@@ -121,7 +121,7 @@ export function VariableEditor({
         {sections.map((section) => (
           <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
             {section.key && groups[section.key] && (
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex cursor-pointer items-baseline justify-between gap-3" onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
                 <h3 className="group-title">
                   {groups[section.key].title}{" "}
                   <span className="text-base text-ink-faint">
@@ -134,7 +134,10 @@ export function VariableEditor({
                   aria-expanded={!closed[section.key]}
                   aria-label={`${closed[section.key] ? "Expand" : "Collapse"} ${groups[section.key].title}`}
                   title={closed[section.key] ? "Expand" : "Collapse"}
-                  onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }));
+                  }}
                 >
                   <Chevron open={!closed[section.key]} />
                 </button>

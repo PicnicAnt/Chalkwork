@@ -18,30 +18,10 @@ export type CollectionView = {
   choices?: { board: string; preset?: string; title: string }[];
 };
 
-// Where people using a board add existing boards to its collections (items of a character, say). Each item's stats
-// are added up into the collection's totals, which the board's formulas use. The items are kept in the address.
-export function ItemPicker({
-  collections,
-  boards,
-  extras,
-  onChange,
-}: {
-  collections: CollectionView[];
-  /** The boards that can be added. */
-  boards: { id: string; title: string }[];
-  extras: ExtraItem[];
-  onChange: (extras: ExtraItem[]) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      {collections.map((c) => (
-        <Collection key={c.name} collection={c} boards={boards} extras={extras} onChange={onChange} />
-      ))}
-    </div>
-  );
-}
-
-function Collection({ collection: c, boards, extras, onChange }: { collection: CollectionView; boards: { id: string; title: string }[]; extras: ExtraItem[]; onChange: (extras: ExtraItem[]) => void }) {
+// Where people using a board add existing boards to one of its collections. It sits inside the collection's own box.
+// Each board's variables are added up into the collection's totals, which the board's formulas use. The boards are
+// kept in the address.
+export function ItemControls({ collection: c, boards, extras, onChange }: { collection: CollectionView; boards: { id: string; title: string }[]; extras: ExtraItem[]; onChange: (extras: ExtraItem[]) => void }) {
   const [pick, setPick] = useState("");
   // The presets of the chosen board (a Shortsword, a Bow), so an item can be added as one of them.
   const [presets, setPresets] = useState<{ board: string; names: string[] } | null>(null);
@@ -59,10 +39,7 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
   const names = presets?.board === pick ? presets.names : [];
   const count = c.fixed.length + c.added.length;
   return (
-    <section className="sketch-box flex flex-col gap-2 px-4 py-3" aria-label={`Boards in ${c.title}`}>
-      <h2 className="text-xl">
-        {c.title} <span className="text-lg font-normal text-ink-muted">({count})</span>
-      </h2>
+    <div className="flex flex-col gap-2" aria-label={`Boards in ${c.title}`}>
       <p className="text-base text-ink-muted">
         Add boards here: {c.stats.length > 0 ? c.stats.join(", ") : "their variables"} are added up into {c.name}.&lt;variable&gt;, and each board has an Included switch (1 counts it, 0 leaves it out).
       </p>
@@ -141,8 +118,8 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
           </button>
         </div>
       ) : (
-        <p className="text-base text-ink-muted">Sign in to add items.</p>
+        <p className="text-base text-ink-muted">Sign in to add boards.</p>
       )}
-    </section>
+    </div>
   );
 }
