@@ -5,6 +5,7 @@ import type { Bundle } from "@/lib/boards";
 import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard } from "@/lib/db";
 import { resolveBoard } from "@/lib/resolve-boards";
 import { notifyBoardChanged } from "./notify";
+import { analyzeFormulas } from "@/lib/formulas";
 import { presetValues } from "@/lib/scenarios";
 import { prepare } from "./prepare";
 
@@ -89,4 +90,18 @@ export async function deleteBoard(id: string): Promise<DeleteResult> {
 export async function presetsOf(boardId: unknown): Promise<string[]> {
   if (!(await getCurrentUser()) || typeof boardId !== "string") return [];
   return (getBoard(boardId)?.presets ?? []).map((p) => p.name);
+}
+
+// The variables of some boards (by the names people see), to suggest while choosing what a collection adds up.
+export async function variablesOf(boardIds: unknown): Promise<string[]> {
+  if (!(await getCurrentUser()) || !Array.isArray(boardIds)) return [];
+  const names = new Set<string>();
+  for (const id of boardIds.slice(0, 30)) {
+    const board = typeof id === "string" ? getBoard(id) : null;
+    if (!board) continue;
+    for (const v of analyzeFormulas(board.formulas, board.tables).variables) {
+      if (!v.name.includes("$") && board.hidden[v.name] !== true) names.add(v.name);
+    }
+  }
+  return [...names].sort();
 }

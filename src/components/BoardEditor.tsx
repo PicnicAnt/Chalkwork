@@ -461,7 +461,7 @@ function BoardEditorInner({
 
       <TablesEditor drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} />
 
-      <CollectionsEditor drafts={collectionDrafts} usedNames={included.map((i) => i.alias)} available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))} onChange={setCollectionDrafts} />
+      <CollectionsEditor drafts={collectionDrafts} usedNames={included.map((i) => i.alias)} usedVariables={[...new Set(included.flatMap((i) => analyzeFormulas(i.bundle.formulas, i.bundle.tables).variables.map((v) => v.name).filter((n) => !n.includes("$"))))]} available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))} onChange={setCollectionDrafts} />
 
       <VariableEditor
         analysis={analysis}
@@ -535,8 +535,8 @@ function BoardEditorInner({
         <div className="flex flex-col gap-2">
           <h3 className="text-xl">Presets</h3>
           <p className="text-base text-ink-muted">
-            Save the numbers above as a named preset, such as Shortsword or Longsword. Everyone using the board sees its presets and can load one, and a board used as an item
-            can start from one.
+            Save the numbers above as a named preset, such as Small or Large. Everyone using the board sees its presets and can load one, and a board added to a collection
+            or used inside another board can start from one.
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <input

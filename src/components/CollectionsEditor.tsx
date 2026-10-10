@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { variablesOf } from "@/app/actions/boards";
 import { BOARD_LIMITS, checkAlias, type Collection } from "@/lib/boards";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
+import { ListTypeahead } from "./ui/ListTypeahead";
 import { SearchSelect } from "./ui/SearchSelect";
 
 /** A collection as it is typed: the stats are one line of text until they are read. */
@@ -19,22 +22,40 @@ export const collectionsOf = (drafts: readonly CollectionDraft[]): Collection[] 
 export function CollectionsEditor({
   drafts,
   usedNames,
+  usedVariables,
   available,
   onChange,
 }: {
   drafts: CollectionDraft[];
   /** Names that are already taken by used boards. */
   usedNames: string[];
+  /** Variables of the boards this board uses, suggested when no boards are listed. */
+  usedVariables: string[];
   /** The boards that can be allowed in a collection. */
   available: { id: string; title: string }[];
   onChange: (drafts: CollectionDraft[]) => void;
 }) {
+  // The variables of the boards that can be added, for the typeahead (looked up when the list of boards changes).
+  const [known, setKnown] = useState<Record<string, string[]>>({});
+  const keys = drafts.map((d) => d.boards.join(",")).join("|");
+  useEffect(() => {
+    let cancelled = false;
+    for (const key of new Set(keys.split("|").filter(Boolean))) {
+      variablesOf(key.split(",")).then((names) => {
+        if (!cancelled) setKnown((k) => ({ ...k, [key]: names }));
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [keys]);
+  const suggestionsFor = (d: CollectionDraft) => (d.boards.length ? (known[d.boards.join(",")] ?? []) : usedVariables);
   const update = (i: number, patch: Partial<CollectionDraft>) => onChange(drafts.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   return (
     <CollapsibleSection
-      title="Item collections"
+      title="Collections"
       count={drafts.length}
-      description="A collection lets people using the board add existing boards to it as items, such as the items of a character. Give it a name (gear), list the stats to add up (strength, damage, armor), and choose which boards can be added (any, if none are chosen). Boards with presets, like a Sword with Longsword and Shortsword, let people pick a preset. Formulas can then use the totals as gear.strength, and each item gets an Equipped switch. Boards you use here can also be put in a collection from the Boards section."
+      description="A collection lets people using the board add existing boards to it, and adds up the variables you choose across them. Give it a name (parts), list the variables to add up (weight, cost), and choose which boards can be added (any, if none are chosen). A board with presets lets people pick a preset when adding it. Formulas can then use the totals as parts.weight, and each added board gets an Included switch (1 counts it, 0 leaves it out). Boards you use here can also be put in a collection from the Boards section."
     >
       <div className="flex flex-col gap-4">
         {drafts.map((d, i) => {
@@ -46,22 +67,20 @@ export function CollectionsEditor({
                 className={`field w-40 text-xl ${problem ? "!border-danger" : ""}`}
                 value={d.name}
                 maxLength={BOARD_LIMITS.alias}
-                placeholder="gear"
+                placeholder="parts"
                 onChange={(e) => update(i, { name: e.target.value.replace(/[^A-Za-z0-9_]/g, "") })}
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
                 aria-label={`Name of collection ${i + 1}`}
               />
-              <input
-                className="field min-w-[12rem] flex-1 text-xl"
+              <ListTypeahead
+                className="min-w-[12rem] flex-1"
                 value={d.stats}
-                placeholder="stats to add up: strength, damage, armor"
-                onChange={(e) => update(i, { stats: e.target.value })}
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                aria-label={`Stats of ${d.name || `collection ${i + 1}`}`}
+                onChange={(stats) => update(i, { stats })}
+                suggestions={suggestionsFor(d)}
+                placeholder="variables to add up: weight, cost"
+                ariaLabel={`Variables ${d.name || `collection ${i + 1}`} adds up`}
               />
               <button type="button" className="link text-base text-danger" onClick={() => onChange(drafts.filter((_, j) => j !== i))}>
                 Remove

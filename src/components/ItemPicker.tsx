@@ -59,12 +59,12 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
   const names = presets?.board === pick ? presets.names : [];
   const count = c.fixed.length + c.added.length;
   return (
-    <section className="sketch-box flex flex-col gap-2 px-4 py-3" aria-label={`Items of ${c.title}`}>
+    <section className="sketch-box flex flex-col gap-2 px-4 py-3" aria-label={`Boards in ${c.title}`}>
       <h2 className="text-xl">
-        {c.title} <span className="text-base text-ink-muted">({count} {count === 1 ? "item" : "items"})</span>
+        {c.title} <span className="text-base text-ink-muted">({count} {count === 1 ? "board" : "boards"})</span>
       </h2>
       <p className="text-base text-ink-muted">
-        Add boards as items: {c.stats.length > 0 ? c.stats.join(", ") : "their variables"} are added up into {c.name}.&lt;stat&gt;, and each item has an Equipped switch (1 counts it, 0 leaves it out).
+        Add boards here: {c.stats.length > 0 ? c.stats.join(", ") : "their variables"} are added up into {c.name}.&lt;variable&gt;, and each board has an Included switch (1 counts it, 0 leaves it out).
       </p>
       {count > 0 && (
         <ul className="flex flex-col gap-1 text-lg">
@@ -88,8 +88,8 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
           <SearchSelect
             value={pick}
             onChange={setPick}
-            placeholder="Choose an item…"
-            ariaLabel={`Item to add to ${c.title}`}
+            placeholder="Choose a board…"
+            ariaLabel={`Board to add to ${c.title}`}
             options={(c.choices ?? []).map((ch, i) => ({ value: String(i), label: ch.title }))}
           />
           <button
@@ -102,7 +102,7 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
               setPick("");
             }}
           >
-            Add item
+            Add
           </button>
         </div>
       ) : boards.length > 0 ? (
@@ -137,7 +137,7 @@ function Collection({ collection: c, boards, extras, onChange }: { collection: C
               setPreset("");
             }}
           >
-            Add item
+            Add
           </button>
         </div>
       ) : (

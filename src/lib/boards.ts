@@ -221,8 +221,8 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
     for (const { item } of owned) {
       const key = withAlias(item.alias, "equipped");
       out.values[key] = "1";
-      out.labels[key] = "Equipped";
-      out.descriptions[key] = "1 counts this item in the totals, 0 leaves it out.";
+      out.labels[key] = "Included";
+      out.descriptions[key] = "1 counts this board in the totals, 0 leaves it out.";
       out.decimals[key] = 0;
       out.ranges[key] = { min: 0, max: 1 };
     }

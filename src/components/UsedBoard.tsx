@@ -89,7 +89,7 @@ export function UsedBoard({
         </button>
       </div>
       <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
-        item in the group
+        in the collection
         <input
           className="field w-40 text-xl text-ink"
           value={inc.group ?? ""}
@@ -100,8 +100,8 @@ export function UsedBoard({
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          aria-label={`Group ${title} is an item of`}
-          title="Boards in the same group are added up: group.variable is the total over the items that are switched on, and each item gets an Equipped switch. For example a group called gear for the items of a character."
+          aria-label={`Collection ${title} is in`}
+          title="Boards in the same collection are added up: collection.variable is the total over the boards that are switched on, and each gets an Included switch."
         />
         {groups.length > 0 && <datalist id="item-groups">{groups.map((g) => <option key={g} value={g} />)}</datalist>}
       </label>
