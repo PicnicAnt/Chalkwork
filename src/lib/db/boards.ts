@@ -18,6 +18,7 @@ type Row = {
   variable_ranges: string;
   board_tables: string;
   board_tags: string;
+  variable_order: string;
   variable_labels: string;
   variable_hidden: string;
   board_includes: string;
@@ -32,30 +33,33 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    id,
-    draft.title,
-    draft.description,
-    JSON.stringify(draft.formulas),
-    JSON.stringify(draft.values),
-    JSON.stringify(draft.descriptions),
-    JSON.stringify(draft.units),
-    JSON.stringify(draft.decimals),
-    JSON.stringify(draft.ranges),
-    JSON.stringify(draft.tables),
-    JSON.stringify(draft.tags),
-    JSON.stringify(draft.labels),
-    JSON.stringify(draft.hidden),
-    JSON.stringify(draft.includes),
-    JSON.stringify(draft.links),
-    JSON.stringify(draft.visualizations),
-    ownerId,
-  );
+       variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_order, variable_labels,
+       variable_hidden, board_includes, variable_links, visualizations, owner_id)
+     VALUES (${Array(18).fill("?").join(", ")})`,
+  ).run(id, ...fieldsOf(draft), ownerId);
   recordVersion(id, draft, ownerId);
   return id;
 }
+
+// The draft as the values of the columns, in the order the statements above and below list them.
+const fieldsOf = (draft: BoardDraft) => [
+  draft.title,
+  draft.description,
+  JSON.stringify(draft.formulas),
+  JSON.stringify(draft.values),
+  JSON.stringify(draft.descriptions),
+  JSON.stringify(draft.units),
+  JSON.stringify(draft.decimals),
+  JSON.stringify(draft.ranges),
+  JSON.stringify(draft.tables),
+  JSON.stringify(draft.tags),
+  JSON.stringify(draft.order),
+  JSON.stringify(draft.labels),
+  JSON.stringify(draft.hidden),
+  JSON.stringify(draft.includes),
+  JSON.stringify(draft.links),
+  JSON.stringify(draft.visualizations),
+];
 
 // Only the owner's own calculation is changed: the ownership check is part of the statement.
 // `note` says why, for the history ("Restored version 3").
@@ -63,35 +67,12 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
   const result = db
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
-         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?, board_tags = ?, variable_labels = ?, variable_hidden = ?,
+         variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?,
+         board_tags = ?, variable_order = ?, variable_labels = ?, variable_hidden = ?,
          board_includes = ?, variable_links = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
-    .run(
-      draft.title,
-      draft.description,
-      JSON.stringify(draft.formulas),
-      JSON.stringify(draft.values),
-      JSON.stringify(draft.descriptions),
-      JSON.stringify(draft.units),
-      JSON.stringify(draft.decimals),
-      JSON.stringify(draft.ranges),
-      JSON.stringify(draft.tables),
-      JSON.stringify(draft.tags),
-    JSON.stringify(draft.tags),
-    JSON.stringify(draft.tables),
-    JSON.stringify(draft.tags),
-    JSON.stringify(draft.ranges),
-    JSON.stringify(draft.tables),
-    JSON.stringify(draft.tags),
-      JSON.stringify(draft.labels),
-      JSON.stringify(draft.hidden),
-      JSON.stringify(draft.includes),
-      JSON.stringify(draft.links),
-      JSON.stringify(draft.visualizations),
-      id,
-      ownerId,
-    );
+    .run(...fieldsOf(draft), id, ownerId);
   if (result.changes === 0) return false;
   recordVersion(id, draft, ownerId, note);
   return true;
@@ -110,6 +91,7 @@ const parse = (row: Row): Board => ({
   ranges: JSON.parse(row.variable_ranges || "{}"),
   tables: JSON.parse(row.board_tables || "[]"),
   tags: JSON.parse(row.board_tags || "[]"),
+  order: JSON.parse(row.variable_order || "[]"),
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
   links: JSON.parse(row.variable_links || "{}"),

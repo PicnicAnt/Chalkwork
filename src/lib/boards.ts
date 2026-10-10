@@ -36,6 +36,8 @@ export type Bundle = {
   ranges: Record<string, Range>;
   /** Lookup tables the formulas can call like functions. Those of a used board are named alias$table. */
   tables: Table[];
+  /** The order variables are listed in, by name; those not named come after, in the order they appear. */
+  order: string[];
   /**
    * Variables linked to another variable, by name. A link is an equation, `variable = other`, so
    * the two follow each other whichever one is changed. Meant for joining the variables of
@@ -128,6 +130,7 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
         .join(""),
     ),
     tables: bundle.tables.map((t) => ({ ...t, name: withAlias(alias, t.name) })),
+    order: bundle.order.map((n) => withAlias(alias, n)),
     values: keys(bundle.values),
     descriptions: keys(bundle.descriptions),
     units: keys(bundle.units),
@@ -188,6 +191,7 @@ export function flatten(
       decimals: merge((b) => b.decimals, own.decimals),
       ranges: merge((b) => b.ranges, own.ranges),
       tables: [...own.tables, ...parts.flatMap((p) => p.bundle.tables)],
+      order: [...own.order, ...parts.flatMap((p) => p.bundle.order)],
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],
       groups: Object.assign(
         {},
@@ -268,10 +272,17 @@ export function defaultAlias(title: string, taken: readonly string[]): string {
 export function sectionsByBoard<T extends { name: string }>(
   variables: readonly T[],
   groups: Record<string, unknown>,
+  order: readonly string[] = [],
 ): { key: string | null; variables: T[] }[] {
   const boards = Object.keys(groups).filter((key) => !key.includes(PATH_SEPARATOR));
+  // Variables named in `order` come first, in that order; the rest keep the order they appear in.
+  const place = (name: string) => {
+    const i = order.indexOf(name);
+    return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  const sorted = (list: T[]) => (order.length === 0 ? list : [...list].sort((a, b) => place(a.name) - place(b.name)));
   return [
-    { key: null as string | null, variables: variables.filter((v) => !boards.includes(groupOf(v.name) ?? "")) },
-    ...boards.map((key) => ({ key, variables: variables.filter((v) => groupOf(v.name) === key) })),
+    { key: null as string | null, variables: sorted(variables.filter((v) => !boards.includes(groupOf(v.name) ?? ""))) },
+    ...boards.map((key) => ({ key, variables: sorted(variables.filter((v) => groupOf(v.name) === key)) })),
   ].filter((section) => section.variables.length > 0);
 }

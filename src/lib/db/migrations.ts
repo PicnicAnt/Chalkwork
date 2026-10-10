@@ -223,4 +223,10 @@ export function migrate(db: Database.Database) {
     `);
     db.pragma("user_version = 19");
   }
+  if (version < 20) {
+    // The order the variables of a board are listed in, as a JSON list of names.
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "variable_order");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_order TEXT NOT NULL DEFAULT '[]';`);
+    db.pragma("user_version = 20");
+  }
 }

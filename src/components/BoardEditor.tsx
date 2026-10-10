@@ -90,6 +90,8 @@ export function BoardEditor({
     }
     return out;
   }, [rangeText]);
+  // The order variables are listed in (by name).
+  const [order, setOrder] = useState<string[]>(initial?.order ?? []);
   // Lookup tables, held as typed (the rows are text until they are read).
   const [tableDrafts, setTableDrafts] = useState<TableDraft[]>(() =>
     (initial?.tables ?? []).map((t) => ({ name: t.name, mode: t.mode, text: rowsToText(t.rows) })),
@@ -108,8 +110,8 @@ export function BoardEditor({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, links, visualizations }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, links, visualizations, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, links, visualizations }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, links, visualizations, included],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas, flat.bundle.tables), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
@@ -207,6 +209,7 @@ export function BoardEditor({
     setHidden((h) => renameKey(h, from, to));
     setDecimalText((d) => renameKey(d, from, to));
     setRangeText((r) => renameKey(r, from, to));
+    setOrder((o) => o.map((n) => (n === from ? to : n)));
     setLinks((l) => renameLinks(l, from, to));
     setVisualizations((vs) => renameInVisualizations(vs, (name) => (name === from ? to : name)));
   }
@@ -214,7 +217,7 @@ export function BoardEditor({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, tags: parseTags(tagText), includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, tags: parseTags(tagText), includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -362,6 +365,8 @@ export function BoardEditor({
           })
         }
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
+        order={flat.bundle.order}
+        onOrder={(names) => setOrder((o) => [...o.filter((n) => !names.includes(n)), ...names])}
         ranges={Object.fromEntries(Object.entries(flat.bundle.ranges).map(([k, r]) => [k, { min: r.min === undefined ? "" : String(r.min), max: r.max === undefined ? "" : String(r.max) }]))}
         onRange={(name, end, text) =>
           setRangeText((r) => {
@@ -399,6 +404,7 @@ export function BoardEditor({
           revealHidden
           decimals={flat.bundle.decimals}
           ranges={flat.bundle.ranges}
+          order={flat.bundle.order}
           groups={flat.bundle.groups}
           visualizations={flat.bundle.visualizations}
         />

@@ -11,6 +11,9 @@ export function VariableLine({
   name,
   expanded,
   onToggle,
+  onMove,
+  canMoveUp,
+  canMoveDown,
   fixedName,
   unit,
   label,
@@ -34,6 +37,10 @@ export function VariableLine({
   name: string;
   expanded: boolean;
   onToggle: () => void;
+  /** Moves the variable up (-1) or down (1) in its list. Not set when the list has one variable. */
+  onMove?: (direction: -1 | 1) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
   /** Set for a variable of a board in use: its name is shown but not editable. */
   fixedName?: string;
   unit: string;
@@ -76,6 +83,18 @@ export function VariableLine({
       expanded={expanded}
       onToggle={onToggle}
       summary={label || fixedName || displayName(name)}
+      actions={
+        onMove && (
+          <span className="flex shrink-0 items-baseline gap-1">
+            <button type="button" className="link px-1 text-lg disabled:opacity-30" disabled={!canMoveUp} onClick={() => onMove(-1)} aria-label={`Move ${label || fixedName || displayName(name)} up`} title="Move up">
+              ↑
+            </button>
+            <button type="button" className="link px-1 text-lg disabled:opacity-30" disabled={!canMoveDown} onClick={() => onMove(1)} aria-label={`Move ${label || fixedName || displayName(name)} down`} title="Move down">
+              ↓
+            </button>
+          </span>
+        )
+      }
       hint={`${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">

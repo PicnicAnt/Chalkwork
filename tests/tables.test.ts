@@ -72,7 +72,7 @@ describe("conditions and tables in formulas", () => {
   });
 
   it("a used board's tables and calls to them get its alias", () => {
-    const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [] as Table[] };
+    const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [] as Table[], order: [] };
     const inner = flatten({ ...own, formulas: ["y = curve(x)"], tables: [curve] }, []).bundle;
     const outer = flatten({ ...own, formulas: ["total = tax$y"] }, [{ alias: "tax", board: "b", title: "Tax", bundle: inner }]).bundle;
     expect(outer.formulas).toContain("tax$y = tax$curve(tax$x)");

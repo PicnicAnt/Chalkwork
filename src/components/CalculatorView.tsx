@@ -27,6 +27,7 @@ export function CalculatorPanel({
   groups,
   decimals,
   ranges,
+  order,
   visualizations,
   initialLocked,
   onLocks,
@@ -54,6 +55,8 @@ export function CalculatorPanel({
   decimals?: Record<string, number>;
   /** The values each variable should stay within, by name: a warning outside them, a slider between them. */
   ranges?: Record<string, Range>;
+  /** The order variables are listed in, by name. */
+  order?: string[];
   /** Drawings that follow the variables: the board's own come first, those of used boards go with their board. */
   visualizations?: BundleVisualization[];
   /** Starts with these variables locked instead of working it out from the values (a loaded scenario). */
@@ -197,7 +200,7 @@ export function CalculatorPanel({
   }
 
   // This board's own variables first, then the variables of each board in use under its title.
-  const sections = sectionsByBoard(analysis.variables, groups ?? {});
+  const sections = sectionsByBoard(analysis.variables, groups ?? {}, order);
 
   // What the drawings and charts read from the board.
   const vizValues: VizValues = {

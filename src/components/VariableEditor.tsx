@@ -24,6 +24,8 @@ export function VariableEditor({
   ownLinks,
   decimals,
   ranges,
+  order,
+  onOrder,
   onRename,
   onDescribe,
   onUnit,
@@ -58,11 +60,15 @@ export function VariableEditor({
   /** The values a variable should stay within, as typed. */
   ranges: Record<string, { min: string; max: string }>;
   onRange: (name: string, end: "min" | "max", text: string) => void;
+  /** The order variables are listed in. */
+  order: string[];
+  /** Gives the new order of one list of variables (those shown together), by name. */
+  onOrder: (names: string[]) => void;
 }) {
   const fold = useFold();
   if (analysis.variables.length === 0) return null;
 
-  const sections = sectionsByBoard(analysis.variables, groups);
+  const sections = sectionsByBoard(analysis.variables, groups, order);
 
   // The text typed in the link field is a person's way of writing a variable (board.variable).
   function applyLink(name: string, text: string): string | null {
@@ -118,10 +124,23 @@ export function VariableEditor({
                 </span>
               </h3>
             )}
-            {section.variables.map((v) => (
+            {section.variables.map((v, index) => (
               <VariableLine
                 key={v.name}
                 name={v.name}
+                onMove={
+                  section.variables.length < 2
+                    ? undefined
+                    : (direction) => {
+                        const names = section.variables.map((x) => x.name);
+                        const to = index + direction;
+                        if (to < 0 || to >= names.length) return;
+                        [names[index], names[to]] = [names[to], names[index]];
+                        onOrder(names);
+                      }
+                }
+                canMoveUp={index > 0}
+                canMoveDown={index < section.variables.length - 1}
                 expanded={fold.isOpen(v.name)}
                 onToggle={() => fold.toggle(v.name)}
                 fixedName={section.key ? displayName(v.name.slice(section.key.length + 1)) : undefined}

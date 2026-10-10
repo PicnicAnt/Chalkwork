@@ -156,6 +156,7 @@ export function SharedCalculator({
           hidden={flat.hidden}
           decimals={flat.decimals}
           ranges={flat.ranges}
+          order={flat.order}
           links={flat.links}
           groups={flat.groups}
           visualizations={flat.visualizations}

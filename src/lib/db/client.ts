@@ -6,7 +6,7 @@ import { backupIfDue } from "./backup";
 import { migrate } from "./migrations";
 
 // The one connection to the database, opened (and brought up to date) when the server first needs it.
-const dataDir = path.join(process.cwd(), "data");
+const dataDir = process.env.CHALKWORK_DATA_DIR || path.join(process.cwd(), "data");
 mkdirSync(dataDir, { recursive: true });
 
 export const db = new Database(path.join(dataDir, "chalkwork.db"));

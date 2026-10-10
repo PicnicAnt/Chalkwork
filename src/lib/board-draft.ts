@@ -28,6 +28,8 @@ export type BoardDraft = {
   ranges: Record<string, Range>;
   // Lookup tables the formulas can call like functions, such as tax_rate(income).
   tables: Table[];
+  // The order variables are listed in, by name. Variables not named come after, in the order they appear.
+  order: string[];
   // Short labels that make the board easier to find, such as finance or game.
   tags: string[];
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
@@ -107,7 +109,7 @@ export function validateDraft(
   const parsedTables = parseTables(r.tables);
   errors.push(...parsedTables.errors);
   const tables = parsedTables.tables;
-  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], links: {}, visualizations: [] };
+  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], links: {}, visualizations: [] };
   const { bundle: inherited, ownErrors } = flatten({ formulas, ...none, tables }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
   const analysis = analyzeFormulas(inherited.formulas, inherited.tables);
@@ -230,6 +232,7 @@ export function validateDraft(
           decimals,
           ranges,
           tables,
+          order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),
           tags: parseTags(r.tags),
           includes: included.map(includeOf),
           links,

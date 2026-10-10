@@ -58,6 +58,10 @@ Every save of a board is kept as a numbered version (`board_versions`: the whole
 
 Each variable can have a lowest and a highest value (in the variable editor). A value outside them gets a warning, and a variable with both gets a slider under it. The **Spread** chart draws the inputs at random between their ranges (most often near the value they have now), solves the board for each draw and shows how the result could turn out: a histogram with the 5% and 95% marks. The draws are seeded, so a board shows the same picture every time.
 
+## Order of variables
+
+In the variable editor each variable has up and down arrows. The order is saved with the board and used on the board page too; variables that were never moved keep the order they first appear in. Variables of a used board are ordered within their own group.
+
 ## Writing helper
 
 Two buttons use an AI model, and only appear when the server has a key: **Describe it** on the New page turns a sentence into a draft board (checked like any board, and opened in the editor, nothing saved until you save), and **Explain this board** on a board page writes a short explanation. Set `ANTHROPIC_API_KEY` in `.env.local` and restart. `CHALKWORK_AI_MODEL` picks the model (default `claude-haiku-5-5`) and `CHALKWORK_AI=0` turns it off. Each use costs tokens, so it is for signed-in people only and limited to 10 uses an hour per person (kept in memory, so a restart resets it).

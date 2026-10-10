@@ -22,6 +22,7 @@ const ownData = (calc: Board): OwnData => ({
   decimals: calc.decimals,
   ranges: calc.ranges,
   tables: calc.tables,
+  order: calc.order ?? [],
   links: calc.links,
   visualizations: calc.visualizations,
 });

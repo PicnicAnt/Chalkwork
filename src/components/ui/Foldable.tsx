@@ -7,6 +7,7 @@ import { useCallback, useState, type ReactNode } from "react";
 export function Foldable({
   summary,
   hint,
+  actions,
   expanded,
   onToggle,
   children,
@@ -14,12 +15,15 @@ export function Foldable({
   summary: ReactNode;
   /** Quiet words after the summary, such as the unit or "hidden". */
   hint?: ReactNode;
+  /** Small controls at the end of the header line, outside the button that folds the row. */
+  actions?: ReactNode;
   expanded: boolean;
   onToggle: () => void;
   children: ReactNode;
 }) {
   return (
     <div className="fold-box flex flex-col gap-1">
+      <div className="flex items-baseline gap-2">
       <button
         type="button"
         onClick={onToggle}
@@ -32,6 +36,8 @@ export function Foldable({
         </span>
         <span className="shrink-0 text-base text-accent">{expanded ? "Collapse" : "Expand"}</span>
       </button>
+      {actions}
+      </div>
       <div className={expanded ? "flex flex-col gap-1" : "hidden"}>{children}</div>
     </div>
   );
