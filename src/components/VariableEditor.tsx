@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { sectionsByBoard } from "@/lib/boards";
 import { displayName, type Analysis } from "@/lib/formulas";
 import { checkVariableName } from "@/lib/rename";
@@ -30,6 +30,9 @@ export function VariableEditor({
   onOrder,
   types,
   onType,
+  typedRows,
+  extraCount = 0,
+  addVariable,
   onRename,
   onDescribe,
   onUnit,
@@ -71,11 +74,16 @@ export function VariableEditor({
   /** What each variable holds (a variable with no entry is a number). */
   types: Record<string, "number" | "boolean">;
   onType: (name: string, type: "number" | "boolean") => void;
+  /** The variables that are tables, collections and boards, shown after the others. */
+  typedRows?: ReactNode;
+  /** How many of those there are (for the count in the title). */
+  extraCount?: number;
+  /** The "Add variable" button. */
+  addVariable?: ReactNode;
 }) {
   const fold = useFold();
   // Used boards that are folded away in this list.
   const [closed, setClosed] = useState<Record<string, boolean>>({});
-  if (analysis.variables.length === 0) return null;
 
   const sections = sectionsByBoard(analysis.variables, groups, order);
 
@@ -95,10 +103,10 @@ export function VariableEditor({
   return (
     <CollapsibleSection
       title="Variables"
-      count={analysis.variables.length}
+      count={analysis.variables.length + extraCount}
       description={
         <>
-          Rename a variable and every formula that uses it is updated. A display name is shown instead of it on the
+          A variable is a number, a yes/no, a table, a collection or a board; &ldquo;Add variable&rdquo; at the end adds one of any type. A table is looked up like a function (tax_rate(income)), a collection totals the boards people add to it (parts.weight), and a board brings another board&apos;s variables in as name.variable. Rename a number and every formula that uses it is updated. A display name is shown instead of it on the
           rows (the formulas still use the real name). Hide a variable to keep it off the board while it still takes
           part in the maths. A unit (like % or m²) is shown next to the value, decimals set how many digits a
           calculated value shows, and a note is shown under the variable. Units and decimals only change what is
@@ -198,6 +206,8 @@ export function VariableEditor({
             </div>
           </div>
         ))}
+        {typedRows && <div className="flex flex-col gap-3">{typedRows}</div>}
+        {addVariable}
       </div>
     </CollapsibleSection>
   );

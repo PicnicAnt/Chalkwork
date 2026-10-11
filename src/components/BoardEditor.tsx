@@ -9,6 +9,7 @@ import { MAX_PRESETS, SCENARIO_LIMITS, type Preset } from "@/lib/scenarios";
 import { initialLocks } from "@/lib/calculator";
 import { createSuggestion } from "@/app/actions/suggestions";
 import {
+  checkAlias,
   defaultAlias,
   dropAliasLinks,
   flatten,
@@ -23,15 +24,17 @@ import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib
 import type { Range, VarType } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
 import { parseTags } from "@/lib/tags";
-import { renameKey, renameVariableInText } from "@/lib/rename";
-import { BoardsSection, type BoardChoice } from "./BoardsSection";
+import { checkVariableName, renameKey, renameVariableInText } from "@/lib/rename";
+import { BoardRows, type BoardChoice } from "./BoardsSection";
+import { AddVariable, type VariableKind } from "./AddVariable";
+import { useFold } from "./ui/Foldable";
 import { VisualizationEditor } from "./VisualizationEditor";
 import { dropFromVisualizations, renameInVisualizations, type Visualization } from "@/lib/visualizations";
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
-import { readTableDrafts, TablesEditor, type TableDraft } from "./TablesEditor";
-import { CollectionsEditor, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
+import { readTableDrafts, TableRows, type TableDraft } from "./TablesEditor";
+import { CollectionRows, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
 import { rowsToText } from "@/lib/tables";
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
@@ -212,7 +215,35 @@ function BoardEditorInner({
     [analysis],
   );
 
-  function addBoard(boardId: string) {
+  // "Add variable": a number or yes/no is a new variable of the formulas (a line that is only its name), and a table,
+  // collection or board is a variable of that type.
+  const typedFold = useFold();
+  function addVariable(kind: VariableKind, rawName: string, boardId?: string): string | null {
+    const name = rawName.trim();
+    const taken = new Set([...tableDrafts.map((t) => t.name), ...collectionDrafts.map((c) => c.name.trim()), ...included.map((i) => i.alias)]);
+    if (taken.has(name)) return `"${name}" is already used by a table, a collection or a board`;
+    if (kind === "number" || kind === "boolean") {
+      const problem = checkVariableName(name, "", analysis);
+      if (problem) return problem;
+      setFormulaText((text) => (text.trim() ? `${text.trimEnd()}\n${name}` : name));
+      if (kind === "boolean") setTypes((t) => ({ ...t, [name]: "boolean" }));
+      return null;
+    }
+    const problem = checkAlias(name) ?? (analysis.variables.some((v) => v.name === name) ? `"${name}" is already used by another variable` : null);
+    if (problem) return problem;
+    if (kind === "table") {
+      setTableDrafts((list) => [...list, { name, mode: "step", text: "" }]);
+      typedFold.open(`table:${tableDrafts.length}`);
+    } else if (kind === "collection") {
+      setCollectionDrafts((list) => [...list, { name, boards: [] }]);
+      typedFold.open(`collection:${collectionDrafts.length}`);
+    } else if (boardId) {
+      addBoard(boardId, name);
+    }
+    return null;
+  }
+
+  function addBoard(boardId: string, alias?: string) {
     setBoardError(null);
     startLoadingBoard(async () => {
       const result = await loadBoardToUse(boardId, editing?.id ?? suggesting?.boardId);
@@ -223,10 +254,12 @@ function BoardEditorInner({
       setIncluded((list) => [
         ...list,
         {
-          alias: defaultAlias(
-            result.title,
-            list.map((i) => i.alias),
-          ),
+          alias:
+            alias ??
+            defaultAlias(
+              result.title,
+              list.map((i) => i.alias),
+            ),
           board: result.board,
           title: result.title,
           latest: result.latest,
@@ -442,30 +475,6 @@ function BoardEditorInner({
         )}
       </section>
 
-      <BoardsSection
-        includes={included.map(includeOf)}
-        included={included}
-        available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
-        busy={loadingBoard}
-        error={boardError}
-        onAdd={addBoard}
-        onAlias={renameAlias}
-        onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
-        onGroup={(alias, group) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, group: group || undefined } : i)))}
-        onPreset={(alias, preset) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, preset: preset || undefined } : i)))}
-        onPin={pinBoard}
-        onRemove={(alias) => {
-          setIncluded((list) => list.filter((i) => i.alias !== alias));
-          setLinks((l) => dropAliasLinks(l, alias));
-          // A drawing can't read a variable of a board that is no longer used.
-          setVisualizations((vs) => dropFromVisualizations(vs, (name) => name.startsWith(alias + "$")));
-        }}
-      />
-
-      <TablesEditor drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} />
-
-      <CollectionsEditor drafts={collectionDrafts} usedNames={included.map((i) => i.alias)} available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))} onChange={setCollectionDrafts} />
-
       <VariableEditor
         analysis={analysis}
         groups={flat.bundle.groups}
@@ -497,6 +506,43 @@ function BoardEditorInner({
             void _removed;
             return type === "boolean" ? { ...rest, [name]: type } : { ...rest, ...(flat.bundle.types?.[name] === "boolean" ? { [name]: "number" as VarType } : {}) };
           })
+        }
+        extraCount={tableDrafts.length + collectionDrafts.length + included.length}
+        addVariable={
+          <AddVariable
+            boards={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId)).map((b) => ({ id: b.id, title: b.title }))}
+            busy={loadingBoard}
+            onAdd={addVariable}
+          />
+        }
+        typedRows={
+          <>
+            <TableRows drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} isOpen={typedFold.isOpen} onToggle={typedFold.toggle} />
+            <CollectionRows
+              drafts={collectionDrafts}
+              usedNames={included.map((i) => i.alias)}
+              available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
+              onChange={setCollectionDrafts}
+              isOpen={typedFold.isOpen}
+              onToggle={typedFold.toggle}
+            />
+            <BoardRows
+              includes={included.map(includeOf)}
+              included={included}
+              error={boardError}
+              onAlias={renameAlias}
+              onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
+              onGroup={(alias, group) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, group: group || undefined } : i)))}
+              onPreset={(alias, preset) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, preset: preset || undefined } : i)))}
+              onPin={pinBoard}
+              onRemove={(alias) => {
+                setIncluded((list) => list.filter((i) => i.alias !== alias));
+                setLinks((l) => dropAliasLinks(l, alias));
+                // A drawing can't read a variable of a board that is no longer used.
+                setVisualizations((vs) => dropFromVisualizations(vs, (name) => name.startsWith(alias + "$")));
+              }}
+            />
+          </>
         }
         onOrder={(names) => setOrder((o) => [...o.filter((n) => !names.includes(n)), ...names])}
         ranges={Object.fromEntries(Object.entries(flat.bundle.ranges).map(([k, r]) => [k, { min: r.min === undefined ? "" : String(r.min), max: r.max === undefined ? "" : String(r.max) }]))}

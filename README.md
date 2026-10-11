@@ -64,6 +64,8 @@ A formula line that is only a name (for example `speed`) declares that variable:
 
 ## Variable types
 
+In the editor everything a board is made of is a variable, and **Add variable** under the Variables list adds one of any type: a number, a yes/no, a **table**, a **collection** or a **board**. A table, a collection or a board shows in the list like the other variables (with its type next to the name) and is edited there, so there are no separate sections for them any more. A board added this way is used under the variable's name (`base.width`).
+
 A variable is a number, or a **yes/no**. In the variable editor each variable has a type. A yes/no variable is a tick box on the board; in formulas it is 1 (yes) and 0 (no), so `if(rush, 20, 5)` and `heavy = weight > 10` work, and a comparison can be a yes/no result. The web service takes `true` and `false` for yes/no variables and says which results are yes/no. The Included switch of a board in a collection is a yes/no variable.
 
 ## Order of variables
