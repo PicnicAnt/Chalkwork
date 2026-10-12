@@ -201,10 +201,12 @@ export function CalculatorPanel({
     field.focus({ preventScroll: true });
   }, []);
 
-  if (analysis.variables.length === 0) {
+  // A board that is only collections has no variables of its own, but still has the boxes to add boards to.
+  const hasExtras = Object.keys(sectionExtras ?? {}).length > 0;
+  if (analysis.variables.length === 0 && !hasExtras) {
     return <p className="text-ink-muted">Variables from your formulas show up here.</p>;
   }
-  if (!revealHidden && analysis.variables.every((v) => hidden?.[v.name] === true)) {
+  if (!hasExtras && !revealHidden && analysis.variables.every((v) => hidden?.[v.name] === true)) {
     return <p className="text-ink-muted">Every variable on this board is hidden.</p>;
   }
 
