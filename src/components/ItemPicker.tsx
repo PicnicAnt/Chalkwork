@@ -15,7 +15,7 @@ export type CollectionView = {
   /** Items added by whoever is using the board. */
   added: { index: number; title: string }[];
   /** When the creator listed the boards that can be added: each one, and each of its presets, as a choice. */
-  choices?: { board: string; preset?: string; title: string }[];
+  choices?: { board: string; preset?: string; title: string; boardTitle?: string }[];
 };
 
 // Where people using a board add existing boards to one of its collections. It sits inside the collection's own box.
@@ -67,7 +67,7 @@ export function ItemControls({ collection: c, boards, extras, onChange }: { coll
             onChange={setPick}
             placeholder="Choose a board…"
             ariaLabel={`Board to add to ${c.title}`}
-            options={(c.choices ?? []).map((ch, i) => ({ value: String(i), label: ch.title }))}
+            options={(c.choices ?? []).map((ch, i) => (ch.preset ? { value: String(i), label: ch.preset, group: ch.boardTitle ?? ch.title } : { value: String(i), label: ch.title }))}
           />
           <button
             type="button"

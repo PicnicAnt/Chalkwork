@@ -61,7 +61,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
       ?.boards?.flatMap((id) => {
         const b = getBoard(id);
         if (!b || b.id === full.id || !canOpen(b, user?.id)) return [];
-        return [{ board: id, title: b.title }, ...(b.presets ?? []).map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}` }))];
+        return [{ board: id, title: b.title }, ...(b.presets ?? []).map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}`, boardTitle: b.title }))];
       }),
     added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
   }));
