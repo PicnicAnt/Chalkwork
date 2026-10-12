@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmbedTheme } from "@/components/EmbedTheme";
 import { SharedCalculator } from "@/components/SharedCalculator";
-import { getBoard } from "@/lib/db";
+import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveForView } from "@/lib/resolve-boards";
 import { decodeState } from "@/lib/share-state";
 
@@ -15,7 +15,7 @@ export default async function EmbeddedBoardPage({ params, searchParams }: PagePr
   await connection();
   const { id } = await params;
   const { state } = await searchParams;
-  const board = getBoard(id);
+  const board = await getVisibleBoard(id);
   if (!board) notFound();
   const resolved = resolveForView(board);
   const initialState = decodeState(typeof state === "string" ? state : undefined);

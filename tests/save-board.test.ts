@@ -58,3 +58,20 @@ describe("saving a board", () => {
     expect(api.saveBoard(id, "other", draft({ title: "Mine now" }))).toBe(false);
   });
 });
+
+describe("listing boards for a viewer", () => {
+  it("leaves out private and link-only boards that are not the viewer's own", () => {
+    const owner = api.upsertUser({ provider: "test", accountId: "owner", name: "Owner" });
+    const other = api.upsertUser({ provider: "test", accountId: "other", name: "Other" });
+    const make = (title: string, visibility: "public" | "link" | "private") => api.insertBoard(draft({ title, visibility }), owner.id);
+    make("Listed", "public");
+    make("Link only", "link");
+    make("Secret", "private");
+    const titles = (viewer?: string) => api.listAllBoards(1000, viewer).map((b) => b.title);
+    expect(titles(other.id)).toEqual(expect.arrayContaining(["Listed"]));
+    expect(titles(other.id)).not.toContain("Link only");
+    expect(titles(other.id)).not.toContain("Secret");
+    expect(titles(owner.id)).toEqual(expect.arrayContaining(["Listed", "Link only", "Secret"]));
+    expect(titles()).not.toContain("Secret");
+  });
+});

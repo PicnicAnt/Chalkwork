@@ -62,6 +62,10 @@ Each variable can have a lowest and a highest value (in the variable editor). A 
 
 A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
 
+## Who can open a board
+
+In the editor, **Who can open it** is one of: *Everyone* (listed on Boards and in the lists for adding boards, open to anyone with the link, as before), *Anyone with the link* (open by link but not listed for others) or *Only me* (only the owner can open it, including the web service, the embed and the board file; everyone else gets "not found"). Boards you already have stay public. A private board of someone else can't be added to your boards. If you use your own private board inside a board that others can open, they see that board's variables through yours.
+
 ## Board files and pasted tables
 
 - **Download board file** (Share menu) saves a board as a `.chalkwork.json` file. **Import a board file** on the New page opens such a file in the editor (nothing is saved until you save). Boards the file used that don't exist on the server are left out, and the editor says so.

@@ -4,7 +4,8 @@ import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
-import { getBoard, listAllBoards } from "@/lib/db";
+import { listAllBoards } from "@/lib/db";
+import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveIncludes } from "@/lib/resolve-boards";
 import { draftOf } from "@/lib/change-suggestions";
 
@@ -15,7 +16,7 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
   const { id } = await params;
   const user = await requireUser(`/c/${id}/suggest`);
   await connection();
-  const board = getBoard(id);
+  const board = await getVisibleBoard(id);
   if (!board) notFound();
   if (board.ownerId === user.id) redirect(`/c/${id}/edit`);
 
@@ -35,7 +36,7 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
       </p>
     );
   }
-  const availableBoards = listAllBoards().map((b) => ({
+  const availableBoards = listAllBoards(1000, user.id).map((b) => ({
     id: b.id,
     title: b.title,
     description: b.description,

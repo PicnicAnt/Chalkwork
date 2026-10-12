@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { solveBoard } from "@/lib/board-api";
-import { getBoard } from "@/lib/db";
+import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveForView } from "@/lib/resolve-boards";
 
 // A board as a small web service. GET /api/boards/<id>?width=3&height=4 (names as shown, such as room.width) or
@@ -25,7 +25,7 @@ const reply = (body: unknown, status = 200) => NextResponse.json(body, { status,
 
 async function answer(request: NextRequest, params: Promise<{ id: string }>, inputs: Record<string, unknown>) {
   if (tooMany(request)) return reply({ error: "Too many requests. Try again in a minute." }, 429);
-  const board = getBoard((await params).id);
+  const board = await getVisibleBoard((await params).id);
   if (!board) return reply({ error: "No such board." }, 404);
   const resolved = resolveForView(board);
   if ("error" in resolved) return reply({ error: resolved.error }, 422);

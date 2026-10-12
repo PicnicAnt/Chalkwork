@@ -6,17 +6,29 @@ import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard } from "@/li
 import { resolveBoard } from "@/lib/resolve-boards";
 import { notifyBoardChanged } from "./notify";
 import { presetValues } from "@/lib/scenarios";
+import { canOpen } from "@/lib/visibility";
 import { prepare } from "./prepare";
 
 // What a board's owner (and anyone signed in) does with boards. Every action checks who is asking.
 
 export type SaveResult = { ok: true; id: string } | { ok: false; errors: string[] };
 
+// A board can only use boards its author may open: a private board of someone else can't be built into yours.
+function hiddenUse(draft: { includes: { board: string }[] }, userId: string): string | null {
+  for (const inc of draft.includes) {
+    const used = getBoard(inc.board);
+    if (used && !canOpen(used, userId)) return "One of the boards used here is private, so it can't be used.";
+  }
+  return null;
+}
+
 export async function createBoard(payload: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to save a board."] };
   const prepared = prepare(payload);
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
+  const hidden = hiddenUse(prepared.draft, user.id);
+  if (hidden) return { ok: false, errors: [hidden] };
   return { ok: true, id: insertBoard(prepared.draft, user.id) };
 }
 
@@ -29,6 +41,8 @@ export async function updateBoard(id: string, payload: unknown): Promise<SaveRes
   }
   const prepared = prepare(payload, id);
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
+  const hidden = hiddenUse(prepared.draft, user.id);
+  if (hidden) return { ok: false, errors: [hidden] };
   if (!saveBoard(id, user.id, prepared.draft)) {
     return { ok: false, errors: ["Only the owner can change this board."] };
   }
@@ -43,6 +57,9 @@ export type BoardToUse = { ok: true; board: string; title: string; latest: numbe
 export async function loadBoardToUse(boardId: string, selfId?: string, version?: number): Promise<BoardToUse> {
   if (!(await getCurrentUser())) return { ok: false, error: "Sign in to use a board." };
   if (typeof boardId !== "string") return { ok: false, error: "Pick a board." };
+  const user = await getCurrentUser();
+  const target = getBoard(boardId);
+  if (!target || !canOpen(target, user?.id)) return { ok: false, error: "That board doesn't exist." };
   const found = resolveBoard(boardId, typeof selfId === "string" ? selfId : undefined, Number.isInteger(version) ? version : undefined);
   return "error" in found
     ? { ok: false, error: found.error }
@@ -87,8 +104,10 @@ export async function deleteBoard(id: string): Promise<DeleteResult> {
 
 // The names of the presets a board has, so someone adding it as an item can pick one.
 export async function presetsOf(boardId: unknown): Promise<string[]> {
-  if (!(await getCurrentUser()) || typeof boardId !== "string") return [];
-  return (getBoard(boardId)?.presets ?? []).map((p) => p.name);
+  const user = await getCurrentUser();
+  if (!user || typeof boardId !== "string") return [];
+  const board = getBoard(boardId);
+  return board && canOpen(board, user.id) ? (board.presets ?? []).map((p) => p.name) : [];
 }
 
 export type ImportResult = { ok: true; draft: import("@/lib/board-draft").BoardDraft; note: string } | { ok: false; error: string };
@@ -111,11 +130,13 @@ export async function importBoardFile(text: unknown): Promise<ImportResult> {
   const board = { ...(file.board as Record<string, unknown>) };
   // Boards that aren't on this server can't be used here.
   const includes = Array.isArray(board.includes) ? (board.includes as { board?: unknown; alias?: unknown }[]) : [];
-  const present = includes.filter((i) => typeof i?.board === "string" && getBoard(i.board));
+  const user = await getCurrentUser();
+  const seen = (id: unknown) => typeof id === "string" && (() => { const b = getBoard(id); return b !== null && canOpen(b, user?.id); })();
+  const present = includes.filter((i) => seen(i?.board));
   const missing = includes.length - present.length;
   board.includes = present;
   const collections = Array.isArray(board.collections) ? (board.collections as { boards?: unknown }[]) : [];
-  board.collections = collections.map((c) => (Array.isArray(c?.boards) ? { ...c, boards: (c.boards as unknown[]).filter((id) => typeof id === "string" && getBoard(id)) } : c));
+  board.collections = collections.map((c) => (Array.isArray(c?.boards) ? { ...c, boards: (c.boards as unknown[]).filter((id) => seen(id)) } : c));
   // A used board that is gone takes its variables with it: formulas that use them can't be kept.
   const prepared = prepare(board);
   if ("errors" in prepared) {

@@ -24,6 +24,7 @@ import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib
 import type { Choice, Range, VarFormat, VarType } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
 import { parseTags } from "@/lib/tags";
+import { VISIBILITIES, type Visibility } from "@/lib/visibility";
 import { checkVariableName, renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardRow, type BoardChoice } from "./BoardsSection";
 import { AddVariable, type VariableKind } from "./AddVariable";
@@ -111,6 +112,8 @@ function BoardEditorInner({
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [tagText, setTagText] = useState((initial?.tags ?? []).join(", "));
+  // Who can open the board.
+  const [visibility, setVisibility] = useState<Visibility>(initial?.visibility ?? "public");
   const [formulaText, setFormulaText] = useState(initial?.formulas.join("\n") ?? "");
   const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
   const [descriptions, setDescriptions] = useState<Record<string, string>>(initial?.descriptions ?? {});
@@ -342,7 +345,7 @@ function BoardEditorInner({
   }
 
   // What the editor holds now, as a draft.
-  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, choices, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
+  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, choices, visibility, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
 
   // The writing helper changes the board as asked; the editor then starts again from the result.
   const [aiText, setAiText] = useState("");
@@ -364,7 +367,7 @@ function BoardEditorInner({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, choices, tags: parseTags(tagText), includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, choices, visibility, tags: parseTags(tagText), includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -428,6 +431,17 @@ function BoardEditorInner({
           autoCapitalize="off"
           spellCheck={false}
         />
+        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
+          Who can open it
+          <select value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label="Who can open the board">
+            {VISIBILITIES.map((v) => (
+              <option key={v.value} value={v.value}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-base">{VISIBILITIES.find((v) => v.value === visibility)?.hint}</span>
+        </label>
       </section>
 
       {aiEnabled && (

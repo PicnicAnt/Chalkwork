@@ -15,7 +15,7 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
   if (wantsMine) params.set("mine", "1");
   if (query) params.set("q", query);
   const user = await requireUser(params.size ? `/boards?${params}` : "/boards");
-  const boards = listAllBoards().map((b) => ({
+  const boards = listAllBoards(1000, user.id).map((b) => ({
     id: b.id,
     title: b.title,
     description: b.description,

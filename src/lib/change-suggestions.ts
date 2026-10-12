@@ -59,6 +59,7 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
   compareMap(out, (n) => `Unit of ${n}`, base.units, next.units);
   compareMap(out, (n) => `Note on ${n}`, base.descriptions, next.descriptions);
   compareMap(out, (n) => `Type of ${n}`, base.types ?? {}, next.types ?? {}, (v) => (v === undefined ? "number" : v));
+  if ((base.visibility ?? "public") !== (next.visibility ?? "public")) out.push(`Who can open it: ${base.visibility ?? "public"} → ${next.visibility ?? "public"}`);
   compareMap(out, (n) => `Options of ${n}`, base.choices ?? {}, next.choices ?? {}, (v) => (v === undefined ? "none" : (v as { label: string; value: number }[]).map((o) => `${o.label} = ${o.value}`).join(", ")));
   compareMap(out, (n) => `Number format of ${n}`, base.formats ?? {}, next.formats ?? {}, (v) => (v === undefined ? "as it comes" : v));
   compareMap(out, (n) => `Decimals of ${n}`, base.decimals, next.decimals, (v) => (v === undefined ? "automatic" : String(v)));
@@ -98,6 +99,7 @@ export function draftOf(c: BoardDraft): BoardDraft {
     types: c.types,
     formats: c.formats,
     choices: c.choices,
+    visibility: c.visibility,
     includes: c.includes,
     links: c.links,
     visualizations: c.visualizations,

@@ -1,6 +1,7 @@
 // Shared types and validation for calculations. Safe to import from client and server.
 import { parsePresets, type Preset } from "./scenarios";
 import { parseTags } from "./tags";
+import { visibilityOf, type Visibility } from "./visibility";
 import { parseTables, type Table } from "./tables";
 import { checkAlias, flatten, type Choice, type Collection, type Include, type IncludedBundle, type Range, type VarFormat, type VarType } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems, isVariableName } from "./formulas";
@@ -33,6 +34,8 @@ export type BoardDraft = {
   order: string[];
   // Scenarios the creator saved on the board, which everyone using it sees (and can use as the starting point of an item).
   presets?: Preset[];
+  // Who can open the board (public, link or private). Missing means public.
+  visibility?: Visibility;
   // The type of a variable, keyed by variable name: number (the default, not stored) or boolean (yes/no).
   types?: Record<string, VarType>;
   // How a variable's number is written (grouped, percent or currency); no entry means as it comes.
@@ -293,6 +296,7 @@ export function validateDraft(
           ranges,
           tables,
           collections,
+          visibility: visibilityOf(r.visibility),
           types,
           choices,
           formats,

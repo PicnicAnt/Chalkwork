@@ -9,6 +9,7 @@ import { analyzeFormulas, displayName } from "@/lib/formulas";
 import { VIZ_TYPES } from "@/lib/visualizations";
 import type { BoardDraft } from "@/lib/board-draft";
 import { getBoard, listAllBoards } from "@/lib/db";
+import { canOpen } from "@/lib/visibility";
 import { prepare } from "./prepare";
 
 // The writing helper. Every use is paid for in tokens, so each action checks who is asking and how often.
@@ -24,8 +25,8 @@ export async function helperAvailable(): Promise<boolean> {
 }
 
 // The boards worth offering for a description, with their variables, so the draft can use them.
-function boardCatalog(description: string, alwaysIds: readonly string[] = [], exceptId?: string): CatalogBoard[] {
-  const all = listAllBoards().filter((b) => b.id !== exceptId);
+function boardCatalog(description: string, viewerId: string, alwaysIds: readonly string[] = [], exceptId?: string): CatalogBoard[] {
+  const all = listAllBoards(1000, viewerId).filter((b) => b.id !== exceptId);
   const chosen = [...relevantBoards(all, description), ...all.filter((b) => alwaysIds.includes(b.id))];
   return chosen.filter((b, i) => chosen.findIndex((x) => x.id === b.id) === i).flatMap((b) => {
     const board = getBoard(b.id);
@@ -56,7 +57,7 @@ export async function draftBoard(description: unknown): Promise<DraftOutcome> {
   const result = await draftFrom(messagesAsk(config), description, (payload) => {
     const prepared = prepare(payload);
     return "errors" in prepared ? { ok: false, errors: prepared.errors } : { ok: true };
-  }, catalogText(boardCatalog(description), DRAWINGS));
+  }, catalogText(boardCatalog(description, user.id), DRAWINGS));
   if (!result.ok) return result;
   const prepared = prepare(result.draft);
   if ("errors" in prepared) return { ok: false, error: "The draft didn't pass the checks." };
@@ -68,7 +69,8 @@ export async function explainBoard(boardId: unknown): Promise<ExplainOutcome> {
   if (!user) return { ok: false, error: "Sign in to use the writing helper." };
   const config = aiConfig();
   if ("error" in config) return { ok: false, error: config.error };
-  const board = typeof boardId === "string" ? getBoard(boardId) : null;
+  const found = typeof boardId === "string" ? getBoard(boardId) : null;
+  const board = found && canOpen(found, user.id) ? found : null;
   if (!board) return { ok: false, error: "That board doesn't exist." };
   if (!allowed(user.id)) return { ok: false, error: `The helper can be used ${AI_LIMITS.perHour} times an hour. Try again a little later.` };
   try {
@@ -106,7 +108,7 @@ export async function reviseBoard(selfId: unknown, current: unknown, instruction
       const prepared = prepare(payload, self);
       return "errors" in prepared ? { ok: false, errors: prepared.errors } : { ok: true };
     },
-    catalogText(boardCatalog(`${instruction} ${now.draft.title}`, using, self), DRAWINGS),
+    catalogText(boardCatalog(`${instruction} ${now.draft.title}`, user.id, using, self), DRAWINGS),
   );
   if (!result.ok) return result;
   const prepared = prepare(result.draft, self);

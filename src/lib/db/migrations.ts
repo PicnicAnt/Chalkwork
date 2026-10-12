@@ -264,4 +264,10 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_choices TEXT NOT NULL DEFAULT '{}';`);
     db.pragma("user_version = 26");
   }
+  if (version < 27) {
+    // Who can open a board: public (listed), link (open by link, not listed) or private (only the owner).
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "visibility");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public';`);
+    db.pragma("user_version = 27");
+  }
 }

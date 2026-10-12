@@ -4,13 +4,14 @@ import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
-import { getBoard, listAllBoards } from "@/lib/db";
+import { listAllBoards } from "@/lib/db";
+import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveIncludes } from "@/lib/resolve-boards";
 
 async function load(id: string) {
   // better-sqlite3 is synchronous, so opt out of prerendering explicitly.
   await connection();
-  const calculation = getBoard(id);
+  const calculation = await getVisibleBoard(id);
   if (!calculation) notFound();
   return calculation;
 }
@@ -45,6 +46,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
     types: calculation.types,
     formats: calculation.formats,
     choices: calculation.choices,
+    visibility: calculation.visibility,
     includes: calculation.includes,
     links: calculation.links,
     visualizations: calculation.visualizations,
@@ -61,7 +63,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
       </p>
     );
   }
-  const availableBoards = listAllBoards().map((b) => ({
+  const availableBoards = listAllBoards(1000, user.id).map((b) => ({
     id: b.id,
     title: b.title,
     description: b.description,

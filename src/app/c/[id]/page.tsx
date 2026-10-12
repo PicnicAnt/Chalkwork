@@ -6,6 +6,8 @@ import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
 import { boardsUsing, getBoard, listAllBoards, listScenarios } from "@/lib/db";
+import { getVisibleBoard } from "@/lib/visible-board";
+import { canOpen, isListed } from "@/lib/visibility";
 import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
@@ -18,7 +20,7 @@ import { decodeState } from "@/lib/share-state";
 async function load(id: string) {
   // better-sqlite3 is synchronous, so opt out of prerendering explicitly.
   await connection();
-  const calculation = getBoard(id);
+  const calculation = await getVisibleBoard(id);
   if (!calculation) notFound();
   return calculation;
 }
@@ -45,7 +47,10 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
 
   // The collections of the board and what is in them, for the "add an item" boxes.
   const known = groupsOf(full);
-  const usedExtras = acceptedExtras(full, extras);
+  const usedExtras = acceptedExtras(full, extras).filter((e) => {
+    const b = getBoard(e.board);
+    return b !== null && canOpen(b, user?.id);
+  });
   const collections = known.map((name) => ({
     name,
     title: humanize(name),
@@ -55,7 +60,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
       .find((c) => c.name === name)
       ?.boards?.flatMap((id) => {
         const b = getBoard(id);
-        if (!b || b.id === full.id) return [];
+        if (!b || b.id === full.id || !canOpen(b, user?.id)) return [];
         return [{ board: id, title: b.title }, ...(b.presets ?? []).map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}` }))];
       }),
     added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
@@ -69,7 +74,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     if ("error" in other) continue;
     scenarioOutcomes[sc.id] = outcomeOf(analyzeFormulas(other.bundle.formulas, other.bundle.tables), sc, other.bundle.decimals);
   }
-  const boardChoices = user && known.some((n) => !(full.collections ?? []).find((c) => c.name === n)?.boards?.length) ? listAllBoards().filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
+  const boardChoices = user && known.some((n) => !(full.collections ?? []).find((c) => c.name === n)?.boards?.length) ? listAllBoards(1000, user?.id).filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
 
   return (
     <>
@@ -132,7 +137,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
       {user && (
         <div className="mt-8 flex flex-col gap-3">
           {"key" in aiConfig() && <ExplainBoard boardId={calculation.id} />}
-          <UsedByList boards={boardsUsing(calculation.id).map((b) => ({ id: b.id, title: b.title }))} />
+          <UsedByList boards={boardsUsing(calculation.id).filter((b) => isListed(b, user.id)).map((b) => ({ id: b.id, title: b.title }))} />
         </div>
       )}
     </>

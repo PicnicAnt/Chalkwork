@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Board, BoardDraft } from "../board-draft";
+import { visibilityOf, type Visibility } from "../visibility";
 import { db } from "./client";
 import { recordVersion } from "./versions";
 
@@ -24,6 +25,7 @@ type Row = {
   variable_types: string;
   variable_formats: string;
   variable_choices: string;
+  visibility: string;
   variable_labels: string;
   variable_hidden: string;
   board_includes: string;
@@ -38,9 +40,9 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_order, board_collections, board_presets, variable_types, variable_formats, variable_choices, variable_labels,
+       variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_order, board_collections, board_presets, variable_types, variable_formats, variable_choices, visibility, variable_labels,
        variable_hidden, board_includes, variable_links, visualizations, owner_id)
-     VALUES (${Array(23).fill("?").join(", ")})`,
+     VALUES (${Array(24).fill("?").join(", ")})`,
   ).run(id, ...fieldsOf(draft), ownerId);
   recordVersion(id, draft, ownerId);
   return id;
@@ -64,6 +66,7 @@ const fieldsOf = (draft: BoardDraft) => [
   JSON.stringify(draft.types ?? {}),
   JSON.stringify(draft.formats ?? {}),
   JSON.stringify(draft.choices ?? {}),
+  draft.visibility ?? "public",
   JSON.stringify(draft.labels),
   JSON.stringify(draft.hidden),
   JSON.stringify(draft.includes),
@@ -78,7 +81,7 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
     .prepare(
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
          variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?,
-         board_tags = ?, variable_order = ?, board_collections = ?, board_presets = ?, variable_types = ?, variable_formats = ?, variable_choices = ?, variable_labels = ?, variable_hidden = ?,
+         board_tags = ?, variable_order = ?, board_collections = ?, board_presets = ?, variable_types = ?, variable_formats = ?, variable_choices = ?, visibility = ?, variable_labels = ?, variable_hidden = ?,
          board_includes = ?, variable_links = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
@@ -107,6 +110,7 @@ const parse = (row: Row): Board => ({
   types: JSON.parse(row.variable_types || "{}"),
   formats: JSON.parse(row.variable_formats || "{}"),
   choices: JSON.parse(row.variable_choices || "{}"),
+  visibility: visibilityOf(row.visibility),
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
   links: JSON.parse(row.variable_links || "{}"),
@@ -154,16 +158,18 @@ export type BoardSummary = {
   keywords: string;
 };
 
-// Every calculation by every user, newest first, for the browse page.
-export function listAllBoards(limit = 1000): BoardSummary[] {
+// Every calculation by every user, newest first, for the browse page. Private and link-only boards are left out
+// unless they are the viewer's own.
+export function listAllBoards(limit = 1000, viewerId?: string | null): BoardSummary[] {
   return (
     db
       .prepare(
         `SELECT c.id, c.title, c.description, c.created_at, c.owner_id, u.name AS owner_name, c.board_tags, c.formulas, c.variable_labels
          FROM calculations c LEFT JOIN users u ON u.id = c.owner_id
+         WHERE c.visibility = 'public' OR (? IS NOT NULL AND c.owner_id = ?)
          ORDER BY c.created_at DESC LIMIT ?`,
       )
-      .all(limit) as {
+      .all(viewerId ?? null, viewerId ?? null, limit) as {
       id: string;
       title: string;
       description: string;
@@ -187,10 +193,10 @@ export function listAllBoards(limit = 1000): BoardSummary[] {
 }
 
 // The boards that use this one, by title, so it is not deleted from under them.
-export function boardsUsing(id: string): { id: string; title: string; ownerId: string | null }[] {
+export function boardsUsing(id: string): { id: string; title: string; ownerId: string | null; visibility: Visibility }[] {
   const rows = db
-    .prepare("SELECT id, title, owner_id, board_includes FROM calculations WHERE id != ? AND board_includes LIKE ?")
-    .all(id, `%${id}%`) as { id: string; title: string; owner_id: string | null; board_includes: string }[];
+    .prepare("SELECT id, title, owner_id, visibility, board_includes FROM calculations WHERE id != ? AND board_includes LIKE ?")
+    .all(id, `%${id}%`) as { id: string; title: string; owner_id: string | null; visibility: string; board_includes: string }[];
   return rows
     .filter((row) => {
       try {
@@ -199,7 +205,7 @@ export function boardsUsing(id: string): { id: string; title: string; ownerId: s
         return false;
       }
     })
-    .map(({ id, title, owner_id }) => ({ id, title, ownerId: owner_id }));
+    .map(({ id, title, owner_id, visibility }) => ({ id, title, ownerId: owner_id, visibility: visibilityOf(visibility) }));
 }
 
 // Only the owner's own board is deleted: the ownership check is part of the statement.
