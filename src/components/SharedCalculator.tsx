@@ -179,6 +179,7 @@ export function SharedCalculator({
           ranges={flat.ranges}
           order={flat.order}
           types={flat.types}
+          formats={flat.formats}
           links={flat.links}
           groups={flat.groups}
           sectionExtras={Object.fromEntries(

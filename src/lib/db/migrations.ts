@@ -252,4 +252,10 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_types TEXT NOT NULL DEFAULT '{}';`);
     db.pragma("user_version = 24");
   }
+  if (version < 25) {
+    // How a variable's number is written, as JSON: { "price": "currency" }. Variables without an entry are shown as they come.
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "variable_formats");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_formats TEXT NOT NULL DEFAULT '{}';`);
+    db.pragma("user_version = 25");
+  }
 }

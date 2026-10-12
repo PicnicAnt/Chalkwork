@@ -35,6 +35,8 @@ const draft = (over: Partial<BoardDraft> = {}): BoardDraft => ({
   order: ["height", "width"],
   tags: ["geometry"],
   collections: [{ name: "gear", stats: ["strength"] }],
+  types: { width: "boolean" },
+  formats: { area: "currency" },
   presets: [{ name: "Wide", values: { width: "9" }, locked: ["width"] }],
   includes: [],
   links: {},
@@ -46,7 +48,7 @@ describe("saving a board", () => {
   it("stores a new board and every later change to it", () => {
     const user = api.upsertUser({ provider: "test", accountId: "a", name: "Tester" });
     const id = api.insertBoard(draft(), user.id);
-    expect(api.getBoard(id)).toMatchObject({ title: "Rectangle", collections: [{ name: "gear", stats: ["strength"] }], presets: [{ name: "Wide", values: { width: "9" }, locked: ["width"] }], ranges: { width: { min: 1, max: 9 } }, tags: ["geometry"], order: ["height", "width"] });
+    expect(api.getBoard(id)).toMatchObject({ title: "Rectangle", types: { width: "boolean" }, formats: { area: "currency" }, collections: [{ name: "gear", stats: ["strength"] }], presets: [{ name: "Wide", values: { width: "9" }, locked: ["width"] }], ranges: { width: { min: 1, max: 9 } }, tags: ["geometry"], order: ["height", "width"] });
 
     const changed = draft({ title: "Changed", ranges: { height: { min: 2 } }, tags: ["a", "b"], order: ["width", "height"], tables: [] });
     expect(api.saveBoard(id, user.id, changed, "test")).toBe(true);

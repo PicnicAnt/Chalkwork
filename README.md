@@ -62,6 +62,10 @@ Each variable can have a lowest and a highest value (in the variable editor). A 
 
 A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
 
+## Number formats
+
+Each number variable has a format in the variable editor: as it comes, **1,234,567** (thousands separators), **percent** (0.15 shows as 15 %, and typing 20 stores 0.2) or **money** (separators, and two decimals for worked-out values). Only the display changes, never the maths. Formats apply on the board page and in the editor's preview; the scenario table and charts still show plain numbers.
+
 ## Show working
 
 The small **?** next to a value on the board shows how it was worked out: the equation it came from with the numbers put in, and under it how each of those numbers was worked out in turn (down to the values that were typed). A value worked backwards or found by trying values says so. It reads the plan the solver used, so it always matches the numbers on screen.

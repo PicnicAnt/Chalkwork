@@ -21,7 +21,7 @@ import {
 } from "@/lib/boards";
 import { includeOf, LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
 import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib/formulas";
-import type { Range, VarType } from "@/lib/boards";
+import type { Range, VarFormat, VarType } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
 import { parseTags } from "@/lib/tags";
 import { checkVariableName, renameKey, renameVariableInText } from "@/lib/rename";
@@ -158,6 +158,8 @@ function BoardEditorInner({
     (initial?.collections ?? []).map((c) => ({ name: c.name, boards: c.boards ?? [] })),
   );
   const collections = useMemo(() => collectionsOf(collectionDrafts), [collectionDrafts]);
+  // How each number is written (not listed: as it comes).
+  const [formats, setFormats] = useState<Record<string, VarFormat>>(initial?.formats ?? {});
   // What each variable holds: a number (not listed) or a yes/no.
   const [types, setTypes] = useState<Record<string, VarType>>(initial?.types ?? {});
   // The order variables are listed in (by name).
@@ -180,8 +182,8 @@ function BoardEditorInner({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, links, visualizations }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, links, visualizations, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, links, visualizations }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, links, visualizations, included],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas, flat.bundle.tables), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
@@ -315,13 +317,14 @@ function BoardEditorInner({
     setDecimalText((d) => renameKey(d, from, to));
     setRangeText((r) => renameKey(r, from, to));
     setTypes((t) => renameKey(t, from, to));
+    setFormats((f) => renameKey(f, from, to));
     setOrder((o) => o.map((n) => (n === from ? to : n)));
     setLinks((l) => renameLinks(l, from, to));
     setVisualizations((vs) => renameInVisualizations(vs, (name) => (name === from ? to : name)));
   }
 
   // What the editor holds now, as a draft.
-  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
+  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
 
   // The writing helper changes the board as asked; the editor then starts again from the result.
   const [aiText, setAiText] = useState("");
@@ -343,7 +346,7 @@ function BoardEditorInner({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, tags: parseTags(tagText), includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, tags: parseTags(tagText), includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -504,6 +507,14 @@ function BoardEditorInner({
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
         order={flat.bundle.order}
         types={flat.bundle.types ?? {}}
+        formats={flat.bundle.formats ?? {}}
+        onFormat={(name, format) =>
+          setFormats((f) => {
+            const { [name]: _removed, ...rest } = f;
+            void _removed;
+            return format ? { ...rest, [name]: format } : { ...rest, ...(flat.bundle.formats?.[name] ? { [name]: undefined as unknown as VarFormat } : {}) };
+          })
+        }
         onType={(name, type) =>
           setTypes((t) => {
             const { [name]: _removed, ...rest } = t;
@@ -600,6 +611,7 @@ function BoardEditorInner({
           ranges={flat.bundle.ranges}
           order={flat.bundle.order}
           types={flat.bundle.types}
+          formats={flat.bundle.formats}
           groups={flat.bundle.groups}
           visualizations={flat.bundle.visualizations}
         />

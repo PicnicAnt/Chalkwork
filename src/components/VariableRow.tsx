@@ -30,6 +30,7 @@ export const VariableRow = memo(function VariableRow({
   isBoolean = false,
   onHow,
   how,
+  grouped = false,
 }: {
   name: string;
   description?: string;
@@ -66,6 +67,8 @@ export const VariableRow = memo(function VariableRow({
   onHow?: (name: string) => void;
   /** The working, shown under the row while it is open. */
   how?: React.ReactNode;
+  /** The number is written with thousands separators, so what is typed is kept as typed while editing. */
+  grouped?: boolean;
 }) {
   const id = `var-${name}`;
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
@@ -124,7 +127,7 @@ export const VariableRow = memo(function VariableRow({
           onChange={(e) => {
             const text = e.target.value;
             const n = parseValue(text);
-            if (ratio === 1 || n === undefined) {
+            if ((ratio === 1 && !grouped) || n === undefined) {
               setTyped(null);
               onEdit(name, text);
             } else {

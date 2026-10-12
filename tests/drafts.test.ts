@@ -55,6 +55,12 @@ describe("checking a board before it is saved", () => {
     expect(out.draft?.types).toEqual({ width: "boolean" });
   });
 
+  it("keeps how a number is written and drops what it doesn't know", () => {
+    const out = validateDraft({ ...base, formats: { width: "percent", height: "currency", area: "grouped", nothing: "grouped", other: "bold" } });
+    expect(out.errors).toEqual([]);
+    expect(out.draft?.formats).toEqual({ width: "percent", height: "currency", area: "grouped" });
+  });
+
   it("keeps a collection with the boards that can be added to it", () => {
     const out = validateDraft({ ...base, collections: [{ name: "items", stats: ["damage", "bad name"], boards: ["abcdef12", "x", 5] }] });
     expect(out.errors).toEqual([]);

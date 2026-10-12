@@ -2,7 +2,7 @@
 import { parsePresets, type Preset } from "./scenarios";
 import { parseTags } from "./tags";
 import { parseTables, type Table } from "./tables";
-import { checkAlias, flatten, type Collection, type Include, type IncludedBundle, type Range, type VarType } from "./boards";
+import { checkAlias, flatten, type Collection, type Include, type IncludedBundle, type Range, type VarFormat, type VarType } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems, isVariableName } from "./formulas";
 import { parseVisualizations, type Visualization } from "./visualizations";
 
@@ -35,6 +35,8 @@ export type BoardDraft = {
   presets?: Preset[];
   // The type of a variable, keyed by variable name: number (the default, not stored) or boolean (yes/no).
   types?: Record<string, VarType>;
+  // How a variable's number is written (grouped, percent or currency); no entry means as it comes.
+  formats?: Record<string, VarFormat>;
   // Collections of items that people using the board can add boards to; their stats are added up.
   collections?: Collection[];
   // Short labels that make the board easier to find, such as finance or game.
@@ -244,6 +246,13 @@ export function validateDraft(
     if (rawTypes[variable.name] === "boolean") types[variable.name] = "boolean";
   }
 
+  const rawFormats = typeof r.formats === "object" && r.formats !== null ? (r.formats as Record<string, unknown>) : {};
+  const formats: Record<string, VarFormat> = {};
+  for (const variable of analysis.variables) {
+    const f = rawFormats[variable.name];
+    if (f === "grouped" || f === "percent" || f === "currency") formats[variable.name] = f;
+  }
+
   const parsedPresets = parsePresets(r.presets, known);
   errors.push(...parsedPresets.errors);
 
@@ -267,6 +276,7 @@ export function validateDraft(
           tables,
           collections,
           types,
+          formats,
           presets: parsedPresets.presets,
           order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),
           tags: parseTags(r.tags),

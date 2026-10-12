@@ -41,6 +41,9 @@ export type Range = { min?: number; max?: number };
 /** What a variable holds: a number, or a yes/no (shown as a tick box; true is 1 and false is 0 in the maths). */
 export type VarType = "number" | "boolean";
 
+/** How a number is written on the board: as it comes, with thousands separators, as a percentage of 1, or as money. */
+export type VarFormat = "grouped" | "percent" | "currency";
+
 export type Bundle = {
   formulas: string[];
   values: Record<string, string>;
@@ -52,6 +55,8 @@ export type Bundle = {
   ranges: Record<string, Range>;
   /** The type of a variable; a variable with no entry is a number. */
   types?: Record<string, VarType>;
+  /** How a variable's number is written; no entry means as it comes. Display only. */
+  formats?: Record<string, VarFormat>;
   /** Lookup tables the formulas can call like functions. Those of a used board are named alias$table. */
   tables: Table[];
   /** The order variables are listed in, by name; those not named come after, in the order they appear. */
@@ -182,6 +187,7 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
     decimals: keys(bundle.decimals),
     ranges: keys(bundle.ranges),
     types: keys(bundle.types ?? {}),
+    formats: keys(bundle.formats ?? {}),
     // A link joins two variables of the same board, so both ends get the alias.
     links: Object.fromEntries(
       Object.entries(bundle.links).map(([from, to]) => [withAlias(alias, from), withAlias(alias, to)]),
@@ -396,6 +402,7 @@ export function flatten(
       decimals: { ...sums.decimals, ...merge((b) => b.decimals, own.decimals) },
       ranges: { ...sums.ranges, ...merge((b) => b.ranges, own.ranges) },
       types: { ...sums.types, ...merge((b) => b.types ?? {}, own.types ?? {}) },
+      formats: merge((b) => b.formats ?? {}, own.formats ?? {}),
       tables: [...own.tables, ...parts.flatMap((p) => p.bundle.tables)],
       order: [...own.order, ...parts.flatMap((p) => p.bundle.order)],
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],

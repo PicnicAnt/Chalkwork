@@ -35,6 +35,8 @@ export function VariableLine({
   onRange,
   type,
   onType,
+  format,
+  onFormat,
 }: {
   name: string;
   expanded: boolean;
@@ -71,6 +73,9 @@ export function VariableLine({
   /** What the variable holds, and a way to change it. */
   type: "number" | "boolean";
   onType: (type: "number" | "boolean") => void;
+  /** How the number is written, and a way to change it. */
+  format: "" | "grouped" | "percent" | "currency";
+  onFormat: (format: "" | "grouped" | "percent" | "currency") => void;
 }) {
   // Applied when the field is left, so half-typed names never rewrite the formulas. After a rename the line
   // is replaced under its new name, so this component starts over with a clean draft.
@@ -131,6 +136,14 @@ export function VariableLine({
           <option value="number">number</option>
           <option value="boolean">yes / no</option>
         </select>
+        {type === "number" && (
+          <select value={format} onChange={(e) => onFormat(e.target.value as "" | "grouped" | "percent" | "currency")} className="cursor-pointer bg-transparent text-lg" aria-label={`Number format of ${name}`} title="How the number is written. Only the display changes, never the maths.">
+            <option value="">as it comes</option>
+            <option value="grouped">1,234,567</option>
+            <option value="percent">percent (0.15 shows as 15%)</option>
+            <option value="currency">money (1,234.50)</option>
+          </select>
+        )}
         <input
           className="field w-24 text-lg"
           value={unit}

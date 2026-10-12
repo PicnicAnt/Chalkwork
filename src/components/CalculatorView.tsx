@@ -33,6 +33,7 @@ export function CalculatorPanel({
   ranges,
   order,
   types,
+  formats,
   visualizations,
   initialLocked,
   onLocks,
@@ -66,6 +67,8 @@ export function CalculatorPanel({
   order?: string[];
   /** The type of each variable; a variable with no entry is a number. */
   types?: Record<string, "number" | "boolean">;
+  /** How each number is written: grouped, percent (the number times 100, with a % sign) or money. */
+  formats?: Record<string, "grouped" | "percent" | "currency">;
   /** Drawings that follow the variables: the board's own come first, those of used boards go with their board. */
   visualizations?: BundleVisualization[];
   /** Starts with these variables locked instead of working it out from the values (a loaded scenario). */
@@ -232,6 +235,7 @@ export function CalculatorPanel({
 
   // By what the number written in the variable's own unit is multiplied to be shown in the unit chosen for it.
   const ratioOf = (name: string): number => {
+    if (formats?.[name] === "percent") return 100;
     const chosen = shownUnits[name];
     return chosen && unitOptions[name] ? (unitRatio(units?.[name], chosen) ?? 1) : 1;
   };
@@ -243,6 +247,14 @@ export function CalculatorPanel({
     const places = decimals?.[name];
     return places !== undefined && !plan.held.includes(name) ? formatDecimals(n * r, places) : formatNumber(n * r);
   };
+  // The text with the format applied: thousands separators, and two decimals for money that was worked out.
+  const formatted = (name: string, text: string): string => {
+    const f = formats?.[name];
+    if (!f || f === "percent" || parseValue(text) === undefined) return text;
+    const n = parseValue(text)!;
+    const body = f === "currency" && decimals?.[name] === undefined && !plan.held.includes(name) ? formatDecimals(n, 2) : text.replace(/,/g, "");
+    return body.replace(/^(-?\d+)/, (int) => int.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
+  };
 
   function row(v: { name: string }, group: string | null) {
     const isHidden = hidden?.[v.name] === true;
@@ -253,7 +265,7 @@ export function CalculatorPanel({
         key={v.name}
         name={v.name}
         description={descriptions?.[v.name]}
-        unit={shownUnits[v.name] && unitOptions[v.name] ? shownUnits[v.name] : units?.[v.name]}
+        unit={formats?.[v.name] === "percent" ? "%" : shownUnits[v.name] && unitOptions[v.name] ? shownUnits[v.name] : units?.[v.name]}
         unitOptions={unitOptions[v.name]}
         ratio={ratioOf(v.name)}
         onUnit={changeUnit}
@@ -261,7 +273,8 @@ export function CalculatorPanel({
         label={labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined)}
         hidden={isHidden}
         linkedTo={links?.[v.name] ? displayName(links[v.name]) : undefined}
-        value={valueOf(v.name, problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name])}
+        value={formatted(v.name, valueOf(v.name, problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]))}
+        grouped={formats?.[v.name] === "grouped" || formats?.[v.name] === "currency"}
         problem={problem?.reason ?? null}
         canLock={parseValue(display[v.name]) !== undefined}
         readOnly={decided.has(v.name) && !problem}

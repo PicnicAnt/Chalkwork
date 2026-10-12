@@ -30,6 +30,8 @@ export function VariableEditor({
   onOrder,
   types,
   onType,
+  formats,
+  onFormat,
   typedRows,
   boardRows,
   extraCount = 0,
@@ -75,6 +77,9 @@ export function VariableEditor({
   /** What each variable holds (a variable with no entry is a number). */
   types: Record<string, "number" | "boolean">;
   onType: (name: string, type: "number" | "boolean") => void;
+  /** How each number is written (no entry: as it comes). */
+  formats: Record<string, "grouped" | "percent" | "currency">;
+  onFormat: (name: string, format: "" | "grouped" | "percent" | "currency") => void;
   /** The variables that are tables, collections and boards, shown after the others. */
   typedRows?: ReactNode;
   /** The rows of the boards that are used, by alias: each is shown at the top of the box with that board's variables. */
@@ -205,6 +210,8 @@ export function VariableEditor({
                 onRange={(end, text) => onRange(v.name, end, text)}
                 type={types[v.name] ?? "number"}
                 onType={(type) => onType(v.name, type)}
+                format={formats[v.name] ?? ""}
+                onFormat={(format) => onFormat(v.name, format)}
               />
             ))}
             </div>
