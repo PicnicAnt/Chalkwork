@@ -15,6 +15,7 @@ export function SearchSelect({
   placeholder,
   ariaLabel,
   className = "",
+  trigger,
 }: {
   options: SearchOption[];
   value: string;
@@ -22,6 +23,8 @@ export function SearchSelect({
   placeholder: string;
   ariaLabel: string;
   className?: string;
+  /** Draws the closed control as a button with this text (and an arrow) instead of showing the choice. */
+  trigger?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -52,14 +55,14 @@ export function SearchSelect({
     <div ref={box} className={`relative min-w-0 ${className}`}>
       <button
         type="button"
-        className="field max-w-full truncate text-left text-lg"
+        className={trigger ? "btn" : "field max-w-full truncate text-left text-lg"}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
         aria-label={ariaLabel}
         onClick={() => setOpen((o) => !o)}
       >
-        {chosen ? (chosen.group ? `${chosen.group} · ${chosen.label}` : chosen.label) : <span className="text-ink-muted">{placeholder}</span>} <span className="text-ink-muted">▾</span>
+        {trigger ? trigger : chosen ? (chosen.group ? `${chosen.group} · ${chosen.label}` : chosen.label) : <span className="text-ink-muted">{placeholder}</span>} <span className="text-ink-muted">▾</span>
       </button>
       {open && (
         <div className="sketch-box absolute left-0 z-30 mt-1 flex w-[min(24rem,86vw)] flex-col gap-2 bg-[var(--board)] p-2 shadow-lg">

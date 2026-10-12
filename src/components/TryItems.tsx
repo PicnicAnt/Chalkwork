@@ -5,38 +5,20 @@ import { AddBoards } from "./AddBoards";
 // In the editor's "Try it" section: boards added to a collection to see how it works out, added the same way as on the
 // board. They are only for trying and aren't saved; people using the board add their own.
 export function TryItems({
-  collection,
   boards,
-  items,
   busy,
   onAdd,
-  onRemove,
 }: {
-  collection: string;
   /** The boards that can be added: the ones the collection lists, or every board. */
   boards: { id: string; title: string }[];
-  items: { alias: string; title: string }[];
   busy: boolean;
   onAdd: (boardId: string, preset?: string) => void;
-  onRemove: (alias: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-base text-ink-muted">
         Try it: add boards here to see the totals. People using the board add their own the same way; these aren&apos;t saved.
       </p>
-      {items.length > 0 && (
-        <ul className="flex flex-col gap-1 text-lg">
-          {items.map((i) => (
-            <li key={i.alias} className="flex items-baseline gap-3">
-              <span>{i.title}</span>
-              <button type="button" className="link text-base text-danger" aria-label={`Take ${i.title} out of ${collection}`} onClick={() => onRemove(i.alias)}>
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
       <AddBoards types={boards.map((b) => ({ board: b.id, title: b.title }))} busy={busy} onAdd={onAdd} />
     </div>
   );

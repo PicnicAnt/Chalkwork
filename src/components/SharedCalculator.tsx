@@ -175,6 +175,25 @@ export function SharedCalculator({
               />,
             ]),
           )}
+          sectionActions={Object.fromEntries(
+            collections.flatMap((c) =>
+              c.added.map((a) => [
+                a.alias,
+                <button
+                  key={a.alias}
+                  type="button"
+                  className="link text-base text-danger"
+                  aria-label={`Take ${a.title} out of ${c.title}`}
+                  onClick={() => {
+                    const url = new URL(linkWith(extras.filter((_, i) => i !== a.index)));
+                    router.replace(`${url.pathname}${url.search}`);
+                  }}
+                >
+                  Remove
+                </button>,
+              ]),
+            ),
+          )}
           visualizations={flat.visualizations}
           initialLocked={loadedLocks}
           onLocks={setLocks}

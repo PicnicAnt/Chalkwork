@@ -654,17 +654,22 @@ function BoardEditorInner({
               c.name,
               <TryItems
                 key={c.name}
-                collection={c.name}
                 boards={
                   c.boards && c.boards.length > 0
                     ? availableBoards.filter((b) => c.boards!.includes(b.id))
                     : availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))
                 }
-                items={liveTryItems.filter((t) => t.group === c.name).map((t) => ({ alias: t.alias, title: t.preset ? `${t.title} (${t.preset})` : t.title }))}
                 busy={loadingBoard}
                 onAdd={(id, preset) => addTryItem(c.name, id, preset)}
-                onRemove={(alias) => setTryItems((list) => list.filter((t) => t.alias !== alias))}
               />,
+            ]),
+          )}
+          sectionActions={Object.fromEntries(
+            liveTryItems.map((t) => [
+              t.alias,
+              <button key={t.alias} type="button" className="link text-base text-danger" aria-label={`Take ${t.title} out of ${t.group}`} onClick={() => setTryItems((list) => list.filter((x) => x.alias !== t.alias))}>
+                Remove
+              </button>,
             ]),
           )}
           visualizations={flat.bundle.visualizations}

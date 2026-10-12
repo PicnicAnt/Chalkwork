@@ -12,12 +12,14 @@ export type BoardType = {
   presets?: string[];
 };
 
+// Stands for the board as it is, in the list that also holds its presets.
+const PLAIN = "plain-board";
 const MAX_ROWS = 20;
 // With this many boards or fewer there is no search box: they are all listed.
 const SEARCH_FROM = 6;
 
-// What a collection offers for adding boards: one "Add <board>" button per kind of board, with a searchable list of
-// that board's presets next to it: picking a preset adds the board as that preset. It is the same on the board page and under "Try it" in the editor.
+// What a collection offers for adding boards: one "Add <board>" button per kind of board, that opens a searchable list of
+// the board and its presets: picking one adds it. It is the same on the board page and under "Try it" in the editor.
 export function AddBoards({
   types,
   busy = false,
@@ -61,18 +63,20 @@ function BoardTypeRow({ type, busy, onAdd }: { type: BoardType; busy: boolean; o
   }, [type.board, type.presets]);
   const presets = type.presets ?? asked ?? [];
   return (
-    <li className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-      <button type="button" className="btn" disabled={busy} onClick={() => onAdd(type.board)}>
-        Add {type.title}
-      </button>
-      {presets.length > 0 && (
-        // Picking a preset adds the board as that preset straight away.
+    <li>
+      {presets.length === 0 ? (
+        <button type="button" className="btn" disabled={busy} onClick={() => onAdd(type.board)}>
+          Add {type.title}
+        </button>
+      ) : (
+        // The button opens the board and its presets as a list to search; picking one adds it.
         <SearchSelect
           value=""
-          onChange={(p) => p && onAdd(type.board, p)}
-          placeholder="Add as a preset"
-          ariaLabel={`Preset of ${type.title} to add`}
-          options={presets.map((p) => ({ value: p, label: p }))}
+          onChange={(v) => onAdd(type.board, v === PLAIN ? undefined : v)}
+          placeholder={`Add ${type.title}`}
+          trigger={`Add ${type.title}`}
+          ariaLabel={`Add ${type.title}`}
+          options={[{ value: PLAIN, label: type.title }, ...presets.map((p) => ({ value: p, label: p, group: type.title }))]}
         />
       )}
     </li>

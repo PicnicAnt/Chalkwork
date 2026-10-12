@@ -12,7 +12,7 @@ export type CollectionView = {
   /** Items the board's creator put in, which can't be taken out here. */
   fixed: { title: string }[];
   /** Items added by whoever is using the board. */
-  added: { index: number; title: string }[];
+  added: { index: number; alias: string; title: string }[];
   /** The boards that can be added, each followed by its presets; absent when adding needs a sign-in. */
   choices?: { board: string; preset?: string; title: string; boardTitle?: string }[];
 };
@@ -30,29 +30,11 @@ export function ItemControls({ collection: c, extras, onChange }: { collection: 
     }
     return out;
   }, [c.choices]);
-  const count = c.fixed.length + c.added.length;
   return (
     <div className="flex flex-col gap-2" aria-label={`Boards in ${c.title}`}>
       <p className="text-base text-ink-muted">
         Add boards here. Their variables are added up as {c.name}.&lt;variable&gt; (also avg(), min(), max() and count() in formulas). Take a board out with Remove.
       </p>
-      {count > 0 && (
-        <ul className="flex flex-col gap-1 text-lg">
-          {c.fixed.map((f, i) => (
-            <li key={`f${i}`} className="text-ink-muted">
-              {f.title}
-            </li>
-          ))}
-          {c.added.map((a) => (
-            <li key={a.index} className="flex items-baseline gap-3">
-              <span>{a.title}</span>
-              <button type="button" className="link text-base text-danger" aria-label={`Take ${a.title} out of ${c.title}`} onClick={() => onChange(extras.filter((_, i) => i !== a.index))}>
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
       {c.choices === undefined ? (
         <p className="text-base text-ink-muted">Sign in to add boards.</p>
       ) : (

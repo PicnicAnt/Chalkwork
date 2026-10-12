@@ -29,6 +29,7 @@ export function CalculatorPanel({
   revealHidden = false,
   groups,
   sectionExtras,
+  sectionActions,
   decimals,
   ranges,
   order,
@@ -56,6 +57,8 @@ export function CalculatorPanel({
   revealHidden?: boolean;
   /** Controls to show inside a used board's or collection's box, by its name (adding boards to a collection). */
   sectionExtras?: Record<string, React.ReactNode>;
+  /** Small controls for the title line of a used board's box, by its name (taking a board out of a collection). */
+  sectionActions?: Record<string, React.ReactNode>;
   /** The boards behind variables that come from boards in use, by alias, for the headings. */
   groups?: Record<string, { title: string; board: string; collection?: string }>;
   /** Decimals to show per variable name for calculated values. Display only. */
@@ -325,6 +328,7 @@ export function CalculatorPanel({
                 {group.title}
                 {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
               </h3>
+              {key && sectionActions?.[key] && <span onClick={(e) => e.stopPropagation()}>{sectionActions[key]}</span>}
               {group.board && (
                 <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link text-base" onClick={(e) => e.stopPropagation()} title={`Open ${group.title}`}>
                   Open board

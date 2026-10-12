@@ -11,7 +11,7 @@ import { canOpen, isListed } from "@/lib/visibility";
 import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
-import { acceptedExtras, groupsOf, resolveForView } from "@/lib/resolve-boards";
+import { acceptedExtras, groupsOf, resolveForView, type ExtraItem } from "@/lib/resolve-boards";
 import { encodeItems, parseItems } from "@/lib/items-param";
 import { outcomeOf, type Outcome } from "@/lib/scenarios";
 import { analyzeFormulas, humanize } from "@/lib/formulas";
@@ -51,6 +51,17 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     const b = getBoard(e.board);
     return b !== null && canOpen(b, user?.id);
   });
+  // The name each added board goes by on the board, worked out as resolveForView does, so its box can say how to take it out.
+  const aliasOf = new Map<ExtraItem, string>();
+  {
+    const taken = new Set(full.includes.map((i) => i.alias));
+    acceptedExtras(full, extras).forEach((e, n) => {
+      let alias = `item${n + 1}`;
+      while (taken.has(alias)) alias += "_";
+      taken.add(alias);
+      aliasOf.set(e, alias);
+    });
+  }
   const choicesOf = (id: string) => {
     const b = getBoard(id);
     if (!b || b.id === full.id || !canOpen(b, user?.id)) return [];
@@ -69,7 +80,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
       : user
         ? anyBoard()
         : undefined,
-    added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
+    added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, alias: aliasOf.get(e) ?? "", title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
   }));
   // Scenarios saved with other boards added are another board to solve: worked out here, for the comparison table.
   const scenarios = user ? listScenarios(full.id, user.id) : undefined;
