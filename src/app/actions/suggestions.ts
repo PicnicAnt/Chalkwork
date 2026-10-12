@@ -33,7 +33,6 @@ export async function createSuggestion(boardId: string, payload: unknown, messag
   const board = found && canOpen(found, user.id) ? found : null;
   if (!board) return { ok: false, errors: ["That board doesn't exist."] };
   if (board.ownerId === user.id) return { ok: false, errors: ["This is your own board: change it directly."] };
-  if (board.ownerId === null) return { ok: false, errors: ["This board has no owner to approve a change."] };
   if (countOpenSuggestionsByAuthorOnBoard(user.id, boardId) >= MAX_OPEN_PER_BOARD) {
     return { ok: false, errors: [`You already have ${MAX_OPEN_PER_BOARD} open suggestions on this board. Wait for an answer or withdraw one.`] };
   }

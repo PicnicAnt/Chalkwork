@@ -21,13 +21,6 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
   if (!board) notFound();
   if (board.ownerId === user.id) redirect(`/c/${id}/edit`);
 
-  if (board.ownerId === null) {
-    return (
-      <p className="sketch-box px-4 py-3 text-ink-muted">
-        This board has no owner, so there is nobody to approve a change. You can make your own copy instead.
-      </p>
-    );
-  }
   const resolved = resolveIncludes(board.includes, id);
   if ("error" in resolved) {
     return (

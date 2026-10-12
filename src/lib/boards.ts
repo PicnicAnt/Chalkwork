@@ -57,11 +57,11 @@ export type Bundle = {
   decimals: Record<string, number>;
   ranges: Record<string, Range>;
   /** The type of a variable; a variable with no entry is a number. */
-  types?: Record<string, VarType>;
+  types: Record<string, VarType>;
   /** How a variable's number is written; no entry means as it comes. Display only. */
-  formats?: Record<string, VarFormat>;
+  formats: Record<string, VarFormat>;
   /** The options of each variable that is a choice. */
-  choices?: Record<string, Choice[]>;
+  choices: Record<string, Choice[]>;
   /** Lookup tables the formulas can call like functions. Those of a used board are named alias$table. */
   tables: Table[];
   /** The order variables are listed in, by name; those not named come after, in the order they appear. */
@@ -84,7 +84,7 @@ export type Collection = {
   boards?: string[];
 };
 
-export type OwnData = Omit<Bundle, "groups" | "visualizations"> & { visualizations: Visualization[]; collections?: Collection[] };
+export type OwnData = Omit<Bundle, "groups" | "visualizations"> & { visualizations: Visualization[]; collections: Collection[] };
 
 export type IncludedBundle = {
   alias: string;
@@ -185,9 +185,9 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
     hidden: keys(bundle.hidden),
     decimals: keys(bundle.decimals),
     ranges: keys(bundle.ranges),
-    types: keys(bundle.types ?? {}),
-    formats: keys(bundle.formats ?? {}),
-    choices: keys(bundle.choices ?? {}),
+    types: keys(bundle.types),
+    formats: keys(bundle.formats),
+    choices: keys(bundle.choices),
     groups: keys(bundle.groups),
     // A drawing of a used board follows that board's variables, and is shown with that board.
     visualizations: bundle.visualizations.map((v) => ({
@@ -345,7 +345,7 @@ export function flatten(
 ): { bundle: Bundle; ownErrors: { index: number; message: string }[] } {
   // Boards put in a collection are added up: group.variable is the total over the boards that are switched on, or the
   // average, minimum or maximum when the collection says so or the formula asks (avg(group.variable)).
-  const collections = own.collections ?? [];
+  const collections = own.collections;
   const groupNames = new Set([...collections.map((c) => c.name), ...included.flatMap((i) => (i.group ? [i.group] : []))]);
   const needs: AggregateNeed[] = [];
   const rewritten = own.formulas.map((formula) => {
@@ -391,9 +391,9 @@ export function flatten(
       hidden: merge((b) => b.hidden, own.hidden),
       decimals: { ...sums.decimals, ...merge((b) => b.decimals, own.decimals) },
       ranges: { ...sums.ranges, ...merge((b) => b.ranges, own.ranges) },
-      types: { ...sums.types, ...merge((b) => b.types ?? {}, own.types ?? {}) },
-      formats: merge((b) => b.formats ?? {}, own.formats ?? {}),
-      choices: merge((b) => b.choices ?? {}, own.choices ?? {}),
+      types: { ...sums.types, ...merge((b) => b.types, own.types) },
+      formats: merge((b) => b.formats, own.formats),
+      choices: merge((b) => b.choices, own.choices),
       tables: [...own.tables, ...parts.flatMap((p) => p.bundle.tables)],
       order: [...own.order, ...parts.flatMap((p) => p.bundle.order)],
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],

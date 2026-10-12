@@ -1,4 +1,4 @@
-// Shared types and validation for calculations. Safe to import from client and server.
+// Shared types and validation for boards. Safe to import from client and server.
 import { parsePresets, type Preset } from "./scenarios";
 import { parseTags } from "./tags";
 import { visibilityOf, type Visibility } from "./visibility";
@@ -33,17 +33,17 @@ export type BoardDraft = {
   // The order variables are listed in, by name. Variables not named come after, in the order they appear.
   order: string[];
   // Scenarios the creator saved on the board, which everyone using it sees (and can use as the starting point of an item).
-  presets?: Preset[];
-  // Who can open the board (public, link or private). Missing means public.
-  visibility?: Visibility;
+  presets: Preset[];
+  // Who can open the board: public (listed), link (open by link, not listed) or private (only the owner).
+  visibility: Visibility;
   // The type of a variable, keyed by variable name: number (the default, not stored) or boolean (yes/no).
-  types?: Record<string, VarType>;
+  types: Record<string, VarType>;
   // How a variable's number is written (grouped, percent or currency); no entry means as it comes.
-  formats?: Record<string, VarFormat>;
+  formats: Record<string, VarFormat>;
   // The options of a variable of the type choice, keyed by variable name.
-  choices?: Record<string, Choice[]>;
+  choices: Record<string, Choice[]>;
   // Collections of items that people using the board can add boards to; their stats are added up.
-  collections?: Collection[];
+  collections: Collection[];
   // Short labels that make the board easier to find, such as finance or game.
   tags: string[];
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
@@ -55,13 +55,11 @@ export type BoardDraft = {
 export type Board = BoardDraft & {
   id: string;
   createdAt: string;
-  /** The user who owns it, or null for calculations made before there were users. */
-  ownerId: string | null;
-  ownerName: string | null;
+  /** The user who owns it. */
+  ownerId: string;
+  ownerName: string;
 };
 
-/** What the browser gets: everything except the owner's id. */
-export type PublicBoard = Omit<Board, "ownerId">;
 
 export const LIMITS = {
   title: 120,
@@ -104,8 +102,7 @@ export function validateDraft(
   const r = raw as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
-  const baseFormulas = (Array.isArray(r.formulas) ? r.formulas : []).map(str).filter(Boolean);
-  const formulas = baseFormulas;
+  const formulas = (Array.isArray(r.formulas) ? r.formulas : []).map(str).filter(Boolean);
   const title = str(r.title);
   const description = str(r.description);
 
@@ -139,7 +136,7 @@ export function validateDraft(
   const parsedTables = parseTables(r.tables);
   errors.push(...parsedTables.errors);
   const tables = parsedTables.tables;
-  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], visualizations: [] };
+  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, tables: [], order: [], visualizations: [] };
   const { bundle: inherited, ownErrors } = flatten({ formulas, ...none, tables, collections }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
   const analysis = analyzeFormulas(inherited.formulas, inherited.tables);
@@ -152,19 +149,12 @@ export function validateDraft(
   // The order also places used boards, tables and collections among the variables.
   const rowNames = new Set([...included.map((i) => i.alias), ...tables.map((t) => t.name), ...collections.map((c) => c.name)]);
 
-  // Boards saved when variables could be linked still carry their links: each becomes the formula "a = b".
-  const rawLinks = typeof r.links === "object" && r.links !== null ? (r.links as Record<string, unknown>) : {};
-  const linkFormulas = Object.entries(rawLinks)
-    .filter(([from, to]) => typeof to === "string" && from !== to && known.has(from) && known.has(to))
-    .map(([from, to]) => `${from} = ${to}`);
-  const allFormulas = [...baseFormulas, ...linkFormulas];
-
   // Problems with the formulas and the used boards together: the formulas first, then the used boards' formulas.
-  const flatSystem = flatten({ formulas: allFormulas, ...none, tables, collections }, included).bundle;
+  const flatSystem = flatten({ formulas, ...none, tables, collections }, included).bundle;
   const system = analyzeFormulas(flatSystem.formulas, flatSystem.tables);
   for (const problem of formulaProblems(system)) {
     errors.push(
-      problem.line <= allFormulas.length
+      problem.line <= formulas.length
         ? `Line ${problem.line}: ${problem.message}`
         : `A formula from a board that is used: ${problem.message}`,
     );
@@ -281,7 +271,7 @@ export function validateDraft(
         draft: {
           title,
           description,
-          formulas: allFormulas,
+          formulas,
           values,
           descriptions,
           units,

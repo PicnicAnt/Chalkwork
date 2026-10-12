@@ -12,7 +12,7 @@ import {
   type IncludedBundle,
 } from "@/lib/boards";
 
-const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], visualizations: [] };
+const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, collections: [], tables: [], order: [], visualizations: [] };
 
 const rectangle: Bundle = {
   ...empty,

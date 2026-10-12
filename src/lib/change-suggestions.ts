@@ -58,22 +58,22 @@ export function diffDrafts(base: BoardDraft, next: BoardDraft): string[] {
   compareMap(out, (n) => `Display name of ${n}`, base.labels, next.labels);
   compareMap(out, (n) => `Unit of ${n}`, base.units, next.units);
   compareMap(out, (n) => `Note on ${n}`, base.descriptions, next.descriptions);
-  compareMap(out, (n) => `Type of ${n}`, base.types ?? {}, next.types ?? {}, (v) => (v === undefined ? "number" : v));
-  if ((base.visibility ?? "public") !== (next.visibility ?? "public")) out.push(`Who can open it: ${base.visibility ?? "public"} → ${next.visibility ?? "public"}`);
-  compareMap(out, (n) => `Options of ${n}`, base.choices ?? {}, next.choices ?? {}, (v) => (v === undefined ? "none" : (v as { label: string; value: number }[]).map((o) => `${o.label} = ${o.value}`).join(", ")));
-  compareMap(out, (n) => `Number format of ${n}`, base.formats ?? {}, next.formats ?? {}, (v) => (v === undefined ? "as it comes" : v));
+  compareMap(out, (n) => `Type of ${n}`, base.types, next.types, (v) => (v === undefined ? "number" : v));
+  if (base.visibility !== next.visibility) out.push(`Who can open it: ${base.visibility} → ${next.visibility}`);
+  compareMap(out, (n) => `Options of ${n}`, base.choices, next.choices, (v) => (v === undefined ? "none" : (v as { label: string; value: number }[]).map((o) => `${o.label} = ${o.value}`).join(", ")));
+  compareMap(out, (n) => `Number format of ${n}`, base.formats, next.formats, (v) => (v === undefined ? "as it comes" : v));
   compareMap(out, (n) => `Decimals of ${n}`, base.decimals, next.decimals, (v) => (v === undefined ? "automatic" : String(v)));
   const rangeText = (v: { min?: number; max?: number } | undefined) => (v ? `${v.min ?? "…"} to ${v.max ?? "…"}` : "none");
-  compareMap(out, (n) => `Range of ${n}`, base.ranges ?? {}, next.ranges ?? {}, rangeText);
+  compareMap(out, (n) => `Range of ${n}`, base.ranges, next.ranges, rangeText);
   // Only what is hidden counts: "not hidden" and no entry are the same.
   const hiddenOnly = (h: Record<string, boolean>) => Object.fromEntries(Object.entries(h).filter(([, v]) => v));
   compareMap(out, (n) => `${n} hidden`, hiddenOnly(base.hidden), hiddenOnly(next.hidden), (v) => (v ? "yes" : "no"));
-  if (JSON.stringify(base.presets ?? []) !== JSON.stringify(next.presets ?? [])) out.push("Presets changed");
-  if (JSON.stringify(base.collections ?? []) !== JSON.stringify(next.collections ?? [])) out.push("Collections changed");
-  if ((base.order ?? []).join(",") !== (next.order ?? []).join(",")) out.push("Order of the variables changed");
-  if ((base.tags ?? []).join(",") !== (next.tags ?? []).join(",")) out.push(`Tags: ${(base.tags ?? []).join(", ") || "none"} → ${(next.tags ?? []).join(", ") || "none"}`);
-  if (JSON.stringify(base.tables ?? []) !== JSON.stringify(next.tables ?? [])) out.push("Tables changed");
-  if (JSON.stringify(base.visualizations ?? []) !== JSON.stringify(next.visualizations ?? [])) out.push("Drawings changed");
+  if (JSON.stringify(base.presets) !== JSON.stringify(next.presets)) out.push("Presets changed");
+  if (JSON.stringify(base.collections) !== JSON.stringify(next.collections)) out.push("Collections changed");
+  if (base.order.join(",") !== next.order.join(",")) out.push("Order of the variables changed");
+  if (base.tags.join(",") !== next.tags.join(",")) out.push(`Tags: ${base.tags.join(", ") || "none"} → ${next.tags.join(", ") || "none"}`);
+  if (JSON.stringify(base.tables) !== JSON.stringify(next.tables)) out.push("Tables changed");
+  if (JSON.stringify(base.visualizations) !== JSON.stringify(next.visualizations)) out.push("Drawings changed");
   return out;
 }
 

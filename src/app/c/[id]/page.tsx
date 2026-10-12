@@ -42,8 +42,8 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
   const resolved = resolveForView(full, extras);
   const user = await getCurrentUser();
   const isOwner = user !== null && user.id === ownerId;
-  // Anyone else signed in can suggest a change (if there is an owner). The owner finds suggestions under Suggestions.
-  const canSuggest = user !== null && !isOwner && ownerId !== null;
+  // Anyone else signed in can suggest a change. The owner finds suggestions under Suggestions.
+  const canSuggest = user !== null && !isOwner;
 
   // The collections of the board and what is in them, for the "add an item" boxes.
   const known = groupsOf(full);
@@ -65,18 +65,18 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
   const choicesOf = (id: string) => {
     const b = getBoard(id);
     if (!b || b.id === full.id || !canOpen(b, user?.id)) return [];
-    return [{ board: id, title: b.title, boardTitle: b.title }, ...(b.presets ?? []).map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}`, boardTitle: b.title }))];
+    return [{ board: id, title: b.title, boardTitle: b.title }, ...b.presets.map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}`, boardTitle: b.title }))];
   };
   let everyBoard: ReturnType<typeof choicesOf> | undefined;
   const anyBoard = () => (everyBoard ??= listAllBoards(300, user?.id).filter((b) => b.id !== full.id).flatMap((b) => choicesOf(b.id)));
   const collections = known.map((name) => ({
     name,
     title: humanize(name),
-    stats: (full.collections ?? []).find((c) => c.name === name)?.stats ?? [],
+    stats: full.collections.find((c) => c.name === name)?.stats ?? [],
     fixed: full.includes.filter((i) => i.group === name).map((i) => ({ title: i.name || i.preset || getBoard(i.board)?.title || "A board" })),
     // The boards that can be added, each followed by its presets: the ones the collection lists, or any board.
-    choices: (full.collections ?? []).find((c) => c.name === name)?.boards?.length
-      ? (full.collections ?? []).find((c) => c.name === name)!.boards!.flatMap(choicesOf)
+    choices: full.collections.find((c) => c.name === name)?.boards?.length
+      ? full.collections.find((c) => c.name === name)!.boards!.flatMap(choicesOf)
       : user
         ? anyBoard()
         : undefined,
@@ -144,7 +144,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
         <SharedCalculator
           key={usedExtras.map((e) => `${e.group}:${e.board}:${e.preset ?? ""}`).join(",")}
           collections={collections}
-          presets={full.presets ?? []}
+          presets={full.presets}
           extras={usedExtras}
           flat={resolved.bundle}
           formulas={calculation.formulas}

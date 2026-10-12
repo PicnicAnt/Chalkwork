@@ -3,7 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import { matchesWords, wordsOf } from "@/lib/board-search";
 
-export type BoardChoice = { id: string; title: string; description: string; ownerName: string | null; /** The names of its presets. */ presets?: string[] };
+export type BoardChoice = { id: string; title: string; description: string; ownerName: string; /** The names of its presets. */ presets?: string[] };
 
 // "Add an existing board": a toggle that opens a search over all boards. Choosing one calls `onAdd`.
 export function BoardPicker({
@@ -75,7 +75,7 @@ export function BoardPicker({
                       {board.title}
                     </span>
                     <span className="shrink-0 text-sm text-ink-faint">
-                      {board.ownerName ? `by ${board.ownerName}` : "no owner"}
+                      by {board.ownerName}
                     </span>
                   </span>
                   {board.description && (

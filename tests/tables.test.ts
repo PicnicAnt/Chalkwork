@@ -72,7 +72,7 @@ describe("conditions and tables in formulas", () => {
   });
 
   it("a used board's tables and calls to them get its alias", () => {
-    const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, visualizations: [], tables: [] as Table[], order: [] };
+    const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, collections: [], visualizations: [], tables: [] as Table[], order: [] };
     const inner = flatten({ ...own, formulas: ["y = curve(x)"], tables: [curve] }, []).bundle;
     const outer = flatten({ ...own, formulas: ["total = tax$y"] }, [{ alias: "tax", board: "b", title: "Tax", bundle: inner }]).bundle;
     expect(outer.formulas).toContain("tax$y = tax$curve(tax$x)");
@@ -96,7 +96,7 @@ describe("solving backwards through conditions and tables", () => {
 });
 
 describe("items in a group are summed", () => {
-  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, visualizations: [], tables: [] as Table[], order: [] };
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, collections: [], visualizations: [], tables: [] as Table[], order: [] };
   const item = (formulas: string[], values: Record<string, string>, units: Record<string, string> = {}) => flatten({ ...own, formulas, values, units }, []).bundle;
   const sword = item(["damage", "strength"], { damage: "10", strength: "2" }, { damage: "pts" });
   const helm = item(["strength", "armor"], { strength: "3", armor: "5" });
@@ -131,7 +131,7 @@ describe("items in a group are summed", () => {
 });
 
 describe("collections people add items to", () => {
-  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, visualizations: [], tables: [] as Table[], order: [] };
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, collections: [], visualizations: [], tables: [] as Table[], order: [] };
   const board = (collections: { name: string; stats: string[] }[], items: { alias: string; formulas: string[]; values: Record<string, string> }[]) =>
     flatten(
       { ...own, formulas: ["power = gear.strength * 10 + base"], values: { base: "7" }, collections },
@@ -174,7 +174,7 @@ describe("presets", () => {
   });
 
   it("a board used from a preset starts with its typed values", () => {
-    const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, visualizations: [], tables: [] as Table[], order: [] };
+    const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, collections: [], visualizations: [], tables: [] as Table[], order: [] };
     const sword = flatten({ ...own, formulas: ["damage", "strength"], values: { damage: "5", strength: "1" } }, []).bundle;
     const { bundle } = flatten(
       { ...own, formulas: ["power = gear.damage"], collections: [{ name: "gear", stats: ["damage"] }] },
@@ -192,7 +192,7 @@ describe("presets", () => {
 });
 
 describe("averages, smallest and largest over a collection", () => {
-  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, visualizations: [], tables: [] as Table[], order: [] };
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, collections: [], visualizations: [], tables: [] as Table[], order: [] };
   const part = (v: string) => flatten({ ...own, formulas: ["damage"], values: { damage: v }, units: { damage: "pts" } }, []).bundle;
   const items = [
     { alias: "a", board: "a", title: "A", group: "weapons", bundle: part("4") },
@@ -231,7 +231,7 @@ describe("averages, smallest and largest over a collection", () => {
 });
 
 describe("a collection needs no list of variables", () => {
-  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, visualizations: [], tables: [] as Table[], order: [] };
+  const own = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, types: {}, formats: {}, choices: {}, collections: [], visualizations: [], tables: [] as Table[], order: [] };
 
   it("totals what the formulas use, even before any board is added", () => {
     const { bundle, ownErrors } = flatten({ ...own, formulas: ["power = weapons.damage * 2 + avg(weapons.speed)"], collections: [{ name: "weapons", stats: [] }] }, []);

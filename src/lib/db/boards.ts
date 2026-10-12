@@ -5,7 +5,7 @@ import { db } from "./client";
 import { recordVersion } from "./versions";
 
 // ---------------------------------------------------------------------------
-// Calculations
+// Boards
 
 type Row = {
   id: string;
@@ -31,14 +31,14 @@ type Row = {
   board_includes: string;
   visualizations: string;
   created_at: string;
-  owner_id: string | null;
-  owner_name: string | null;
+  owner_id: string;
+  owner_name: string;
 };
 
 export function insertBoard(draft: BoardDraft, ownerId: string): string {
   const id = randomBytes(9).toString("base64url");
   db.prepare(
-    `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
+    `INSERT INTO boards (id, title, description, formulas, input_values, variable_descriptions,
        variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_order, board_collections, board_presets, variable_types, variable_formats, variable_choices, visibility, variable_labels,
        variable_hidden, board_includes, visualizations, owner_id)
      VALUES (${Array(23).fill("?").join(", ")})`,
@@ -60,12 +60,12 @@ const fieldsOf = (draft: BoardDraft) => [
   JSON.stringify(draft.tables),
   JSON.stringify(draft.tags),
   JSON.stringify(draft.order),
-  JSON.stringify(draft.collections ?? []),
-  JSON.stringify(draft.presets ?? []),
-  JSON.stringify(draft.types ?? {}),
-  JSON.stringify(draft.formats ?? {}),
-  JSON.stringify(draft.choices ?? {}),
-  draft.visibility ?? "public",
+  JSON.stringify(draft.collections),
+  JSON.stringify(draft.presets),
+  JSON.stringify(draft.types),
+  JSON.stringify(draft.formats),
+  JSON.stringify(draft.choices),
+  draft.visibility,
   JSON.stringify(draft.labels),
   JSON.stringify(draft.hidden),
   JSON.stringify(draft.includes),
@@ -77,7 +77,7 @@ const fieldsOf = (draft: BoardDraft) => [
 export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note = ""): boolean {
   const result = db
     .prepare(
-      `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
+      `UPDATE boards SET title = ?, description = ?, formulas = ?, input_values = ?,
          variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?,
          board_tags = ?, variable_order = ?, board_collections = ?, board_presets = ?, variable_types = ?, variable_formats = ?, variable_choices = ?, visibility = ?, variable_labels = ?, variable_hidden = ?,
          board_includes = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
@@ -95,23 +95,23 @@ const parse = (row: Row): Board => ({
   description: row.description,
   formulas: JSON.parse(row.formulas),
   values: JSON.parse(row.input_values),
-  descriptions: JSON.parse(row.variable_descriptions || "{}"),
-  units: JSON.parse(row.variable_units || "{}"),
-  labels: JSON.parse(row.variable_labels || "{}"),
-  decimals: JSON.parse(row.variable_decimals || "{}"),
-  ranges: JSON.parse(row.variable_ranges || "{}"),
-  tables: JSON.parse(row.board_tables || "[]"),
-  tags: JSON.parse(row.board_tags || "[]"),
-  order: JSON.parse(row.variable_order || "[]"),
-  collections: JSON.parse(row.board_collections || "[]"),
-  presets: JSON.parse(row.board_presets || "[]"),
-  types: JSON.parse(row.variable_types || "{}"),
-  formats: JSON.parse(row.variable_formats || "{}"),
-  choices: JSON.parse(row.variable_choices || "{}"),
+  descriptions: JSON.parse(row.variable_descriptions),
+  units: JSON.parse(row.variable_units),
+  labels: JSON.parse(row.variable_labels),
+  decimals: JSON.parse(row.variable_decimals),
+  ranges: JSON.parse(row.variable_ranges),
+  tables: JSON.parse(row.board_tables),
+  tags: JSON.parse(row.board_tags),
+  order: JSON.parse(row.variable_order),
+  collections: JSON.parse(row.board_collections),
+  presets: JSON.parse(row.board_presets),
+  types: JSON.parse(row.variable_types),
+  formats: JSON.parse(row.variable_formats),
+  choices: JSON.parse(row.variable_choices),
   visibility: visibilityOf(row.visibility),
-  hidden: JSON.parse(row.variable_hidden || "{}"),
-  includes: JSON.parse(row.board_includes || "[]"),
-  visualizations: JSON.parse(row.visualizations || "[]"),
+  hidden: JSON.parse(row.variable_hidden),
+  includes: JSON.parse(row.board_includes),
+  visualizations: JSON.parse(row.visualizations),
   createdAt: row.created_at,
   ownerId: row.owner_id,
   ownerName: row.owner_name,
@@ -120,7 +120,7 @@ const parse = (row: Row): Board => ({
 export function getBoard(id: string): Board | null {
   const row = db
     .prepare(
-      `SELECT c.*, u.name AS owner_name FROM calculations c LEFT JOIN users u ON u.id = c.owner_id
+      `SELECT c.*, u.name AS owner_name FROM boards c JOIN users u ON u.id = c.owner_id
        WHERE c.id = ?`,
     )
     .get(id) as Row | undefined;
@@ -130,17 +130,9 @@ export function getBoard(id: string): Board | null {
 export function listBoardsByOwner(ownerId: string): { id: string; title: string; createdAt: string }[] {
   return (
     db
-      .prepare("SELECT id, title, created_at FROM calculations WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100")
+      .prepare("SELECT id, title, created_at FROM boards WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100")
       .all(ownerId) as { id: string; title: string; created_at: string }[]
   ).map((r) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
-}
-
-function safeJson<T>(text: string | null, fallback: T): T {
-  try {
-    return JSON.parse(text || "") as T;
-  } catch {
-    return fallback;
-  }
 }
 
 export type BoardSummary = {
@@ -148,21 +140,21 @@ export type BoardSummary = {
   title: string;
   description: string;
   createdAt: string;
-  ownerId: string | null;
-  ownerName: string | null;
+  ownerId: string;
+  ownerName: string;
   tags: string[];
   /** The formulas and the display names, so a board can be found by what it calculates. */
   keywords: string;
 };
 
-// Every calculation by every user, newest first, for the browse page. Private and link-only boards are left out
+// Every board by every user, newest first, for the browse page. Private and link-only boards are left out
 // unless they are the viewer's own.
 export function listAllBoards(limit = 1000, viewerId?: string | null): BoardSummary[] {
   return (
     db
       .prepare(
         `SELECT c.id, c.title, c.description, c.created_at, c.owner_id, u.name AS owner_name, c.board_tags, c.formulas, c.variable_labels
-         FROM calculations c LEFT JOIN users u ON u.id = c.owner_id
+         FROM boards c JOIN users u ON u.id = c.owner_id
          WHERE c.visibility = 'public' OR (? IS NOT NULL AND c.owner_id = ?)
          ORDER BY c.created_at DESC LIMIT ?`,
       )
@@ -171,8 +163,8 @@ export function listAllBoards(limit = 1000, viewerId?: string | null): BoardSumm
       title: string;
       description: string;
       created_at: string;
-      owner_id: string | null;
-      owner_name: string | null;
+      owner_id: string;
+      owner_name: string;
       board_tags: string;
       formulas: string;
       variable_labels: string;
@@ -184,15 +176,15 @@ export function listAllBoards(limit = 1000, viewerId?: string | null): BoardSumm
     createdAt: r.created_at,
     ownerId: r.owner_id,
     ownerName: r.owner_name,
-    tags: safeJson<string[]>(r.board_tags, []),
-    keywords: [...safeJson<string[]>(r.formulas, []), ...Object.values(safeJson<Record<string, string>>(r.variable_labels, {}))].join("\n"),
+    tags: JSON.parse(r.board_tags) as string[],
+    keywords: [...(JSON.parse(r.formulas) as string[]), ...Object.values(JSON.parse(r.variable_labels) as Record<string, string>)].join("\n"),
   }));
 }
 
 // The boards that use this one, by title, so it is not deleted from under them.
 export function boardsUsing(id: string): { id: string; title: string; ownerId: string | null; visibility: Visibility }[] {
   const rows = db
-    .prepare("SELECT id, title, owner_id, visibility, board_includes FROM calculations WHERE id != ? AND board_includes LIKE ?")
+    .prepare("SELECT id, title, owner_id, visibility, board_includes FROM boards WHERE id != ? AND board_includes LIKE ?")
     .all(id, `%${id}%`) as { id: string; title: string; owner_id: string | null; visibility: string; board_includes: string }[];
   return rows
     .filter((row) => {
@@ -207,5 +199,5 @@ export function boardsUsing(id: string): { id: string; title: string; ownerId: s
 
 // Only the owner's own board is deleted: the ownership check is part of the statement.
 export function removeBoard(id: string, ownerId: string): boolean {
-  return db.prepare("DELETE FROM calculations WHERE id = ? AND owner_id = ?").run(id, ownerId).changes > 0;
+  return db.prepare("DELETE FROM boards WHERE id = ? AND owner_id = ?").run(id, ownerId).changes > 0;
 }

@@ -91,7 +91,7 @@ export async function presetsOf(boardId: unknown): Promise<string[]> {
   const user = await getCurrentUser();
   if (!user || typeof boardId !== "string") return [];
   const board = getBoard(boardId);
-  return board && canOpen(board, user.id) ? (board.presets ?? []).map((p) => p.name) : [];
+  return board && canOpen(board, user.id) ? board.presets.map((p) => p.name) : [];
 }
 
 export type ImportResult = { ok: true; draft: import("@/lib/board-draft").BoardDraft; note: string } | { ok: false; error: string };

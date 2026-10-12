@@ -13,32 +13,33 @@ if (!owner) {
   db.prepare("INSERT INTO users (id, provider, account_id, name) VALUES (?, 'dev', 'martin', 'Martin')").run(owner.id);
 }
 
-const find = (title) => db.prepare("SELECT id FROM calculations WHERE owner_id = ? AND title = ?").get(owner.id, title)?.id;
+const find = (title) => db.prepare("SELECT id FROM boards WHERE owner_id = ? AND title = ?").get(owner.id, title)?.id;
 
 function add(b) {
   const existing = find(b.title);
   if (existing) {
     // A drawing or chart of a type the board doesn't have yet is added; what someone set up is left alone.
     if (b.visualizations) {
-      const row = db.prepare("SELECT visualizations FROM calculations WHERE id = ?").get(existing);
+      const row = db.prepare("SELECT visualizations FROM boards WHERE id = ?").get(existing);
       const have = JSON.parse(row.visualizations || "[]");
       const added = b.visualizations.filter((v) => !have.some((h) => h.type === v.type));
       if (added.length > 0) {
-        db.prepare("UPDATE calculations SET visualizations = ? WHERE id = ?").run(JSON.stringify([...have, ...added]), existing);
+        db.prepare("UPDATE boards SET visualizations = ? WHERE id = ?").run(JSON.stringify([...have, ...added]), existing);
       }
     }
     return existing;
   }
   const id = newId();
   db.prepare(
-    `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
-       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, variable_links, visualizations, owner_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO boards (id, title, description, formulas, input_values, variable_descriptions,
+       variable_units, variable_decimals, variable_labels, variable_hidden, board_includes, visualizations, owner_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     id,
     b.title,
     b.description,
-    JSON.stringify(b.formulas),
+    // Two variables that follow each other are the formula "a = b".
+    JSON.stringify([...b.formulas, ...Object.entries(b.links ?? {}).map(([from, to]) => `${from} = ${to}`)]),
     JSON.stringify(b.values ?? {}),
     JSON.stringify(b.descriptions ?? {}),
     JSON.stringify(b.units ?? {}),
@@ -46,7 +47,6 @@ function add(b) {
     JSON.stringify(b.labels ?? {}),
     JSON.stringify(b.hidden ?? {}),
     JSON.stringify(b.includes ?? []),
-    JSON.stringify(b.links ?? {}),
     JSON.stringify(b.visualizations ?? []),
     owner.id,
   );
@@ -119,7 +119,7 @@ add({
   labels: { total_dps: "Total damage per second" },
 });
 
-console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+console.log("boards:", db.prepare("SELECT title FROM boards WHERE owner_id = ?").all(owner.id).map((r) => r.title));
 
 // A fight that connects three boards: the character, the damage calculator and a monster.
 const monster = add({
@@ -155,7 +155,7 @@ add({
   decimals: { time_to_kill: 1, hits_to_die: 1 },
 });
 
-console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+console.log("boards:", db.prepare("SELECT title FROM boards WHERE owner_id = ?").all(owner.id).map((r) => r.title));
 
 // Shapes, and boards that combine them.
 const circle = add({
@@ -215,7 +215,7 @@ add({
   decimals: { free_area: 2 },
 });
 
-console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+console.log("boards:", db.prepare("SELECT title FROM boards WHERE owner_id = ?").all(owner.id).map((r) => r.title));
 
 // A pyramid on a rectangle: the base is a Rectangle and each pair of side faces is a Triangle whose
 // base is an edge of the rectangle and whose height is the slant height.
@@ -246,7 +246,7 @@ add({
   decimals: { volume: 2, slant_w: 2, slant_d: 2, lateral_area: 2, surface: 2 },
 });
 
-console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+console.log("boards:", db.prepare("SELECT title FROM boards WHERE owner_id = ?").all(owner.id).map((r) => r.title));
 
 // A donut (a torus) from two circles, by Pappus's theorem: the tube is a circle that is swept once
 // around a second circle, the path of its centre. Volume = tube area x ring circumference, and
@@ -271,7 +271,7 @@ add({
   decimals: { volume: 2, surface: 2, outer_diameter: 2, hole_diameter: 2 },
 });
 
-console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+console.log("boards:", db.prepare("SELECT title FROM boards WHERE owner_id = ?").all(owner.id).map((r) => r.title));
 
 // More shapes, with the charts that suit them.
 add({
@@ -379,4 +379,4 @@ add({
   visualizations: [{ type: "bars", lists: { values: ["max_life", "max_mana"] }, map: {} }],
 });
 
-console.log("boards:", db.prepare("SELECT title FROM calculations WHERE owner_id = ?").all(owner.id).map((r) => r.title));
+console.log("boards:", db.prepare("SELECT title FROM boards WHERE owner_id = ?").all(owner.id).map((r) => r.title));

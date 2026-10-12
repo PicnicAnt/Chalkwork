@@ -541,8 +541,8 @@ function BoardEditorInner({
         onHide={(name, value) => setHidden((h) => ({ ...h, [name]: value }))}
         onDecimals={(name, text) => setDecimalText((d) => ({ ...d, [name]: text }))}
         order={flat.bundle.order}
-        types={flat.bundle.types ?? {}}
-        formats={flat.bundle.formats ?? {}}
+        types={flat.bundle.types}
+        formats={flat.bundle.formats}
         onFormat={(name, format) =>
           setFormats((f) => {
             const { [name]: _removed, ...rest } = f;

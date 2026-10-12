@@ -19,11 +19,6 @@ const allowed = makeLimiter(AI_LIMITS.perHour);
 export type DraftOutcome = { ok: true; draft: BoardDraft } | { ok: false; error: string };
 export type ExplainOutcome = { ok: true; text: string } | { ok: false; error: string };
 
-// Whether the helper can be used at all, so the page can hide the buttons when it can't.
-export async function helperAvailable(): Promise<boolean> {
-  return "key" in aiConfig();
-}
-
 // The boards worth offering for a description, with their variables, so the draft can use them.
 function boardCatalog(description: string, viewerId: string, alwaysIds: readonly string[] = [], exceptId?: string): CatalogBoard[] {
   const all = listAllBoards(1000, viewerId).filter((b) => b.id !== exceptId);

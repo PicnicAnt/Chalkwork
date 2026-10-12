@@ -27,7 +27,7 @@ export function listUsers(provider: string, limit = 50): (UserRow & { boards: nu
   return db
     .prepare(
       `SELECT u.id, u.provider, u.name,
-         (SELECT COUNT(*) FROM calculations c WHERE c.owner_id = u.id) AS boards
+         (SELECT COUNT(*) FROM boards c WHERE c.owner_id = u.id) AS boards
        FROM users u WHERE u.provider = ? ORDER BY lower(u.name) LIMIT ?`,
     )
     .all(provider, limit) as (UserRow & { boards: number })[];

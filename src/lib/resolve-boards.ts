@@ -23,11 +23,11 @@ const ownData = (calc: Board): OwnData => ({
   decimals: calc.decimals,
   ranges: calc.ranges,
   tables: calc.tables,
-  order: calc.order ?? [],
-  collections: calc.collections ?? [],
-  types: calc.types ?? {},
-  formats: calc.formats ?? {},
-  choices: calc.choices ?? {},
+  order: calc.order,
+  collections: calc.collections,
+  types: calc.types,
+  formats: calc.formats,
+  choices: calc.choices,
   visualizations: calc.visualizations,
 });
 
@@ -96,7 +96,7 @@ export function resolveBoard(boardId: string, selfId?: string, version?: number)
 export type ExtraItem = { group: string; board: string; preset?: string };
 
 // The groups a board has: its collections, and those its creator put included boards in.
-export const groupsOf = (calc: Board): string[] => [...new Set([...(calc.collections ?? []).map((c) => c.name), ...calc.includes.flatMap((i) => (i.group ? [i.group] : []))])];
+export const groupsOf = (calc: Board): string[] => [...new Set([...calc.collections.map((c) => c.name), ...calc.includes.flatMap((i) => (i.group ? [i.group] : []))])];
 
 // The extra items that this board takes: in a group it has, and (when the collection lists which boards can be
 // added) one of those boards.
@@ -104,7 +104,7 @@ export function acceptedExtras(calc: Board, extras: readonly ExtraItem[]): Extra
   const groups = groupsOf(calc);
   return extras.filter((e) => {
     if (!groups.includes(e.group) || e.board === calc.id) return false;
-    const allowed = (calc.collections ?? []).find((c) => c.name === e.group)?.boards ?? [];
+    const allowed = calc.collections.find((c) => c.name === e.group)?.boards ?? [];
     return allowed.length === 0 || allowed.includes(e.board);
   });
 }

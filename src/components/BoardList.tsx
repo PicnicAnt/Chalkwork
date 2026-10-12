@@ -9,7 +9,7 @@ export type BoardItem = {
   title: string;
   description: string;
   createdAt: string;
-  ownerName: string | null;
+  ownerName: string;
   isMine: boolean;
   tags: string[];
   /** Formulas and display names, searched too. */
@@ -159,7 +159,7 @@ export function BoardList({
                 )}
                 <span className="pl-7 text-sm text-ink-faint">
                   {board.tags.length > 0 && <span className="mr-2 text-accent-2">{board.tags.map((t) => `#${t}`).join(" ")}</span>}
-                  {board.ownerName ? `by ${board.ownerName}${board.isMine ? " (you)" : ""}` : "no owner"}
+                  by {board.ownerName}{board.isMine ? " (you)" : ""}
                   {" · "}
                   {new Date(board.createdAt).toLocaleDateString()}
                 </span>
