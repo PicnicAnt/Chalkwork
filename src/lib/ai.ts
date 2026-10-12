@@ -199,14 +199,20 @@ export function explainWith(ask: Ask, board: { title: string; description: strin
   return ask(EXPLAIN_SYSTEM, lines.join("\n").slice(0, 6000));
 }
 
-const IMAGE_SYSTEM = `You draw a small picture for a calculation board, to be shown in a list next to its title. Reply with ONLY one SVG document and nothing else: it starts with <svg and ends with </svg>.
+const IMAGE_SYSTEM = `You draw a small, stylish picture for a calculation board, shown in a list next to its title. Reply with ONLY one SVG document and nothing else: it starts with <svg and ends with </svg>.
 
-Rules:
+Format:
 - viewBox="0 0 160 120", with an xmlns attribute, no width or height.
-- Flat, simple shapes, a clear subject that suggests what the board calculates (a box for a volume, a coin for a price, a gauge for a rate, and so on), and a plain background rectangle that fills the box.
-- A few colours that sit well together. No text at all, no letters or numbers.
 - Only basic elements: rect, circle, ellipse, line, polyline, polygon, path, g, defs, linearGradient, radialGradient, stop. No script, no style element, no image or use, no links, no external addresses, no event handlers.
-- Under 4000 characters.`;
+- No text at all, no letters or numbers. Under 4000 characters.
+
+Subject: something that suggests what the board calculates (a box for a volume, a coin for a price, a gauge for a rate, a sword for damage), drawn as one clear subject, centred, with plenty of space around it.
+
+Style: the picture is shown on both a dark chalkboard and a light whiteboard, so it must look good on either.
+- Fill the whole box with a background of its own: a deep, rich colour (indigo, teal, plum, forest or slate) with a soft gradient, never pure white or pure black, so it stands on any page.
+- Draw the subject with flat geometric shapes in two or three bright, harmonious colours (one warm accent such as amber or coral against cool tones), with light edges that separate it from the background.
+- Keep it modern and minimal: clean shapes, rounded corners, a subtle shadow or highlight shape for depth, no clutter, no thin hairlines, no photo realism.
+- Use consistent contrast: light shapes on the dark background, nothing that disappears into it.`;
 
 // A picture for a board, drawn by the helper as SVG and checked before it is kept. Returns the SVG, or why not.
 export async function imageWith(
