@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { presetsOf } from "@/app/actions/boards";
-import { SearchSelect } from "./ui/SearchSelect";
+import { AddBoards } from "./AddBoards";
 
-// In the editor's "Try it" section: boards added to a collection to see how it works out. They are only for trying
-// and aren't saved; people using the board add their own the same way.
+// In the editor's "Try it" section: boards added to a collection to see how it works out, added the same way as on the
+// board. They are only for trying and aren't saved; people using the board add their own.
 export function TryItems({
   collection,
   boards,
@@ -22,21 +20,6 @@ export function TryItems({
   onAdd: (boardId: string, preset?: string) => void;
   onRemove: (alias: string) => void;
 }) {
-  const [pick, setPick] = useState("");
-  // The presets of the chosen board, so it can be tried as one of them.
-  const [presets, setPresets] = useState<{ board: string; names: string[] } | null>(null);
-  const [preset, setPreset] = useState("");
-  useEffect(() => {
-    if (!pick) return;
-    let cancelled = false;
-    presetsOf(pick).then((names) => {
-      if (!cancelled) setPresets({ board: pick, names });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [pick]);
-  const names = presets?.board === pick ? presets.names : [];
   return (
     <div className="flex flex-col gap-2">
       <p className="text-base text-ink-muted">
@@ -54,35 +37,7 @@ export function TryItems({
           ))}
         </ul>
       )}
-      {boards.length > 0 ? (
-        <div className="flex flex-wrap items-baseline gap-3">
-          <SearchSelect value={pick} onChange={(id) => { setPick(id); setPreset(""); }} placeholder="Choose a board…" ariaLabel={`Board to try in ${collection}`} options={boards.map((b) => ({ value: b.id, label: b.title }))} />
-          {names.length > 0 && (
-            <select value={preset} onChange={(e) => setPreset(e.target.value)} className="cursor-pointer bg-transparent text-lg" aria-label="Preset to start from">
-              <option value="">as it is</option>
-              {names.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            type="button"
-            className="btn"
-            disabled={!pick || busy}
-            onClick={() => {
-              onAdd(pick, preset || undefined);
-              setPick("");
-              setPreset("");
-            }}
-          >
-            Add
-          </button>
-        </div>
-      ) : (
-        <p className="text-base text-ink-muted">There are no boards to add yet.</p>
-      )}
+      <AddBoards types={boards.map((b) => ({ board: b.id, title: b.title }))} busy={busy} onAdd={onAdd} />
     </div>
   );
 }

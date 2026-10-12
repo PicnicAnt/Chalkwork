@@ -143,7 +143,7 @@ A signed-in user can save what is on a board as a named **scenario** (the typed 
 
 ## Collections on the board page
 
-A collection's totals are not listed as rows (formulas use them and the results strip at the top shows them). In the editor's "Try it" section a collection has its own board picker (with presets) so the totals can be tried; those boards are not saved.
+A collection's totals are not listed as rows (formulas use them and the results strip at the top shows them). Each board a collection can take has its own **Add (board)** button with a searchable list of that board's presets beside it. The editor's "Try it" section has the same buttons so the totals can be tried; those boards are not saved.
 
 ## Results strip
 
