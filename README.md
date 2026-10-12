@@ -148,6 +148,26 @@ A collection's totals are not listed as rows (formulas use them and the results 
 
 A board can have a picture that is shown next to its title in lists (**Boards** and **Your boards**). In the editor, under **About**, **Upload a picture** scales a file down (largest side 480 px, kept as JPEG) and **Draw one with the helper** has the AI model draw a small SVG from the title, formulas and drawings (it counts as one helper use). The picture is stored as a data URL in `board_images` and served at `/c/<id>/image`. SVGs are checked before they are kept: no scripts, handlers, links or loaded files, under 24 KB. A board with no picture of its own gets a plain one made from its title (a colour from the title and the outline of its first drawing), so every board has one. A copy of a board starts with the picture of the original.
 
+## Checks
+
+In the editor, **Try it** has **Checks**: **Save these numbers as a check** takes the values you have typed (locked) as what is put in, and the other results as what the board should work out. Checks are run again whenever the board is shown (a tick or a cross, with what came out different), in the editor and on the board page under **Checks**. A result matches within 0.001 %. They are kept in the `board_checks` table with the board's picture, not in its history, and a copy of a board starts with the original's.
+
+## Undo, redo and a kept draft
+
+The editor remembers its states when typing pauses (up to 50): **Undo** and **Redo** above it, or Ctrl+Z / Ctrl+Y when the cursor is not in a field. The latest state is also kept in the browser (`localStorage`, up to 14 days, per board); opening the editor again offers to open that draft or throw it away, and saving clears it.
+
+## Compare versions
+
+**History** has a **Compare** choice of two versions: `/c/<id>/history/compare?from=1&to=4` lists what changed and puts the formulas of the two versions side by side with the different lines marked.
+
+## Jump to
+
+Ctrl+K (or **Jump to…** in the top row, signed in) opens a search over every board you can open and the variables on the page you are on; Enter on a variable scrolls to it and puts the cursor in it, on a board opens it.
+
+## Install and link previews
+
+The site has a web app manifest, icons and a small service worker, so a phone or computer can install it (on a secure address, which the public tunnel is; the home Wi-Fi address is plain HTTP and browsers won't offer it there). Nothing is kept for offline use. A board's link (public or link-only) shows its picture, title and description when pasted in a chat (`/c/<id>/opengraph-image`).
+
 ## Results strip
 
 The values the formulas work out are listed in a strip that stays at the top of the board while it scrolls, so a change made far down can be seen working through. Tapping a result goes to its field; the arrow next to "Results" hides the strip.

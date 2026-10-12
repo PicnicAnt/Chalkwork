@@ -69,6 +69,12 @@ export function createSchema(db: Database.Database) {
       image TEXT NOT NULL
     );
 
+    -- The checks of a board: sets of numbers with the results expected, as JSON (see lib/checks.ts).
+    CREATE TABLE IF NOT EXISTS board_checks (
+      board_id TEXT PRIMARY KEY REFERENCES boards(id) ON DELETE CASCADE,
+      checks TEXT NOT NULL
+    );
+
     -- How many times each board has been opened by someone other than its owner: the board's popularity.
     CREATE TABLE IF NOT EXISTS board_views (
       board_id TEXT PRIMARY KEY REFERENCES boards(id) ON DELETE CASCADE,

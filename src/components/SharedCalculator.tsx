@@ -17,6 +17,8 @@ import { ShareMenu } from "./ShareMenu";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
+import { ChecksList } from "./ChecksList";
+import { runCheck, type Check } from "@/lib/checks";
 import { FormulaText } from "./FormulaText";
 import { OptimizerPanel } from "./OptimizerPanel";
 import { ScenarioPanel } from "./ScenarioPanel";
@@ -34,6 +36,7 @@ export function SharedCalculator({
   presets = [],
   extras = [],
   scenarioOutcomes,
+  checks = [],
 }: {
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
@@ -51,6 +54,8 @@ export function SharedCalculator({
   collections?: CollectionView[];
   /** Scenarios the creator saved on the board. */
   presets?: Preset[];
+  /** The checks the author set on the board, run against it as it is. */
+  checks?: Check[];
   /** The items someone using the board has added. */
   extras?: ExtraItem[];
   /** What scenarios with other added boards come to, worked out on the server (a different set of boards is a different board). */
@@ -59,6 +64,7 @@ export function SharedCalculator({
   const router = useRouter();
   const loc = useNumberLocale();
   const analysis = useMemo(() => analyzeFormulas(flat.formulas, flat.tables), [flat.formulas, flat.tables]);
+  const checkResults = useMemo(() => checks.map((c) => runCheck(analysis, flat.values, c)), [checks, analysis, flat.values]);
   const [values, setValues] = useState(() => (initialState ? { ...flat.values, ...initialState.values } : flat.values));
   // Bumping the key remounts the panel, which also forgets the edit history.
   const [resets, setResets] = useState(0);
@@ -248,6 +254,18 @@ export function SharedCalculator({
             ))}
           </div>
         </section>
+      )}
+      {checks.length > 0 && (
+        <CollapsibleSection title="Checks" count={checks.length}>
+          <p className={checkResults.every((r) => r.ok) ? "text-lg text-accent" : "text-lg text-danger"}>
+            {checkResults.every((r) => r.ok)
+              ? checks.length === 1
+                ? "The check passes."
+                : `All ${checks.length} checks pass.`
+              : `${checkResults.filter((r) => !r.ok).length} of ${checks.length} checks fail.`}
+          </p>
+          <ChecksList results={checkResults} labels={flat.labels} />
+        </CollapsibleSection>
       )}
       {formulas.length > 0 && (
         <CollapsibleSection title="Formulas" count={formulas.length}>

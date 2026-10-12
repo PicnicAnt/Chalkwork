@@ -2,7 +2,8 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import type { Bundle } from "@/lib/boards";
-import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard, setBoardImage } from "@/lib/db";
+import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard, setBoardImage, setChecks } from "@/lib/db";
+import { parseChecks } from "@/lib/checks";
 import { parseImage } from "@/lib/board-image";
 import { parseIncludes, type IncludedBundle } from "@/lib/boards";
 import { resolveBoard, resolveIncludes } from "@/lib/resolve-boards";
@@ -28,7 +29,7 @@ function hiddenUse(draft: { includes: { board: string }[] }, userId: string): st
 const imageOf = (image: unknown): { ok: true; value: string | null } | { ok: false } =>
   image === undefined || image === null ? { ok: true, value: null } : image === "" ? { ok: true, value: "" } : parseImage(image) ? { ok: true, value: image as string } : { ok: false };
 
-export async function createBoard(payload: unknown, image?: unknown): Promise<SaveResult> {
+export async function createBoard(payload: unknown, image?: unknown, checks?: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to save a board."] };
   const prepared = prepare(payload);
@@ -39,11 +40,12 @@ export async function createBoard(payload: unknown, image?: unknown): Promise<Sa
   if (!picture.ok) return { ok: false, errors: ["That picture can't be used."] };
   const id = insertBoard(prepared.draft, user.id);
   if (picture.value) setBoardImage(id, picture.value);
+  if (Array.isArray(checks)) setChecks(id, parseChecks(checks));
   return { ok: true, id };
 }
 
 // Only the owner can change a calculation.
-export async function updateBoard(id: string, payload: unknown, image?: unknown): Promise<SaveResult> {
+export async function updateBoard(id: string, payload: unknown, image?: unknown, checks?: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to save changes."] };
   if (typeof id !== "string" || getBoard(id)?.ownerId !== user.id) {
@@ -59,6 +61,7 @@ export async function updateBoard(id: string, payload: unknown, image?: unknown)
     return { ok: false, errors: ["Only the owner can change this board."] };
   }
   if (picture.value !== null) setBoardImage(id, picture.value);
+  if (Array.isArray(checks)) setChecks(id, parseChecks(checks));
   notifyBoardChanged(id, user.id);
   return { ok: true, id };
 }

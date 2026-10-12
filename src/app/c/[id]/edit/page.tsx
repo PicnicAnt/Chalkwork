@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
-import { getBoardImage } from "@/lib/db";
+import { getBoardImage, getChecks } from "@/lib/db";
 import { imageVersion } from "@/lib/board-image";
 
 import { getVisibleBoard } from "@/lib/visible-board";
@@ -77,6 +77,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
         availableBoards={availableBoards}
         initialIncluded={resolved.included}
         currentImageSrc={`/c/${id}/image?v=${imageVersion(getBoardImage(id), calculation.title, calculation.visualizations[0]?.type)}`}
+        initialChecks={getChecks(id)}
       />
     );
   }
@@ -91,6 +92,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
         aiEnabled={"key" in aiConfig()}
         initial={{ ...draft, title: `${draft.title} (copy)` }}
         initialImage={getBoardImage(id) ?? ""}
+        initialChecks={getChecks(id)}
         heading={`Copy ${draft.title}`}
         availableBoards={availableBoards}
         initialIncluded={resolved.included}

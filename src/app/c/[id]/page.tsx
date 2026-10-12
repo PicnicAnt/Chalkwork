@@ -6,7 +6,7 @@ import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { boardsUsing, getBoard, listAllBoards, listScenarios, getBoardImage } from "@/lib/db";
+import { boardsUsing, getBoard, listAllBoards, listScenarios, getBoardImage, getChecks } from "@/lib/db";
 import { getVisibleBoard } from "@/lib/visible-board";
 import { canOpen, isListed } from "@/lib/visibility";
 import { ExplainBoard } from "@/components/ExplainBoard";
@@ -172,6 +172,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           boardId={user ? calculation.id : undefined}
           scenarios={scenarios}
           scenarioOutcomes={scenarioOutcomes}
+          checks={getChecks(calculation.id)}
         />
       )}
       {user && (

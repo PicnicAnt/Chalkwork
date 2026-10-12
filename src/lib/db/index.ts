@@ -7,3 +7,4 @@ export * from "./versions";
 export * from "./notifications";
 export * from "./views";
 export * from "./images";
+export * from "./checks";

@@ -6,7 +6,9 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createBoard, loadBoardsUsed, loadBoardToUse, updateBoard } from "@/app/actions/boards";
 import { reviseBoard, type ReviseOutcome } from "@/app/actions/ai";
 import { MAX_PRESETS, SCENARIO_LIMITS, type Preset } from "@/lib/scenarios";
-import { initialLocks } from "@/lib/calculator";
+import { CHECK_LIMITS, runCheck, type Check } from "@/lib/checks";
+import { ChecksList } from "./ChecksList";
+import { compute, initialLocks } from "@/lib/calculator";
 import { createSuggestion } from "@/app/actions/suggestions";
 import {
   checkAlias,
@@ -54,6 +56,8 @@ type EditorProps = {
   initialIncluded?: IncludedBundle[];
   /** The picture of the board being copied, as a data URL, which the copy starts with. */
   initialImage?: string;
+  /** The checks the board has, which a copy starts with. */
+  initialChecks?: Check[];
   /** Where the current picture of the board being edited can be shown from. */
   currentImageSrc?: string;
   /** Show "Ask for a change", which has the writing helper change the board as asked. */
@@ -171,6 +175,8 @@ export function BoardEditor(props: EditorProps) {
   // The picture is kept here so that the helper changing the board doesn't lose it.
   const [image, setImage] = useState(props.initialImage ?? "");
   const [imageTouched, setImageTouched] = useState(false);
+  // The checks are kept here too, for the same reason.
+  const [checks, setChecks] = useState<Check[]>(props.initialChecks ?? []);
   const canUndo = nav.at > 0;
   const canRedo = nav.at < nav.len - 1;
   return (
@@ -244,6 +250,8 @@ export function BoardEditor(props: EditorProps) {
           setImage(next);
           setImageTouched(true);
         }}
+        checks={checks}
+        onChecks={setChecks}
         onSnapshot={onSnapshot}
         onSaved={() => {
           try {
@@ -270,10 +278,12 @@ function BoardEditorInner({
   image,
   imageToSend,
   onImage,
+  checks,
+  onChecks,
   onSnapshot,
   onSaved,
   onRevised,
-}: EditorProps & { image: string; imageToSend: string | undefined; onImage: (image: string) => void; onSnapshot: (snap: Snapshot) => void; onSaved: () => void; onRevised: (out: Extract<ReviseOutcome, { ok: true }>, before: { draft: BoardDraft; included: IncludedBundle[] }) => void }) {
+}: EditorProps & { checks: Check[]; onChecks: (checks: Check[]) => void; image: string; imageToSend: string | undefined; onImage: (image: string) => void; onSnapshot: (snap: Snapshot) => void; onSaved: () => void; onRevised: (out: Extract<ReviseOutcome, { ok: true }>, before: { draft: BoardDraft; included: IncludedBundle[] }) => void }) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -542,6 +552,30 @@ function BoardEditorInner({
     return () => clearTimeout(wait);
   }, [stateText]);
 
+  // Each check is run against the board as it is in the editor now.
+  const checkResults = useMemo(() => checks.map((c) => runCheck(analysis, flat.bundle.values, c)), [checks, analysis, flat]);
+  const [checkName, setCheckName] = useState("");
+
+  // The numbers on screen as a check: what is locked is put in, and the other results are what is expected.
+  function saveCheck() {
+    const set: Record<string, string> = {};
+    const expect: Record<string, string> = {};
+    const lockedNow = locks ?? initialLocks(analysis, flat.bundle.values);
+    // What the board works out from the locked numbers, whether or not the panel has shown it yet.
+    const worked = compute(analysis, flat.bundle.values, lockedNow).display;
+    for (const v of analysis.variables) {
+      const value = lockedNow.includes(v.name) ? flat.bundle.values[v.name] : worked[v.name];
+      const n = parseValue(value ?? "");
+      if (n === undefined) continue;
+      if (lockedNow.includes(v.name)) set[v.name] = value;
+      else if (flat.bundle.hidden[v.name] !== true) expect[v.name] = String(Number(n.toPrecision(6)));
+    }
+    if (Object.keys(set).length === 0 || Object.keys(expect).length === 0) return;
+    const name = checkName.trim().replace(/\s+/g, " ").slice(0, CHECK_LIMITS.name);
+    onChecks([...checks.filter((c) => c.name !== name), { name, set, expect }].slice(0, CHECK_LIMITS.checks));
+    setCheckName("");
+  }
+
   function askHelper() {
     setAiError(null);
     aiStart(async () => {
@@ -570,8 +604,8 @@ function BoardEditorInner({
         return;
       }
       const result = editing
-        ? await updateBoard(editing.id, draft, imageToSend)
-        : await createBoard(draft, imageToSend);
+        ? await updateBoard(editing.id, draft, imageToSend, checks)
+        : await createBoard(draft, imageToSend, checks);
       if (!result.ok) {
         setErrors(result.errors);
         return;
@@ -913,6 +947,32 @@ function BoardEditorInner({
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-xl">
+            Checks{checks.length > 0 && <span className="text-lg font-normal text-ink-muted"> ({checks.length})</span>}
+          </h3>
+          <p className="text-base text-ink-muted">
+            Save the numbers above as a check: the values you typed (locked) are put in, and the other results are what the board
+            should work out. A check is run again whenever the board is shown, so a change to the formulas that breaks it is seen
+            straight away. Checks are kept when you save the board.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <input
+              className="field min-w-[12rem] flex-1 text-xl"
+              value={checkName}
+              maxLength={CHECK_LIMITS.name}
+              placeholder="Name of the check, for example 3 by 4"
+              onChange={(e) => setCheckName(e.target.value)}
+              aria-label="Name of the check"
+            />
+            <button type="button" className="btn" disabled={!checkName.trim() || checks.length >= CHECK_LIMITS.checks} onClick={saveCheck}>
+              Save these numbers as a check
+            </button>
+          </div>
+          {checks.length > 0 && (
+            <ChecksList results={checkResults} labels={flat.bundle.labels} onRemove={(i) => onChecks(checks.filter((_, n) => n !== i))} />
           )}
         </div>
       </CollapsibleSection>
