@@ -488,6 +488,7 @@ function BoardEditorInner({
       <CollapsibleSection
         defaultOpen
         title="Formulas"
+        count={formulas.length}
         description={
           <>
             One per line, like <span className="text-accent-2">area = width * height</span>. Every name becomes a variable, and any variable can be changed: the others adjust so all formulas still hold. Supports + − ×
