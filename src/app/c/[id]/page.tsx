@@ -105,10 +105,11 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           {/* The Share menu is put here by the board below, which knows the numbers on screen. */}
-          {/* The invisible copy keeps the button's place while the page loads, so nothing moves when the menu arrives. */}
+          {/* The button is drawn here from the first paint; the working menu (which knows the numbers on screen) is put
+              on top of it once the page is ready, so the button is there straight away and nothing moves. */}
           <div id="share-slot" className="grid [&>*]:col-start-1 [&>*]:row-start-1">
             {!("error" in resolved) && (
-              <span className="btn btn-primary invisible" aria-hidden>
+              <span className="btn btn-primary" aria-hidden>
                 Share ▾
               </span>
             )}
