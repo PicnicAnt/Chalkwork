@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SearchSelect } from "./ui/SearchSelect";
+import { BoardPicker, type BoardChoice } from "./BoardPicker";
 
 export type VariableKind = "number" | "boolean" | "table" | "collection" | "board";
 
@@ -10,7 +10,7 @@ const KINDS: { kind: VariableKind; label: string; hint: string }[] = [
   { kind: "boolean", label: "Yes / no", hint: "A tick box: 1 for yes and 0 for no in formulas." },
   { kind: "table", label: "Table", hint: "A list of x and y values that a formula looks up, like tax_rate(income)." },
   { kind: "collection", label: "Collection", hint: "Boards that people using this board add, totalled by variable: parts.weight." },
-  { kind: "board", label: "Board", hint: "An existing board used inside this one: its variables become name.variable." },
+  { kind: "board", label: "Existing board", hint: "Search for a board and click it: it is used inside this one, and its variables become name.variable. You can rename it afterwards." },
 ];
 
 // "Add variable": a name and what it is. A number or yes/no is a new variable for the formulas; a table, a collection
@@ -20,15 +20,14 @@ export function AddVariable({
   busy,
   onAdd,
 }: {
-  boards: { id: string; title: string }[];
+  boards: BoardChoice[];
   busy: boolean;
-  /** Adds it; returns why it can't be added, or null when it was. */
+  /** Adds it; returns why it can't be added, or null when it was. A board comes with no name: it is named after the board. */
   onAdd: (kind: VariableKind, name: string, boardId?: string) => string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<VariableKind>("number");
-  const [boardId, setBoardId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   if (!open) {
@@ -45,17 +44,19 @@ export function AddVariable({
   return (
     <div className="sketch-box flex flex-col gap-3 px-4 py-3">
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-        <input
-          autoFocus
-          className="field w-48 text-xl"
-          value={name}
-          placeholder="name"
-          onChange={(e) => setName(e.target.value.replace(/[^A-Za-z0-9_]/g, ""))}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          aria-label="Name of the new variable"
-        />
+        {kind !== "board" && (
+          <input
+            autoFocus
+            className="field w-48 text-xl"
+            value={name}
+            placeholder="name"
+            onChange={(e) => setName(e.target.value.replace(/[^A-Za-z0-9_]/g, ""))}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label="Name of the new variable"
+          />
+        )}
         <select value={kind} onChange={(e) => setKind(e.target.value as VariableKind)} className="cursor-pointer bg-transparent text-xl" aria-label="Type of the new variable">
           {KINDS.map((k) => (
             <option key={k.kind} value={k.kind}>
@@ -63,31 +64,44 @@ export function AddVariable({
             </option>
           ))}
         </select>
-        {kind === "board" && (
-          <SearchSelect value={boardId} onChange={setBoardId} placeholder="Choose a board…" ariaLabel="Board to use" options={boards.map((b) => ({ value: b.id, label: b.title }))} />
-        )}
       </div>
+      {kind === "board" && (
+        <BoardPicker
+          defaultOpen
+          available={boards}
+          busy={busy}
+          onAdd={(id) => {
+            const problem = onAdd("board", "", id);
+            if (problem) setError(problem);
+            else {
+              setError(null);
+              setOpen(false);
+            }
+          }}
+        />
+      )}
       {hint && <p className="text-base text-ink-muted">{hint}</p>}
       {error && <p className="text-danger">{error}</p>}
       <div className="flex flex-wrap gap-3">
+        {kind !== "board" && (
         <button
           type="button"
           className="btn btn-primary"
-          disabled={busy || !name || (kind === "board" && !boardId)}
+          disabled={busy || !name}
           onClick={() => {
-            const problem = onAdd(kind, name, kind === "board" ? boardId : undefined);
+            const problem = onAdd(kind, name);
             if (problem) {
               setError(problem);
               return;
             }
             setError(null);
             setName("");
-            setBoardId("");
             setOpen(false);
           }}
         >
           Add
         </button>
+        )}
         <button
           type="button"
           className="link text-base"

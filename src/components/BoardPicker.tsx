@@ -10,13 +10,16 @@ export function BoardPicker({
   available,
   busy,
   onAdd,
+  defaultOpen = false,
 }: {
   available: BoardChoice[];
   /** True while a board is being loaded. */
   busy: boolean;
   onAdd: (boardId: string) => void;
+  /** Start with the search open (when the picker is the whole point of where it is shown). */
+  defaultOpen?: boolean;
 }) {
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState(defaultOpen);
   const [query, setQuery] = useState("");
   const pickerId = useId();
 

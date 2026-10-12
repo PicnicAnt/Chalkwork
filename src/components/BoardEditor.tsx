@@ -220,6 +220,10 @@ function BoardEditorInner({
   const typedFold = useFold();
   function addVariable(kind: VariableKind, rawName: string, boardId?: string): string | null {
     const name = rawName.trim();
+    if (kind === "board") {
+      if (boardId) addBoard(boardId);
+      return null;
+    }
     const taken = new Set([...tableDrafts.map((t) => t.name), ...collectionDrafts.map((c) => c.name.trim()), ...included.map((i) => i.alias)]);
     if (taken.has(name)) return `"${name}" is already used by a table, a collection or a board`;
     if (kind === "number" || kind === "boolean") {
@@ -238,7 +242,7 @@ function BoardEditorInner({
       setCollectionDrafts((list) => [...list, { name, boards: [] }]);
       typedFold.open(`collection:${collectionDrafts.length}`);
     } else if (boardId) {
-      addBoard(boardId, name);
+      addBoard(boardId);
     }
     return null;
   }
@@ -510,7 +514,7 @@ function BoardEditorInner({
         extraCount={tableDrafts.length + collectionDrafts.length + included.length}
         addVariable={
           <AddVariable
-            boards={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId)).map((b) => ({ id: b.id, title: b.title }))}
+            boards={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
             busy={loadingBoard}
             onAdd={addVariable}
           />
