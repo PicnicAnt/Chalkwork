@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { createBoard, loadBoardToUse, updateBoard } from "@/app/actions/boards";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createBoard, loadBoardsUsed, loadBoardToUse, updateBoard } from "@/app/actions/boards";
 import { reviseBoard, type ReviseOutcome } from "@/app/actions/ai";
 import { MAX_PRESETS, SCENARIO_LIMITS, type Preset } from "@/lib/scenarios";
 import { initialLocks } from "@/lib/calculator";
@@ -64,13 +64,149 @@ type Applied = { n: number; draft: BoardDraft | undefined; included: IncludedBun
 
 // The editor. When the writing helper changes the board, the editor is started again from the changed board, with a
 // list of what changed and a way back to what it was. Nothing is saved until the person saves.
+type Snapshot = { draft: BoardDraft; included: IncludedBundle[] };
+const MAX_STEPS = 50;
+const DRAFT_DAYS = 14;
+
 export function BoardEditor(props: EditorProps) {
   const [applied, setApplied] = useState<Applied | null>(null);
+  // Every state the editor has been in (when typing paused), to step back and forward through, and the draft kept in
+  // the browser so a closed tab or a lost connection doesn't lose it.
+  const steps = useRef<Snapshot[]>([]);
+  const at = useRef(0);
+  const restoring = useRef(false);
+  // Where the editor is among its steps, kept in state so the buttons follow it.
+  const [nav, setNav] = useState({ at: 0, len: 0 });
+  const sync = () => setNav({ at: at.current, len: steps.current.length });
+  const [kept, setKept] = useState<{ draft: BoardDraft; savedAt: string } | null>(null);
+  const draftKey = `chalkwork:draft:${props.editing?.id ?? (props.suggesting ? `suggest:${props.suggesting.boardId}` : "new")}`;
+
+  const read = (): { draft: BoardDraft; savedAt: string } | null => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { draft?: BoardDraft; savedAt?: string };
+      if (!parsed.draft || !parsed.savedAt) return null;
+      if (Date.now() - new Date(parsed.savedAt).getTime() > DRAFT_DAYS * 86_400_000) return null;
+      return { draft: parsed.draft, savedAt: parsed.savedAt };
+    } catch {
+      return null;
+    }
+  };
+
+  function onSnapshot(snap: Snapshot) {
+    const list = steps.current;
+    const text = JSON.stringify(snap.draft);
+    if (list.length === 0) {
+      list.push(snap);
+      at.current = 0;
+      // A draft kept earlier that differs from where the editor starts is offered back.
+      const found = read();
+      if (found && JSON.stringify(found.draft) !== text) setKept(found);
+      sync();
+      return;
+    }
+    if (restoring.current) {
+      // The editor was started again from a step: that is the step now, whatever small tidying it did.
+      restoring.current = false;
+      list[at.current] = snap;
+    } else if (JSON.stringify(list[at.current].draft) === text) {
+      return;
+    } else {
+      list.splice(at.current + 1);
+      list.push(snap);
+      if (list.length > MAX_STEPS) list.shift();
+      at.current = list.length - 1;
+    }
+    sync();
+    try {
+      if (JSON.stringify(list[0].draft) === text) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, JSON.stringify({ draft: snap.draft, savedAt: new Date().toISOString() }));
+    } catch {
+      // A full or blocked store only means no kept draft.
+    }
+  }
+
+  function go(to: number) {
+    const target = steps.current[to];
+    if (!target) return;
+    at.current = to;
+    restoring.current = true;
+    setApplied((a) => ({ n: (a?.n ?? 0) + 1, draft: target.draft, included: target.included, changes: [], before: null }));
+    sync();
+  }
+
+  async function restoreKept() {
+    if (!kept) return;
+    const out = await loadBoardsUsed(kept.draft.includes, props.editing?.id ?? props.suggesting?.boardId);
+    if (!out.ok) {
+      setKept(null);
+      return;
+    }
+    restoring.current = false;
+    setApplied((a) => ({ n: (a?.n ?? 0) + 1, draft: kept.draft, included: out.included, changes: [], before: null }));
+    setKept(null);
+  }
+
+  // Ctrl+Z and Ctrl+Y step through the editor's states when the cursor isn't in a field (a field has its own undo).
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey && at.current > 0) {
+        e.preventDefault();
+        go(at.current - 1);
+      } else if ((k === "y" || (k === "z" && e.shiftKey)) && at.current < steps.current.length - 1) {
+        e.preventDefault();
+        go(at.current + 1);
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+    // go only uses refs and state setters, so it is safe to leave out.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // The picture is kept here so that the helper changing the board doesn't lose it.
   const [image, setImage] = useState(props.initialImage ?? "");
   const [imageTouched, setImageTouched] = useState(false);
+  const canUndo = nav.at > 0;
+  const canRedo = nav.at < nav.len - 1;
   return (
     <>
+      <div className="mb-3 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-lg">
+        <button type="button" className="link disabled:opacity-40" disabled={!canUndo} onClick={() => go(nav.at - 1)} title="Step back (Ctrl+Z when the cursor is not in a field)">
+          Undo
+        </button>
+        <button type="button" className="link disabled:opacity-40" disabled={!canRedo} onClick={() => go(nav.at + 1)} title="Step forward (Ctrl+Y)">
+          Redo
+        </button>
+      </div>
+      {kept && (
+        <div className="sketch-box mb-6 flex flex-col gap-2 px-4 py-3">
+          <p className="text-xl">There is an unsaved draft of this from {new Date(kept.savedAt).toLocaleString("en-GB")}.</p>
+          <div className="flex gap-4">
+            <button type="button" className="btn" onClick={restoreKept}>
+              Open the draft
+            </button>
+            <button
+              type="button"
+              className="link text-base"
+              onClick={() => {
+                try {
+                  localStorage.removeItem(draftKey);
+                } catch {
+                  // Nothing was kept that could be removed.
+                }
+                setKept(null);
+              }}
+            >
+              Throw it away
+            </button>
+          </div>
+        </div>
+      )}
       {applied && applied.changes.length > 0 && (
         <div className="sketch-box mb-6 flex flex-col gap-2 px-4 py-3">
           <p className="text-xl">The helper changed the board. Nothing is saved until you save.</p>
@@ -108,6 +244,14 @@ export function BoardEditor(props: EditorProps) {
           setImage(next);
           setImageTouched(true);
         }}
+        onSnapshot={onSnapshot}
+        onSaved={() => {
+          try {
+            localStorage.removeItem(draftKey);
+          } catch {
+            // Nothing was kept that could be removed.
+          }
+        }}
         onRevised={(out, before) => setApplied({ n: (applied?.n ?? 0) + 1, draft: out.draft, included: out.included, changes: out.changes, before })}
       />
     </>
@@ -126,8 +270,10 @@ function BoardEditorInner({
   image,
   imageToSend,
   onImage,
+  onSnapshot,
+  onSaved,
   onRevised,
-}: EditorProps & { image: string; imageToSend: string | undefined; onImage: (image: string) => void; onRevised: (out: Extract<ReviseOutcome, { ok: true }>, before: { draft: BoardDraft; included: IncludedBundle[] }) => void }) {
+}: EditorProps & { image: string; imageToSend: string | undefined; onImage: (image: string) => void; onSnapshot: (snap: Snapshot) => void; onSaved: () => void; onRevised: (out: Extract<ReviseOutcome, { ok: true }>, before: { draft: BoardDraft; included: IncludedBundle[] }) => void }) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -383,6 +529,19 @@ function BoardEditorInner({
   const [aiText, setAiText] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiPending, aiStart] = useTransition();
+  // The state of the editor, reported when typing pauses, for the steps back and forward and the kept draft.
+  const stateText = JSON.stringify(currentDraft());
+  const includedNow = useRef(included);
+  const reportRef = useRef(onSnapshot);
+  useEffect(() => {
+    includedNow.current = included;
+    reportRef.current = onSnapshot;
+  });
+  useEffect(() => {
+    const wait = setTimeout(() => reportRef.current({ draft: JSON.parse(stateText) as BoardDraft, included: includedNow.current }), 700);
+    return () => clearTimeout(wait);
+  }, [stateText]);
+
   function askHelper() {
     setAiError(null);
     aiStart(async () => {
@@ -406,6 +565,7 @@ function BoardEditorInner({
           setErrors(sent.errors);
           return;
         }
+        onSaved();
         router.push(`/c/${suggesting.boardId}/suggestions/${sent.id}`);
         return;
       }
@@ -416,6 +576,7 @@ function BoardEditorInner({
         setErrors(result.errors);
         return;
       }
+      onSaved();
       router.push(`/c/${result.id}`);
     });
   }

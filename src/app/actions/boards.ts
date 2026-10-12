@@ -4,7 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import type { Bundle } from "@/lib/boards";
 import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard, setBoardImage } from "@/lib/db";
 import { parseImage } from "@/lib/board-image";
-import { resolveBoard } from "@/lib/resolve-boards";
+import { parseIncludes, type IncludedBundle } from "@/lib/boards";
+import { resolveBoard, resolveIncludes } from "@/lib/resolve-boards";
 import { notifyBoardChanged } from "./notify";
 import { presetValues } from "@/lib/scenarios";
 import { canOpen } from "@/lib/visibility";
@@ -60,6 +61,20 @@ export async function updateBoard(id: string, payload: unknown, image?: unknown)
   if (picture.value !== null) setBoardImage(id, picture.value);
   notifyBoardChanged(id, user.id);
   return { ok: true, id };
+}
+
+// The boards a saved draft used, loaded again, so a draft kept in the browser can be opened where it was left.
+export async function loadBoardsUsed(includes: unknown, selfId?: unknown): Promise<{ ok: true; included: IncludedBundle[] } | { ok: false; error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in first." };
+  const parsed = parseIncludes(includes);
+  if (parsed.errors.length) return { ok: false, error: parsed.errors[0] };
+  for (const inc of parsed.includes) {
+    const used = getBoard(inc.board);
+    if (!used || !canOpen(used, user.id)) return { ok: false, error: "A board this draft used is no longer available." };
+  }
+  const resolved = resolveIncludes(parsed.includes, typeof selfId === "string" ? selfId : undefined);
+  return "error" in resolved ? { ok: false, error: resolved.error } : { ok: true, included: resolved.included };
 }
 
 export type BoardToUse = { ok: true; board: string; title: string; latest: number; bundle: Bundle; presetValues: Record<string, Record<string, string>> } | { ok: false; error: string };
