@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { countOpenSuggestionsForOwner, countUnreadNotifications } from "@/lib/db";
+import { QuickJump } from "./QuickJump";
 import { ThemeToggle } from "./ThemeToggle";
 
 // The pages of the app, in a row under the headline, with the board switch at the far end.
@@ -26,6 +27,7 @@ export async function MainNav() {
           Inbox{unread > 0 ? ` (${unread})` : ""}
         </Link>
       )}
+      {user && <QuickJump />}
       {/* Signed in, the board switch is in the account menu. */}
       {!user && (
         <span className="ml-auto">
