@@ -42,9 +42,10 @@ export const svgDataUrl = (svg: string) => `data:image/svg+xml;base64,${Buffer.f
 
 const hash = (text: string) => [...text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
-// The picture for a board with none: a coloured tile from its title, with the outline of its first drawing.
+// The picture for a board with none: line art of its first drawing, on a transparent background, in a colour picked
+// from its title that reads on a dark page and a light one.
 export function defaultImageSvg(title: string, firstDrawing?: string): string {
   const hue = hash(title) % 360;
-  const icon = vizIcon(firstDrawing ?? "board");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><rect width="160" height="120" fill="hsl(${hue} 38% 24%)"/><rect width="160" height="120" fill="hsl(${(hue + 40) % 360} 50% 40%)" fill-opacity="0.25"/><g transform="translate(40 30) scale(1.6)" color="hsl(${hue} 60% 88%)">${icon}</g></svg>`;
+  const icon = vizIcon(firstDrawing ?? "board").replaceAll('fill="currentColor" fill-opacity="0.18"', 'fill="none"');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><g transform="translate(24 15) scale(2.4)" color="hsl(${hue} 62% 50%)">${icon}</g></svg>`;
 }
