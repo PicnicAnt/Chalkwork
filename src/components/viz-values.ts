@@ -19,6 +19,11 @@ export type VizValues = {
   isLocked: (name: string) => boolean;
   /** The values the variable should stay within, if the creator set any. */
   range: (name: string) => Range | undefined;
+  /**
+   * What each board in a collection adds to one of its totals (parts.weight): the board's name and its value
+   * times its Included switch. Empty when the variable is not a total of a collection.
+   */
+  contributors: (total: string) => { name: string; value: number }[];
   /** The variables the user has typed values for, which are the board's inputs. */
   inputs: () => string[];
   /**
@@ -54,7 +59,7 @@ export function makeVizValues({
   shown: Record<string, string>;
   units?: Record<string, string>;
   labels?: Record<string, string>;
-  groups?: Record<string, { title: string; board: string }>;
+  groups?: Record<string, { title: string; board: string; collection?: string }>;
   locked: string[];
   ranges?: Record<string, Range>;
 }): Omit<VizValues, "focus" | "setValue"> {
@@ -74,6 +79,20 @@ export function makeVizValues({
     unit: (name) => units?.[name] ?? "",
     isLocked: (name) => locked.includes(name),
     range: (name) => ranges?.[name],
+    contributors: (total) => {
+      const at = total.indexOf("$");
+      if (at < 0) return [];
+      const collection = total.slice(0, at);
+      const stat = total.slice(at + 1);
+      return Object.entries(groups ?? {})
+        .filter(([, g]) => g.collection === collection)
+        .flatMap(([alias, g]) => {
+          const value = parseValue(display[`${alias}$${stat}`]);
+          if (value === undefined) return [];
+          const on = parseValue(display[`${alias}$equipped`]) ?? 1;
+          return [{ name: g.title, value: value * on }];
+        });
+    },
     inputs: () => locked.filter((n) => parseValue(display[n]) !== undefined),
     // The board solved again with some variables held at other numbers, as if they had been typed.
     evaluate: (overrides) => {

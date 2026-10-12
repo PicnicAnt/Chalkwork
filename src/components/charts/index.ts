@@ -7,3 +7,4 @@ export { PieChart } from "./PieChart";
 export { HeatMap } from "./HeatMap";
 export { DependencyDiagram } from "./DependencyDiagram";
 export { SpreadChart } from "./SpreadChart";
+export { ContributionsBar } from "./ContributionsBar";

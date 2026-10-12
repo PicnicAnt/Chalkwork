@@ -209,6 +209,12 @@ VIZ_TYPES.push(
     lists: [{ key: "values", label: "Variables to compare", required: true }],
   },
   {
+    id: "contributions",
+    label: "Contribution of each board",
+    kind: "chart",
+    params: [{ key: "total", label: "Total of a collection (such as parts.weight)", short: "T" }],
+  },
+  {
     id: "pie",
     label: "Pie chart",
     kind: "chart",

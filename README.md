@@ -62,6 +62,10 @@ Each variable can have a lowest and a highest value (in the variable editor). A 
 
 A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
 
+## Contribution chart
+
+The drawing type **Contribution of each board** takes a total of a collection (such as `parts.weight`) and shows what each board in the collection adds to it, as one bar with the share of each. Boards that are switched off (Included 0) add nothing.
+
 ## Saved loadouts
 
 A scenario saved on a board with collections keeps the boards that were added to them (with their presets) as well as the numbers, so it is a whole loadout. Loading it puts the same boards back, and "Copy link" shares them. Ticking several scenarios compares them side by side even when they have different boards added: each is worked out with its own boards. Scenarios saved before this keep whatever boards are added when they are loaded.

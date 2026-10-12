@@ -124,3 +124,21 @@ describe("pinning a used board to a version", () => {
     expect(includeOf({ board: "x", alias: "a" })).toEqual({ board: "x", alias: "a" });
   });
 });
+
+describe("what each board of a collection adds to a total", () => {
+  it("is each board's variable times its Included switch", async () => {
+    const { makeVizValues } = await import("@/components/viz-values");
+    const { analyzeFormulas } = await import("@/lib/formulas");
+    const analysis = analyzeFormulas(["parts$weight = a$equipped * a$weight + b$equipped * b$weight"]);
+    const display = { a$weight: "2", b$weight: "5", a$equipped: "1", b$equipped: "0", parts$weight: "2" };
+    const v = makeVizValues({
+      analysis,
+      display,
+      shown: display,
+      locked: [],
+      groups: { a: { title: "Frame", board: "x", collection: "parts" }, b: { title: "Wheel", board: "y", collection: "parts" }, parts: { title: "Parts", board: "" } },
+    });
+    expect(v.contributors("parts$weight")).toEqual([{ name: "Frame", value: 2 }, { name: "Wheel", value: 0 }]);
+    expect(v.contributors("loose")).toEqual([]);
+  });
+});
