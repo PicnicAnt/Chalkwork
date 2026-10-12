@@ -31,6 +31,7 @@ export function VariableEditor({
   types,
   onType,
   typedRows,
+  boardRows,
   extraCount = 0,
   addVariable,
   onRename,
@@ -76,6 +77,8 @@ export function VariableEditor({
   onType: (name: string, type: "number" | "boolean") => void;
   /** The variables that are tables, collections and boards, shown after the others. */
   typedRows?: ReactNode;
+  /** The rows of the boards that are used, by alias: each is shown at the top of the box with that board's variables. */
+  boardRows?: Record<string, ReactNode>;
   /** How many of those there are (for the count in the title). */
   extraCount?: number;
   /** The "Add variable" button. */
@@ -157,6 +160,7 @@ export function VariableEditor({
               </div>
             )}
             <div className={section.key && closed[section.key] ? "hidden" : "flex flex-col gap-4"}>
+            {section.key && boardRows?.[section.key]}
             {section.variables.map((v, index) => (
               <VariableLine
                 key={v.name}
@@ -206,6 +210,13 @@ export function VariableEditor({
             </div>
           </div>
         ))}
+        {Object.entries(boardRows ?? {})
+          .filter(([alias]) => !sections.some((s) => s.key === alias))
+          .map(([alias, row]) => (
+            <div key={alias} className="group-box flex flex-col gap-4">
+              {row}
+            </div>
+          ))}
         {typedRows && <div className="flex flex-col gap-3">{typedRows}</div>}
         {addVariable}
       </div>

@@ -25,7 +25,7 @@ import type { Range, VarType } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
 import { parseTags } from "@/lib/tags";
 import { checkVariableName, renameKey, renameVariableInText } from "@/lib/rename";
-import { BoardRows, type BoardChoice } from "./BoardsSection";
+import { BoardRow, type BoardChoice } from "./BoardsSection";
 import { AddVariable, type VariableKind } from "./AddVariable";
 import { useFold } from "./ui/Foldable";
 import { VisualizationEditor } from "./VisualizationEditor";
@@ -519,21 +519,16 @@ function BoardEditorInner({
             onAdd={addVariable}
           />
         }
-        typedRows={
-          <>
-            <TableRows drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} isOpen={typedFold.isOpen} onToggle={typedFold.toggle} />
-            <CollectionRows
-              drafts={collectionDrafts}
-              usedNames={included.map((i) => i.alias)}
-              available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
-              onChange={setCollectionDrafts}
-              isOpen={typedFold.isOpen}
-              onToggle={typedFold.toggle}
-            />
-            <BoardRows
+        boardRows={Object.fromEntries(
+          included.map((inc) => [
+            inc.alias,
+            <BoardRow
+              key={inc.alias}
+              inc={includeOf(inc)}
               includes={included.map(includeOf)}
               included={included}
-              error={boardError}
+              isOpen={typedFold.isOpen}
+              onToggle={typedFold.toggle}
               onAlias={renameAlias}
               onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
               onGroup={(alias, group) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, group: group || undefined } : i)))}
@@ -545,6 +540,20 @@ function BoardEditorInner({
                 // A drawing can't read a variable of a board that is no longer used.
                 setVisualizations((vs) => dropFromVisualizations(vs, (name) => name.startsWith(alias + "$")));
               }}
+            />,
+          ]),
+        )}
+        typedRows={
+          <>
+            {boardError && <p className="text-danger">{boardError}</p>}
+            <TableRows drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} isOpen={typedFold.isOpen} onToggle={typedFold.toggle} />
+            <CollectionRows
+              drafts={collectionDrafts}
+              usedNames={included.map((i) => i.alias)}
+              available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
+              onChange={setCollectionDrafts}
+              isOpen={typedFold.isOpen}
+              onToggle={typedFold.toggle}
             />
           </>
         }
