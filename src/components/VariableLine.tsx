@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LIMITS } from "@/lib/board-draft";
 import { displayName } from "@/lib/formulas";
 import { Foldable } from "./ui/Foldable";
@@ -71,6 +72,8 @@ export function VariableLine({
 }) {
   // Applied when the field is left, so half-typed names never rewrite the formulas. After a rename the line
   // is replaced under its new name, so this component starts over with a clean draft.
+  // The settings people rarely need are folded away, unless this variable already uses one.
+  const [more, setMore] = useState(type !== "number" || format !== "" || decimals !== "" || min !== "" || max !== "" || hidden);
   const rename = useCommitField(name, (next) => {
     if (next === name) return null;
     const problem = validate(next);
@@ -112,6 +115,32 @@ export function VariableLine({
         />
       </div>
       <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+        <input
+          className="field w-24 text-lg"
+          value={unit}
+          maxLength={LIMITS.unit}
+          list="unit-suggestions"
+          placeholder="unit"
+          onChange={(e) => onUnit(e.target.value)}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label={`Unit of ${name}`}
+        />
+        <input
+          className="field w-full min-w-[10rem] text-lg sm:w-auto sm:flex-1"
+          value={description}
+          maxLength={LIMITS.variableDescription}
+          placeholder="What is this? (optional)"
+          onChange={(e) => onDescribe(e.target.value)}
+          aria-label={`Note about ${name}`}
+        />
+        <button type="button" className="link pb-1 text-base" aria-expanded={more} onClick={() => setMore((m) => !m)}>
+          {more ? "Fewer options" : "More options"}
+        </button>
+      </div>
+      {more && (
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
         <select value={type} onChange={(e) => onType(e.target.value as "number" | "boolean" | "choice")} className="cursor-pointer bg-transparent text-lg" aria-label={`Type of ${name}`} title="A number, or a yes/no shown as a tick box (1 and 0 in the formulas)">
           <option value="number">number</option>
           <option value="boolean">yes / no</option>
@@ -125,18 +154,6 @@ export function VariableLine({
             <option value="currency">money (1,234.50)</option>
           </select>
         )}
-        <input
-          className="field w-24 text-lg"
-          value={unit}
-          maxLength={LIMITS.unit}
-          list="unit-suggestions"
-          placeholder="unit"
-          onChange={(e) => onUnit(e.target.value)}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          aria-label={`Unit of ${name}`}
-        />
         <input
           className="field w-24 text-lg"
           value={decimals}
@@ -175,15 +192,8 @@ export function VariableLine({
           />
           Hide
         </label>
-        <input
-          className="field w-full min-w-[10rem] text-lg sm:w-auto sm:flex-1"
-          value={description}
-          maxLength={LIMITS.variableDescription}
-          placeholder="What is this? (optional)"
-          onChange={(e) => onDescribe(e.target.value)}
-          aria-label={`Note about ${name}`}
-        />
-      </div>
+        </div>
+      )}
       {type === "choice" && (
         <div className="flex flex-col gap-1">
           <p className="text-base text-ink-muted">One option per line as <em>label = number</em>. People pick a label; the formulas get its number.</p>

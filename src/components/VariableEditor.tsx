@@ -188,6 +188,7 @@ export function VariableEditor({
 
   return (
     <CollapsibleSection
+      defaultOpen
       title="Variables"
       count={analysis.variables.length + extraCount}
       description={

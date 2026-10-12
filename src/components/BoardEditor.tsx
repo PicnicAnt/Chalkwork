@@ -236,6 +236,8 @@ function BoardEditorInner({
   // "Add variable": a number or yes/no is a new variable of the formulas (a line that is only its name), and a table,
   // collection or board is a variable of that type.
   const typedFold = useFold();
+  // The part of the editor that is open: the formulas, the variables, the drawings, or the board's settings.
+  const [tab, setTab] = useState<"formulas" | "variables" | "look" | "settings">("formulas");
   function addVariable(kind: VariableKind, rawName: string, boardId?: string, allowed?: string[], preset?: string): string | null {
     const name = rawName.trim();
     if (kind === "board") {
@@ -425,37 +427,33 @@ function BoardEditorInner({
           onChange={(e) => setTitle(e.target.value)}
           aria-label="Title"
         />
-        <textarea
-          className="field resize-none"
-          placeholder="Description (optional)"
-          rows={2}
-          value={description}
-          maxLength={LIMITS.description}
-          onChange={(e) => setDescription(e.target.value)}
-          aria-label="Description"
-        />
-        <input
-          className="field text-lg"
-          placeholder="Tags, separated by commas (optional), e.g. finance, loan"
-          value={tagText}
-          onChange={(e) => setTagText(e.target.value)}
-          aria-label="Tags"
-          autoCapitalize="off"
-          spellCheck={false}
-        />
-        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
-          Who can open it
-          <select value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label="Who can open the board">
-            {VISIBILITIES.map((v) => (
-              <option key={v.value} value={v.value}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-          <span className="text-base">{VISIBILITIES.find((v) => v.value === visibility)?.hint}</span>
-        </label>
       </section>
 
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xl" role="tablist" aria-label="Parts of the board">
+        {(
+          [
+            ["formulas", "Formulas", problems.length > 0],
+            ["variables", "Variables", false],
+            ["look", "Look", false],
+            ["settings", "Settings", false],
+          ] as const
+        ).map(([id, label, bad]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`${tab === id ? "text-accent underline decoration-wavy underline-offset-4" : "link"} ${bad ? "!text-danger" : ""}`}
+          >
+            {label}
+            {bad ? " !" : ""}
+          </button>
+        ))}
+      </div>
+
+      {/* Every part stays mounted while it is not shown, so nothing typed is lost when switching. */}
+      <div className={tab === "formulas" ? "flex flex-col gap-10" : "hidden"}>
       {aiEnabled && (
         // Not a form of its own: the editor is one form already, and forms can't be nested.
         <div className="sketch-box flex flex-col gap-2 px-4 py-3">
@@ -525,7 +523,8 @@ function BoardEditorInner({
           </ul>
         )}
       </section>
-
+      </div>
+      <div className={tab === "variables" ? "flex flex-col gap-10" : "hidden"}>
       <VariableEditor
         analysis={analysis}
         groups={flat.bundle.groups}
@@ -615,13 +614,46 @@ function BoardEditorInner({
           })
         }
       />
-
+      </div>
+      <div className={tab === "look" ? "flex flex-col gap-10" : "hidden"}>
       <VisualizationEditor
         analysis={analysis}
         labels={flat.bundle.labels}
         visualizations={visualizations}
         onChange={setVisualizations}
       />
+      </div>
+      <div className={tab === "settings" ? "flex flex-col gap-4" : "hidden"}>
+        <textarea
+          className="field resize-none"
+          placeholder="Description (optional)"
+          rows={2}
+          value={description}
+          maxLength={LIMITS.description}
+          onChange={(e) => setDescription(e.target.value)}
+          aria-label="Description"
+        />
+        <input
+          className="field text-lg"
+          placeholder="Tags, separated by commas (optional), e.g. finance, loan"
+          value={tagText}
+          onChange={(e) => setTagText(e.target.value)}
+          aria-label="Tags"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
+          Who can open it
+          <select value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label="Who can open the board">
+            {VISIBILITIES.map((v) => (
+              <option key={v.value} value={v.value}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-base">{VISIBILITIES.find((v) => v.value === visibility)?.hint}</span>
+        </label>
+      </div>
 
       <section className="flex flex-col gap-4">
         <div>
