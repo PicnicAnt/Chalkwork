@@ -236,10 +236,10 @@ function BoardEditorInner({
   // "Add variable": a number or yes/no is a new variable of the formulas (a line that is only its name), and a table,
   // collection or board is a variable of that type.
   const typedFold = useFold();
-  function addVariable(kind: VariableKind, rawName: string, boardId?: string, allowed?: string[]): string | null {
+  function addVariable(kind: VariableKind, rawName: string, boardId?: string, allowed?: string[], preset?: string): string | null {
     const name = rawName.trim();
     if (kind === "board") {
-      if (boardId) addBoard(boardId);
+      if (boardId) addBoard(boardId, undefined, preset);
       return null;
     }
     const taken = new Set([...tableDrafts.map((t) => t.name), ...collectionDrafts.map((c) => c.name.trim()), ...included.map((i) => i.alias)]);
@@ -260,12 +260,12 @@ function BoardEditorInner({
       setCollectionDrafts((list) => [...list, { name, boards: allowed ?? [] }]);
       typedFold.open(`collection:${collectionDrafts.length}`);
     } else if (boardId) {
-      addBoard(boardId);
+      addBoard(boardId, undefined, preset);
     }
     return null;
   }
 
-  function addBoard(boardId: string, alias?: string) {
+  function addBoard(boardId: string, alias?: string, preset?: string) {
     setBoardError(null);
     startLoadingBoard(async () => {
       const result = await loadBoardToUse(boardId, editing?.id ?? suggesting?.boardId);
@@ -287,6 +287,7 @@ function BoardEditorInner({
           latest: result.latest,
           bundle: result.bundle,
           presetValues: result.presetValues,
+          ...(preset ? { preset } : {}),
         },
       ]);
     });
@@ -575,14 +576,11 @@ function BoardEditorInner({
               handle={handle}
               inc={includeOf(inc)}
               includes={included.map(includeOf)}
-              collectionNames={collections.map((c) => c.name)}
               included={included}
               isOpen={typedFold.isOpen}
               onToggle={typedFold.toggle}
               onAlias={renameAlias}
               onName={(alias, name) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, name } : i)))}
-              onGroup={(alias, group) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, group: group || undefined } : i)))}
-              onPreset={(alias, preset) => setIncluded((list) => list.map((i) => (i.alias === alias ? { ...i, preset: preset || undefined } : i)))}
               onPin={pinBoard}
               onRemove={(alias) => {
                 setIncluded((list) => list.filter((i) => i.alias !== alias));

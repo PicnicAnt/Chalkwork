@@ -15,10 +15,6 @@ export function UsedBoard({
   onToggle,
   onAlias,
   onName,
-  onGroup,
-  groups,
-  presetNames,
-  onPreset,
   onPin,
   onRemove,
   children,
@@ -34,13 +30,6 @@ export function UsedBoard({
   onToggle: () => void;
   onAlias: (to: string) => void;
   onName: (name: string) => void;
-  /** Puts the board in a collection (empty for none). */
-  onGroup: (group: string) => void;
-  /** The groups already used on this board, to pick from. */
-  groups: string[];
-  /** The presets the board has, and a way to start from one of them. */
-  presetNames: string[];
-  onPreset: (preset: string) => void;
   /** Pins the board to a version, or follows its latest again (undefined). */
   onPin: (version: number | undefined) => void;
   onRemove: () => void;
@@ -91,38 +80,6 @@ export function UsedBoard({
           Remove
         </button>
       </div>
-      {groups.length > 0 && (
-        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
-          add to collection
-          <select
-            value={inc.group ?? ""}
-            onChange={(e) => onGroup(e.target.value)}
-            className="cursor-pointer bg-transparent text-xl text-ink"
-            aria-label={`Collection ${title} is in`}
-            title="A board put in a collection is counted in its totals (collection.variable). People using the board can also add boards to a collection themselves."
-          >
-            <option value="">(none)</option>
-            {groups.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {presetNames.length > 0 && (
-        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
-          starts from
-          <select value={inc.preset ?? ""} onChange={(e) => onPreset(e.target.value)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label={`Preset of ${title} to start from`}>
-            <option value="">its own values</option>
-            {presetNames.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
       {alias.error && <span className="text-sm text-danger">{alias.error}</span>}
       {latest !== undefined && latest > 0 && (
         <p className="flex flex-wrap items-baseline gap-x-3 text-base text-ink-muted">

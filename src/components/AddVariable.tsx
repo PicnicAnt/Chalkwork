@@ -25,7 +25,7 @@ export function AddVariable({
   boards: BoardChoice[];
   busy: boolean;
   /** Adds it; returns why it can't be added, or null when it was. A board comes with no name: it is named after the board. */
-  onAdd: (kind: VariableKind, name: string, boardId?: string, allowed?: string[]) => string | null;
+  onAdd: (kind: VariableKind, name: string, boardId?: string, allowed?: string[], preset?: string) => string | null;
 }) {
   const [form, setForm] = useState<"variable" | "collection" | null>(null);
   const [name, setName] = useState("");
@@ -53,11 +53,18 @@ export function AddVariable({
           </button>
           <SearchSelect
             value=""
-            onChange={(id) => setError(onAdd("board", "", id))}
+            onChange={(v) => {
+              // A preset is "board id@preset": it adds the board starting from that preset.
+              const at = v.indexOf("@");
+              setError(at < 0 ? onAdd("board", "", v) : onAdd("board", "", v.slice(0, at), undefined, v.slice(at + 1)));
+            }}
             placeholder="Add board"
             trigger="Add board"
             ariaLabel="Add board"
-            options={boards.map((b) => ({ value: b.id, label: b.title }))}
+            options={boards.flatMap((b) => [
+              { value: b.id, label: b.title },
+              ...(b.presets ?? []).map((p) => ({ value: `${b.id}@${p}`, label: p, group: b.title })),
+            ])}
           />
           <button type="button" className="btn" onClick={() => setForm("collection")}>
             Add collection

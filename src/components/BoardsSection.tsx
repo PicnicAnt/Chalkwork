@@ -12,14 +12,11 @@ export type { BoardChoice };
 export function BoardRow({
   inc,
   includes,
-  collectionNames = [],
   included,
   isOpen,
   onToggle,
   onAlias,
   onName,
-  onGroup,
-  onPreset,
   onPin,
   onRemove,
   children,
@@ -27,15 +24,11 @@ export function BoardRow({
 }: {
   inc: Include;
   includes: Include[];
-  /** The collections declared on this board, which a used board can be put in. */
-  collectionNames?: string[];
   included: IncludedBundle[];
   isOpen: (key: string) => boolean;
   onToggle: (key: string) => void;
   onAlias: (from: string, to: string) => void;
   onName: (alias: string, name: string) => void;
-  onGroup: (alias: string, group: string) => void;
-  onPreset: (alias: string, preset: string) => void;
   onPin: (alias: string, version: number | undefined) => void;
   onRemove: (alias: string) => void;
   /** What is shown under the board's settings when it is opened: its variables. */
@@ -53,10 +46,6 @@ export function BoardRow({
       onToggle={() => onToggle(`board:${inc.alias}`)}
       onAlias={(to) => onAlias(inc.alias, to)}
       onName={(name) => onName(inc.alias, name)}
-      onGroup={(group) => onGroup(inc.alias, group)}
-      presetNames={Object.keys(found?.presetValues ?? {})}
-      onPreset={(preset) => onPreset(inc.alias, preset)}
-      groups={[...new Set([...collectionNames, ...includes.flatMap((i) => (i.group ? [i.group] : []))])]}
       onPin={(version) => onPin(inc.alias, version)}
       onRemove={() => onRemove(inc.alias)}
       handle={handle}

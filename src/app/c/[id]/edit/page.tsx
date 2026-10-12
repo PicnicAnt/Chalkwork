@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { boardChoices } from "@/lib/board-choices";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
-import { listAllBoards } from "@/lib/db";
+
 import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveIncludes } from "@/lib/resolve-boards";
 
@@ -62,12 +63,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
       </p>
     );
   }
-  const availableBoards = listAllBoards(1000, user.id).map((b) => ({
-    id: b.id,
-    title: b.title,
-    description: b.description,
-    ownerName: b.ownerName,
-  }));
+  const availableBoards = boardChoices(user.id);
 
   if (isOwner) {
     return (

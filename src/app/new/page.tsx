@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { boardChoices } from "@/lib/board-choices";
 import Link from "next/link";
 import { AiStarter } from "@/components/AiStarter";
 import { ImportStarter } from "@/components/ImportStarter";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
-import { listAllBoards } from "@/lib/db";
+
 import { BLANK_ID, TEMPLATES, templateById } from "@/lib/templates";
 
 export const metadata: Metadata = { title: "New board · Chalkwork" };
@@ -17,7 +18,7 @@ export default async function NewBoardPage({ searchParams }: PageProps<"/new">) 
 
   if (typeof template !== "string") {
     const helper = "key" in aiConfig();
-    const choices = listAllBoards(1000, user.id).map((b) => ({ id: b.id, title: b.title, description: b.description, ownerName: b.ownerName }));
+    const choices = boardChoices(user.id);
     return (
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
@@ -49,11 +50,6 @@ export default async function NewBoardPage({ searchParams }: PageProps<"/new">) 
   }
 
   // Every existing board can be added to the new one.
-  const availableBoards = listAllBoards(1000, user.id).map((b) => ({
-    id: b.id,
-    title: b.title,
-    description: b.description,
-    ownerName: b.ownerName,
-  }));
+  const availableBoards = boardChoices(user.id);
   return <BoardEditor availableBoards={availableBoards} initial={templateById(template)?.draft} aiEnabled={"key" in aiConfig()} />;
 }

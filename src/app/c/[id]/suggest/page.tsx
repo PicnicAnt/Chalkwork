@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { boardChoices } from "@/lib/board-choices";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
-import { listAllBoards } from "@/lib/db";
+
 import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveIncludes } from "@/lib/resolve-boards";
 import { draftOf } from "@/lib/change-suggestions";
@@ -36,12 +37,7 @@ export default async function SuggestPage({ params }: PageProps<"/c/[id]/suggest
       </p>
     );
   }
-  const availableBoards = listAllBoards(1000, user.id).map((b) => ({
-    id: b.id,
-    title: b.title,
-    description: b.description,
-    ownerName: b.ownerName,
-  }));
+  const availableBoards = boardChoices(user.id);
 
   return (
     <div className="flex flex-col gap-6">
