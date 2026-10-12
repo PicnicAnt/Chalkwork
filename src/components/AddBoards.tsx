@@ -17,7 +17,7 @@ const MAX_ROWS = 20;
 const SEARCH_FROM = 6;
 
 // What a collection offers for adding boards: one "Add <board>" button per kind of board, with a searchable list of
-// that board's presets next to it. It is the same on the board page and under "Try it" in the editor.
+// that board's presets next to it: picking a preset adds the board as that preset. It is the same on the board page and under "Try it" in the editor.
 export function AddBoards({
   types,
   busy = false,
@@ -48,7 +48,6 @@ export function AddBoards({
 }
 
 function BoardTypeRow({ type, busy, onAdd }: { type: BoardType; busy: boolean; onAdd: (board: string, preset?: string) => void }) {
-  const [preset, setPreset] = useState("");
   const [asked, setAsked] = useState<string[] | null>(null);
   useEffect(() => {
     if (type.presets) return;
@@ -63,16 +62,17 @@ function BoardTypeRow({ type, busy, onAdd }: { type: BoardType; busy: boolean; o
   const presets = type.presets ?? asked ?? [];
   return (
     <li className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-      <button type="button" className="btn" disabled={busy} onClick={() => onAdd(type.board, preset || undefined)}>
+      <button type="button" className="btn" disabled={busy} onClick={() => onAdd(type.board)}>
         Add {type.title}
       </button>
       {presets.length > 0 && (
+        // Picking a preset adds the board as that preset straight away.
         <SearchSelect
-          value={preset}
-          onChange={setPreset}
-          placeholder="as it is"
+          value=""
+          onChange={(p) => p && onAdd(type.board, p)}
+          placeholder="Add as a preset"
           ariaLabel={`Preset of ${type.title} to add`}
-          options={[{ value: "", label: "as it is" }, ...presets.map((p) => ({ value: p, label: p }))]}
+          options={presets.map((p) => ({ value: p, label: p }))}
         />
       )}
     </li>
