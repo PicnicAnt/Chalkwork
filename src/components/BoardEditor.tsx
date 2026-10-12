@@ -33,6 +33,7 @@ import { dropFromVisualizations, renameInVisualizations, type Visualization } fr
 import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
+import { TryItems } from "./TryItems";
 import { readTableDrafts, TableRows, type TableDraft } from "./TablesEditor";
 import { CollectionRows, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
 import { rowsToText } from "@/lib/tables";
@@ -200,9 +201,12 @@ function BoardEditorInner({
   const formulas = useMemo(() => splitFormulas(formulaText), [formulaText]);
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
+  // Boards added to a collection just to try it out (not saved): they join the system after the boards that are used.
+  const [tryItems, setTryItems] = useState<(IncludedBundle & { group: string })[]>([]);
+  const liveTryItems = useMemo(() => tryItems.filter((t) => collections.some((c) => c.name === t.group)), [tryItems, collections]);
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, choices, visualizations }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, choices, visualizations, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, choices, visualizations }, [...included, ...liveTryItems]),
+    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, choices, visualizations, included, liveTryItems],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas, flat.bundle.tables), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a board that is used.
@@ -285,6 +289,23 @@ function BoardEditorInner({
           presetValues: result.presetValues,
         },
       ]);
+    });
+  }
+
+  function addTryItem(group: string, boardId: string) {
+    setBoardError(null);
+    startLoadingBoard(async () => {
+      const result = await loadBoardToUse(boardId, editing?.id ?? suggesting?.boardId);
+      if (!result.ok) {
+        setBoardError(result.error);
+        return;
+      }
+      setTryItems((list) => {
+        const taken = new Set([...included.map((i) => i.alias), ...list.map((t) => t.alias)]);
+        let n = 1;
+        while (taken.has(`item${n}`)) n++;
+        return [...list, { alias: `item${n}`, board: result.board, title: result.title, latest: result.latest, bundle: result.bundle, presetValues: result.presetValues, group }];
+      });
     });
   }
 
@@ -628,6 +649,24 @@ function BoardEditorInner({
           formats={flat.bundle.formats}
           choices={flat.bundle.choices}
           groups={flat.bundle.groups}
+          sectionExtras={Object.fromEntries(
+            collections.map((c) => [
+              c.name,
+              <TryItems
+                key={c.name}
+                collection={c.name}
+                boards={
+                  c.boards && c.boards.length > 0
+                    ? availableBoards.filter((b) => c.boards!.includes(b.id))
+                    : availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))
+                }
+                items={liveTryItems.filter((t) => t.group === c.name).map((t) => ({ alias: t.alias, title: t.title }))}
+                busy={loadingBoard}
+                onAdd={(id) => addTryItem(c.name, id)}
+                onRemove={(alias) => setTryItems((list) => list.filter((t) => t.alias !== alias))}
+              />,
+            ]),
+          )}
           visualizations={flat.bundle.visualizations}
         />
         <div className="flex flex-col gap-2">
