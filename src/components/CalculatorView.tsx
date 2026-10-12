@@ -317,7 +317,7 @@ export function CalculatorPanel({
     const group = key ? groups?.[key] : undefined;
     const closed = key !== null && folded[key] === true;
     return (
-      <div key={key ?? "own"} className={`flex flex-col gap-4 ${nested ? "fold-box" : key !== null || sections.length > 1 || hasExtras ? "group-box" : ""}`}>
+      <div key={key ?? "own"} className={`flex flex-col gap-4 ${nested ? "fold-box" : key !== null ? "group-box" : ""}`}>
         {key && group && (
           <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
             <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
