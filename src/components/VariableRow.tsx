@@ -106,7 +106,14 @@ export const VariableRow = memo(function VariableRow({
         <span className="text-xl text-ink-muted">=</span>
         {/* The field is only as wide as its text, so the unit follows the value directly and the double line of a
             fixed value sits under the value alone. */}
-        <span className="flex min-w-0 flex-1 items-baseline">
+        {/* The empty space beside the value works as the field too, so it is easy to hit with a thumb. */}
+        <span
+          className={`flex min-w-0 flex-1 items-baseline self-stretch ${options || isBoolean || readOnly ? "" : "cursor-text"}`}
+          onClick={(e) => {
+            if (options || isBoolean || readOnly || e.target !== e.currentTarget) return;
+            document.getElementById(id)?.focus();
+          }}
+        >
         {options ? (
           <select
             id={id}
@@ -141,7 +148,7 @@ export const VariableRow = memo(function VariableRow({
         <input
           id={id}
           ref={(el) => register(name, el)}
-          style={{ width: `${Math.max(shownText.length, readOnly ? 1 : 3) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
+          style={{ width: `${Math.max(shownText.length, readOnly ? 1 : 4) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
           className={`field min-w-0 flex-none rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
             readOnly ? "field-decided" : locked ? "field-bare field-locked" : "field-bare"
           }`}
