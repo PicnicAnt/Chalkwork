@@ -97,9 +97,9 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     <>
       {!isOwner && <ViewCounter boardId={calculation.id} />}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-4">
+        <div className="flex min-w-0 items-start gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/c/${calculation.id}/image`} alt="" className="h-20 w-28 shrink-0 rounded object-cover sm:h-24 sm:w-32" />
+          <img src={`/c/${calculation.id}/image`} alt="" className="mt-1 h-10 w-14 shrink-0 rounded object-cover opacity-90 sm:h-12 sm:w-16" />
           <div className="min-w-0">
           <h1 className="text-3xl font-bold sm:text-4xl">{calculation.title}</h1>
           {(calculation.ownerName || isOwner) && (
