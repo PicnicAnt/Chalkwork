@@ -299,7 +299,6 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
       const key = withAlias(item.alias, "equipped");
       out.values[key] = "1";
       out.labels[key] = "Included";
-      out.descriptions[key] = "1 counts this board in the totals, 0 leaves it out.";
       out.decimals[key] = 0;
       out.ranges[key] = { min: 0, max: 1 };
       out.types[key] = "boolean";
