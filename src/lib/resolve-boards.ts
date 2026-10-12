@@ -27,6 +27,7 @@ const ownData = (calc: Board): OwnData => ({
   collections: calc.collections ?? [],
   types: calc.types ?? {},
   formats: calc.formats ?? {},
+  choices: calc.choices ?? {},
   links: calc.links,
   visualizations: calc.visualizations,
 });

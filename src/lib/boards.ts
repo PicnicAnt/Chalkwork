@@ -39,7 +39,10 @@ export type Include = {
 export type Range = { min?: number; max?: number };
 
 /** What a variable holds: a number, or a yes/no (shown as a tick box; true is 1 and false is 0 in the maths). */
-export type VarType = "number" | "boolean";
+export type VarType = "number" | "boolean" | "choice";
+
+/** One option of a choice variable: what people see, and the number it stands for in the formulas. */
+export type Choice = { label: string; value: number };
 
 /** How a number is written on the board: as it comes, with thousands separators, as a percentage of 1, or as money. */
 export type VarFormat = "grouped" | "percent" | "currency";
@@ -57,6 +60,8 @@ export type Bundle = {
   types?: Record<string, VarType>;
   /** How a variable's number is written; no entry means as it comes. Display only. */
   formats?: Record<string, VarFormat>;
+  /** The options of each variable that is a choice. */
+  choices?: Record<string, Choice[]>;
   /** Lookup tables the formulas can call like functions. Those of a used board are named alias$table. */
   tables: Table[];
   /** The order variables are listed in, by name; those not named come after, in the order they appear. */
@@ -188,6 +193,7 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
     ranges: keys(bundle.ranges),
     types: keys(bundle.types ?? {}),
     formats: keys(bundle.formats ?? {}),
+    choices: keys(bundle.choices ?? {}),
     // A link joins two variables of the same board, so both ends get the alias.
     links: Object.fromEntries(
       Object.entries(bundle.links).map(([from, to]) => [withAlias(alias, from), withAlias(alias, to)]),
@@ -403,6 +409,7 @@ export function flatten(
       ranges: { ...sums.ranges, ...merge((b) => b.ranges, own.ranges) },
       types: { ...sums.types, ...merge((b) => b.types ?? {}, own.types ?? {}) },
       formats: merge((b) => b.formats ?? {}, own.formats ?? {}),
+      choices: merge((b) => b.choices ?? {}, own.choices ?? {}),
       tables: [...own.tables, ...parts.flatMap((p) => p.bundle.tables)],
       order: [...own.order, ...parts.flatMap((p) => p.bundle.order)],
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],

@@ -258,4 +258,10 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_formats TEXT NOT NULL DEFAULT '{}';`);
     db.pragma("user_version = 25");
   }
+  if (version < 26) {
+    // The options of a variable that is a choice, as JSON: { "level": [{ "label": "Easy", "value": 1 }] }.
+    const has = (db.pragma("table_info(calculations)") as { name: string }[]).some((c) => c.name === "variable_choices");
+    if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN variable_choices TEXT NOT NULL DEFAULT '{}';`);
+    db.pragma("user_version = 26");
+  }
 }

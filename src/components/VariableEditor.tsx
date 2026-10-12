@@ -32,6 +32,8 @@ export function VariableEditor({
   onType,
   formats,
   onFormat,
+  choiceTexts,
+  onChoiceText,
   typedRows,
   boardRows,
   extraCount = 0,
@@ -75,8 +77,11 @@ export function VariableEditor({
   /** Gives the new order of one list of variables (those shown together), by name. */
   onOrder: (names: string[]) => void;
   /** What each variable holds (a variable with no entry is a number). */
-  types: Record<string, "number" | "boolean">;
-  onType: (name: string, type: "number" | "boolean") => void;
+  types: Record<string, "number" | "boolean" | "choice">;
+  onType: (name: string, type: "number" | "boolean" | "choice") => void;
+  /** The options of each choice variable, as typed. */
+  choiceTexts: Record<string, string>;
+  onChoiceText: (name: string, text: string) => void;
   /** How each number is written (no entry: as it comes). */
   formats: Record<string, "grouped" | "percent" | "currency">;
   onFormat: (name: string, format: "" | "grouped" | "percent" | "currency") => void;
@@ -210,6 +215,8 @@ export function VariableEditor({
                 onRange={(end, text) => onRange(v.name, end, text)}
                 type={types[v.name] ?? "number"}
                 onType={(type) => onType(v.name, type)}
+                choiceText={choiceTexts[v.name] ?? ""}
+                onChoiceText={(text) => onChoiceText(v.name, text)}
                 format={formats[v.name] ?? ""}
                 onFormat={(format) => onFormat(v.name, format)}
               />

@@ -180,6 +180,7 @@ export function SharedCalculator({
           order={flat.order}
           types={flat.types}
           formats={flat.formats}
+          choices={flat.choices}
           links={flat.links}
           groups={flat.groups}
           sectionExtras={Object.fromEntries(

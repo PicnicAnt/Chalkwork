@@ -35,6 +35,8 @@ export function VariableLine({
   onRange,
   type,
   onType,
+  choiceText,
+  onChoiceText,
   format,
   onFormat,
 }: {
@@ -71,8 +73,11 @@ export function VariableLine({
   max: string;
   onRange: (end: "min" | "max", text: string) => void;
   /** What the variable holds, and a way to change it. */
-  type: "number" | "boolean";
-  onType: (type: "number" | "boolean") => void;
+  type: "number" | "boolean" | "choice";
+  onType: (type: "number" | "boolean" | "choice") => void;
+  /** The options of a choice, as typed (one per line: Easy = 1), and a way to change them. */
+  choiceText: string;
+  onChoiceText: (text: string) => void;
   /** How the number is written, and a way to change it. */
   format: "" | "grouped" | "percent" | "currency";
   onFormat: (format: "" | "grouped" | "percent" | "currency") => void;
@@ -105,7 +110,7 @@ export function VariableLine({
           </span>
         )
       }
-      hint={`${type === "boolean" ? " · yes/no" : ""}${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
+      hint={`${type === "boolean" ? " · yes/no" : type === "choice" ? " · choice" : ""}${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
         {fixedName !== undefined ? (
@@ -132,9 +137,10 @@ export function VariableLine({
         />
       </div>
       <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-        <select value={type} onChange={(e) => onType(e.target.value as "number" | "boolean")} className="cursor-pointer bg-transparent text-lg" aria-label={`Type of ${name}`} title="A number, or a yes/no shown as a tick box (1 and 0 in the formulas)">
+        <select value={type} onChange={(e) => onType(e.target.value as "number" | "boolean" | "choice")} className="cursor-pointer bg-transparent text-lg" aria-label={`Type of ${name}`} title="A number, or a yes/no shown as a tick box (1 and 0 in the formulas)">
           <option value="number">number</option>
           <option value="boolean">yes / no</option>
+          <option value="choice">choice from a list</option>
         </select>
         {type === "number" && (
           <select value={format} onChange={(e) => onFormat(e.target.value as "" | "grouped" | "percent" | "currency")} className="cursor-pointer bg-transparent text-lg" aria-label={`Number format of ${name}`} title="How the number is written. Only the display changes, never the maths.">
@@ -219,6 +225,12 @@ export function VariableLine({
           aria-label={`Note about ${name}`}
         />
       </div>
+      {type === "choice" && (
+        <div className="flex flex-col gap-1">
+          <p className="text-base text-ink-muted">One option per line as <em>label = number</em>. People pick a label; the formulas get its number.</p>
+          <textarea className="field min-h-[5rem] w-full text-lg" value={choiceText} placeholder={"Easy = 1\nNormal = 1.5\nHard = 2"} onChange={(e) => onChoiceText(e.target.value)} spellCheck={false} aria-label={`Options of ${name}`} />
+        </div>
+      )}
       {rename.error && <span className="text-sm text-danger">{rename.error}</span>}
       {link.error && <span className="text-sm text-danger">{link.error}</span>}
     </Foldable>

@@ -2,7 +2,7 @@
 import { parsePresets, type Preset } from "./scenarios";
 import { parseTags } from "./tags";
 import { parseTables, type Table } from "./tables";
-import { checkAlias, flatten, type Collection, type Include, type IncludedBundle, type Range, type VarFormat, type VarType } from "./boards";
+import { checkAlias, flatten, type Choice, type Collection, type Include, type IncludedBundle, type Range, type VarFormat, type VarType } from "./boards";
 import { analyzeFormulas, displayName, formulaProblems, isVariableName } from "./formulas";
 import { parseVisualizations, type Visualization } from "./visualizations";
 
@@ -37,6 +37,8 @@ export type BoardDraft = {
   types?: Record<string, VarType>;
   // How a variable's number is written (grouped, percent or currency); no entry means as it comes.
   formats?: Record<string, VarFormat>;
+  // The options of a variable of the type choice, keyed by variable name.
+  choices?: Record<string, Choice[]>;
   // Collections of items that people using the board can add boards to; their stats are added up.
   collections?: Collection[];
   // Short labels that make the board easier to find, such as finance or game.
@@ -245,6 +247,22 @@ export function validateDraft(
   for (const variable of analysis.variables) {
     if (rawTypes[variable.name] === "boolean") types[variable.name] = "boolean";
   }
+  const rawChoices = typeof r.choices === "object" && r.choices !== null ? (r.choices as Record<string, unknown>) : {};
+  const choices: Record<string, Choice[]> = {};
+  for (const variable of analysis.variables) {
+    const list = rawChoices[variable.name];
+    if (!Array.isArray(list)) continue;
+    const options: Choice[] = [];
+    for (const o of list.slice(0, 20)) {
+      const label = typeof o?.label === "string" ? o.label.trim().slice(0, 40) : "";
+      if (!label || typeof o?.value !== "number" || !Number.isFinite(o.value)) continue;
+      if (!options.some((x) => x.label === label)) options.push({ label, value: o.value });
+    }
+    if (options.length > 0) {
+      choices[variable.name] = options;
+      types[variable.name] = "choice";
+    }
+  }
 
   const rawFormats = typeof r.formats === "object" && r.formats !== null ? (r.formats as Record<string, unknown>) : {};
   const formats: Record<string, VarFormat> = {};
@@ -276,6 +294,7 @@ export function validateDraft(
           tables,
           collections,
           types,
+          choices,
           formats,
           presets: parsedPresets.presets,
           order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),

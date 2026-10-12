@@ -34,6 +34,7 @@ export function CalculatorPanel({
   order,
   types,
   formats,
+  choices,
   visualizations,
   initialLocked,
   onLocks,
@@ -66,7 +67,9 @@ export function CalculatorPanel({
   /** The order variables are listed in, by name. */
   order?: string[];
   /** The type of each variable; a variable with no entry is a number. */
-  types?: Record<string, "number" | "boolean">;
+  types?: Record<string, "number" | "boolean" | "choice">;
+  /** The options of each variable that is a choice. */
+  choices?: Record<string, { label: string; value: number }[]>;
   /** How each number is written: grouped, percent (the number times 100, with a % sign) or money. */
   formats?: Record<string, "grouped" | "percent" | "currency">;
   /** Drawings that follow the variables: the board's own come first, those of used boards go with their board. */
@@ -285,6 +288,7 @@ export function CalculatorPanel({
         register={register}
         range={ranges?.[v.name]}
         isBoolean={types?.[v.name] === "boolean"}
+        options={types?.[v.name] === "choice" ? choices?.[v.name] : undefined}
         onHow={toggleWorking}
         how={
           workingOf === v.name ? (

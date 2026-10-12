@@ -61,6 +61,13 @@ describe("checking a board before it is saved", () => {
     expect(out.draft?.formats).toEqual({ width: "percent", height: "currency", area: "grouped" });
   });
 
+  it("keeps the options of a choice and makes it that type", () => {
+    const out = validateDraft({ ...base, choices: { width: [{ label: "Narrow", value: 2 }, { label: "Narrow", value: 9 }, { label: "Wide", value: 8 }, { label: "", value: 1 }, { label: "Bad", value: "x" }], height: [] } });
+    expect(out.errors).toEqual([]);
+    expect(out.draft?.choices).toEqual({ width: [{ label: "Narrow", value: 2 }, { label: "Wide", value: 8 }] });
+    expect(out.draft?.types).toEqual({ width: "choice" });
+  });
+
   it("keeps a collection with the boards that can be added to it", () => {
     const out = validateDraft({ ...base, collections: [{ name: "items", stats: ["damage", "bad name"], boards: ["abcdef12", "x", 5] }] });
     expect(out.errors).toEqual([]);

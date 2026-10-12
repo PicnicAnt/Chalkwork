@@ -21,7 +21,7 @@ import {
 } from "@/lib/boards";
 import { includeOf, LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
 import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib/formulas";
-import type { Range, VarFormat, VarType } from "@/lib/boards";
+import type { Choice, Range, VarFormat, VarType } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
 import { parseTags } from "@/lib/tags";
 import { checkVariableName, renameKey, renameVariableInText } from "@/lib/rename";
@@ -158,6 +158,23 @@ function BoardEditorInner({
     (initial?.collections ?? []).map((c) => ({ name: c.name, boards: c.boards ?? [] })),
   );
   const collections = useMemo(() => collectionsOf(collectionDrafts), [collectionDrafts]);
+  // The options of choice variables, held as typed ("Easy = 1" per line).
+  const [choiceText, setChoiceText] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(initial?.choices ?? {}).map(([k, list]) => [k, list.map((o) => `${o.label} = ${o.value}`).join("\n")])),
+  );
+  const choices = useMemo(() => {
+    const out: Record<string, Choice[]> = {};
+    for (const [name, text] of Object.entries(choiceText)) {
+      const list: Choice[] = [];
+      for (const line of text.split(/\r?\n/)) {
+        const m = /^\s*(.+?)\s*[=:]\s*(-?[\d.,]+(?:e[+-]?\d+)?)\s*$/i.exec(line);
+        const value = m ? parseValue(m[2]) : undefined;
+        if (m && value !== undefined && !list.some((o) => o.label === m[1])) list.push({ label: m[1], value });
+      }
+      if (list.length > 0) out[name] = list;
+    }
+    return out;
+  }, [choiceText]);
   // How each number is written (not listed: as it comes).
   const [formats, setFormats] = useState<Record<string, VarFormat>>(initial?.formats ?? {});
   // What each variable holds: a number (not listed) or a yes/no.
@@ -182,8 +199,8 @@ function BoardEditorInner({
   // This board and the boards it uses make up one system. What is set here wins over what a used
   // board says about its own variables.
   const flat = useMemo(
-    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, links, visualizations }, included),
-    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, links, visualizations, included],
+    () => flatten({ formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, choices, links, visualizations }, included),
+    [formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, types, formats, choices, links, visualizations, included],
   );
   const analysis = useMemo(() => analyzeFormulas(flat.bundle.formulas, flat.bundle.tables), [flat]);
   // Problems are numbered among this board's formulas. Line 0 is about a link or a board that is used.
@@ -318,13 +335,14 @@ function BoardEditorInner({
     setRangeText((r) => renameKey(r, from, to));
     setTypes((t) => renameKey(t, from, to));
     setFormats((f) => renameKey(f, from, to));
+    setChoiceText((c) => renameKey(c, from, to));
     setOrder((o) => o.map((n) => (n === from ? to : n)));
     setLinks((l) => renameLinks(l, from, to));
     setVisualizations((vs) => renameInVisualizations(vs, (name) => (name === from ? to : name)));
   }
 
   // What the editor holds now, as a draft.
-  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
+  const currentDraft = () => ({ title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, choices, tags: parseTags(tagText), includes: included.map(includeOf), links, visualizations });
 
   // The writing helper changes the board as asked; the editor then starts again from the result.
   const [aiText, setAiText] = useState("");
@@ -346,7 +364,7 @@ function BoardEditorInner({
   function save() {
     startTransition(async () => {
       const includes = included.map(includeOf);
-      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, tags: parseTags(tagText), includes, links, visualizations };
+      const draft = { title, description, formulas, values, descriptions, units, labels, hidden, decimals, ranges, tables, order, collections, presets, types, formats, choices, tags: parseTags(tagText), includes, links, visualizations };
       if (suggesting) {
         const sent = await createSuggestion(suggesting.boardId, draft, message);
         if (!sent.ok) {
@@ -519,9 +537,11 @@ function BoardEditorInner({
           setTypes((t) => {
             const { [name]: _removed, ...rest } = t;
             void _removed;
-            return type === "boolean" ? { ...rest, [name]: type } : { ...rest, ...(flat.bundle.types?.[name] === "boolean" ? { [name]: "number" as VarType } : {}) };
+            return type === "number" ? { ...rest, ...(flat.bundle.types?.[name] && flat.bundle.types[name] !== "number" ? { [name]: "number" as VarType } : {}) } : { ...rest, [name]: type };
           })
         }
+        choiceTexts={choiceText}
+        onChoiceText={(name, text) => setChoiceText((c) => ({ ...c, [name]: text }))}
         extraCount={tableDrafts.length + collectionDrafts.length + included.length}
         addVariable={
           <AddVariable
@@ -612,6 +632,7 @@ function BoardEditorInner({
           order={flat.bundle.order}
           types={flat.bundle.types}
           formats={flat.bundle.formats}
+          choices={flat.bundle.choices}
           groups={flat.bundle.groups}
           visualizations={flat.bundle.visualizations}
         />

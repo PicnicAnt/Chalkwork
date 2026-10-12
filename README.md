@@ -62,6 +62,10 @@ Each variable can have a lowest and a highest value (in the variable editor). A 
 
 A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
 
+## Choice variables
+
+A variable can be a **choice from a list**: in the variable editor choose the type and write one option per line as `Easy = 1`. On the board it is a drop-down of the labels; the formulas get the number of the chosen option, so a choice can scale a result (`damage = base * difficulty`) or drive an `if` or a table lookup. A worked-out value that matches no option shows its number in the drop-down.
+
 ## Number formats
 
 Each number variable has a format in the variable editor: as it comes, **1,234,567** (thousands separators), **percent** (0.15 shows as 15 %, and typing 20 stores 0.2) or **money** (separators, and two decimals for worked-out values). Only the display changes, never the maths. Formats apply on the board page and in the editor's preview; the scenario table and charts still show plain numbers.

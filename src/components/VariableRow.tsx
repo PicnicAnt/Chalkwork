@@ -31,6 +31,7 @@ export const VariableRow = memo(function VariableRow({
   onHow,
   how,
   grouped = false,
+  options,
 }: {
   name: string;
   description?: string;
@@ -69,6 +70,8 @@ export const VariableRow = memo(function VariableRow({
   how?: React.ReactNode;
   /** The number is written with thousands separators, so what is typed is kept as typed while editing. */
   grouped?: boolean;
+  /** A choice variable: the options to pick from, each with the number it stands for. */
+  options?: { label: string; value: number }[];
 }) {
   const id = `var-${name}`;
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
@@ -84,7 +87,7 @@ export const VariableRow = memo(function VariableRow({
           ? `Above the highest value, ${formatNumber(range.max * ratio)}`
           : null
       : null;
-  const slidable = !isBoolean && !readOnly && range?.min !== undefined && range.max !== undefined && range.max > range.min;
+  const slidable = !isBoolean && !options && !readOnly && range?.min !== undefined && range.max !== undefined && range.max > range.min;
   const shownText = typed && typed.unit === unit ? typed.text : value;
   return (
     <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
@@ -100,7 +103,26 @@ export const VariableRow = memo(function VariableRow({
         {/* The field is only as wide as its text, so the unit follows the value directly and the double line of a
             fixed value sits under the value alone. */}
         <span className="flex min-w-0 flex-1 items-baseline">
-        {isBoolean ? (
+        {options ? (
+          <select
+            id={id}
+            className="field-bare min-w-0 cursor-pointer bg-transparent text-2xl"
+            value={options.findIndex((o) => Math.abs(o.value - (parseValue(value) ?? NaN)) < 1e-9)}
+            disabled={readOnly}
+            onChange={(e) => {
+              const option = options[Number(e.target.value)];
+              if (option) onEdit(name, String(option.value));
+            }}
+            onBlur={() => onBlur(name)}
+          >
+            {options.every((o) => Math.abs(o.value - (parseValue(value) ?? NaN)) >= 1e-9) && <option value={-1}>{value ? `(${value})` : "choose…"}</option>}
+            {options.map((o, i) => (
+              <option key={o.label} value={i}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ) : isBoolean ? (
           <input
             id={id}
             ref={(el) => register(name, el)}
