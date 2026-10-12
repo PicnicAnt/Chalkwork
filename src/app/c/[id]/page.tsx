@@ -105,7 +105,14 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           {/* The Share menu is put here by the board below, which knows the numbers on screen. */}
-          <div id="share-slot" />
+          {/* The invisible copy keeps the button's place while the page loads, so nothing moves when the menu arrives. */}
+          <div id="share-slot" className="grid [&>*]:col-start-1 [&>*]:row-start-1">
+            {!("error" in resolved) && (
+              <span className="btn btn-primary invisible" aria-hidden>
+                Share ▾
+              </span>
+            )}
+          </div>
           {canSuggest && (
             <Link href={`/c/${calculation.id}/suggest`} className="btn">
               Suggest a change

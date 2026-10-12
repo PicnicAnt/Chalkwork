@@ -93,7 +93,7 @@ export function UsedBoard({
             onChange={(e) => onGroup(e.target.value)}
             className="cursor-pointer bg-transparent text-xl text-ink"
             aria-label={`Collection ${title} is in`}
-            title="A board put in a collection is counted in its totals (collection.variable) and gets an Included switch. People using the board can also add boards to a collection themselves."
+            title="A board put in a collection is counted in its totals (collection.variable). People using the board can also add boards to a collection themselves."
           >
             <option value="">(none)</option>
             {groups.map((g) => (

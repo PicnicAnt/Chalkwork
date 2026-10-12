@@ -38,7 +38,7 @@ export function ItemControls({ collection: c, extras, onChange }: { collection: 
   return (
     <div className="flex flex-col gap-2" aria-label={`Boards in ${c.title}`}>
       <p className="text-base text-ink-muted">
-        Add boards here. Their variables are added up as {c.name}.&lt;variable&gt; (also avg(), min(), max() and count() in formulas), and each board has an Included switch (1 counts it, 0 leaves it out).
+        Add boards here. Their variables are added up as {c.name}.&lt;variable&gt; (also avg(), min(), max() and count() in formulas). Take a board out with Remove.
       </p>
       {count > 0 && (
         <ul className="flex flex-col gap-1 text-lg">

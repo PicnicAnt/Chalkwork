@@ -308,7 +308,7 @@ export function CalculatorPanel({
     const key = section.key;
     const members = key ? sections.filter((m) => m.key && groups?.[m.key]?.collection === key) : [];
     const isCollection = key !== null && groups?.[key]?.board === "";
-    // A board in a collection has its Included switch in the title, not among its variables.
+    // A board in a collection counts in the totals; its Included switch isn't shown.
     const includedName = key && groups?.[key]?.collection ? `${key}${PATH_SEPARATOR}equipped` : undefined;
     // A collection's totals aren't listed as rows: the formulas use them, and the results strip shows them.
     const rows = isCollection ? [] : section.variables.filter((v) => v.name !== includedName).map((v) => row(v, key)).filter(Boolean);
@@ -325,18 +325,6 @@ export function CalculatorPanel({
                 {group.title}
                 {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
               </h3>
-              {includedName && section.variables.some((v) => v.name === includedName) && (
-                <label className="flex cursor-pointer items-center gap-2 text-base text-ink-muted" onClick={(e) => e.stopPropagation()} title="Counts this board in the collection's totals. Untick it to leave it out.">
-                  <input
-                    type="checkbox"
-                    className="h-5 w-5 cursor-pointer accent-[var(--accent)]"
-                    checked={(parseValue(display[includedName]) ?? 0) !== 0}
-                    onChange={(e) => edit(includedName, e.target.checked ? "1" : "0")}
-                    aria-label={`Include ${group.title} in the totals`}
-                  />
-                  Included
-                </label>
-              )}
               {group.board && (
                 <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link text-base" onClick={(e) => e.stopPropagation()} title={`Open ${group.title}`}>
                   Open board
