@@ -7,6 +7,7 @@ import { PATH_SEPARATOR, decidedBy, displayName, formatDecimals, formatNumber, p
 import { alternatives, ratio as unitRatio } from "@/lib/units";
 import type { BundleVisualization } from "@/lib/visualizations";
 import { Chevron } from "./ui/Chevron";
+import { CollapsibleSection } from "./ui/CollapsibleSection";
 import { VariableRow } from "./VariableRow";
 import { WorkingPanel } from "./WorkingPanel";
 import { ResultsBar, type ResultItem } from "./ResultsBar";
@@ -232,10 +233,6 @@ export function CalculatorPanel({
     // Written with four significant digits, like a number someone would type.
     setValue: (name, value) => edit(name, String(Number(value.toPrecision(4)))),
   };
-  const drawingsOf = (group: string | null) =>
-    (visualizations ?? [])
-      .filter((viz) => (viz.group ?? null) === group)
-      .map((viz, i) => <VisualizationView key={`${group}-${i}`} viz={viz} values={vizValues} />);
 
   // By what the number written in the variable's own unit is multiplied to be shown in the unit chosen for it.
   const ratioOf = (name: string): number => {
@@ -352,7 +349,6 @@ export function CalculatorPanel({
         )}
         <div className={closed ? "hidden" : "flex flex-col gap-4"}>
           {extra}
-          {drawingsOf(key)}
           {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
           {members.map((m) => renderSection(m, true))}
         </div>
@@ -399,14 +395,20 @@ export function CalculatorPanel({
     const i = (order ?? []).indexOf(idOf(t));
     return i < 0 ? Number.MAX_SAFE_INTEGER : i;
   };
+  // The variables people see on the board, for the count in the title (a collection's totals aren't rows).
+  const variableCount = sections.reduce((n, s) => {
+    if (s.key !== null && groups?.[s.key]?.board === "") return n;
+    return n + s.variables.filter((v) => (revealHidden || hidden?.[v.name] !== true) && !(s.key && v.name === `${s.key}${PATH_SEPARATOR}equipped`)).length;
+  }, 0);
   const tops = defaultTops.map((t, i) => ({ t, i })).sort((x, y) => placeOf(x.t) - placeOf(y.t) || x.i - y.i).map((x) => x.t);
 
   return (
     <div className="flex flex-col gap-6">
       <ResultsBar items={results} onGo={focusField} />
+      <CollapsibleSection defaultOpen title="Variables" count={variableCount}>
       {tops.map((unit, n) => {
         if (unit.kind === "section") return renderSection(unit.section);
-        // Consecutive variables of the board itself are one block; drawings of the board come first.
+        // Consecutive variables of the board itself are one block.
         if (n > 0 && tops[n - 1].kind === "own") return null;
         const run: string[] = [];
         for (let k = n; k < tops.length; k++) {
@@ -415,14 +417,22 @@ export function CalculatorPanel({
           run.push(t.name);
         }
         const rows = run.map((name) => row({ name }, null)).filter(Boolean);
-        const first = !tops.slice(0, n).some((t) => t.kind === "own");
         return (
           <div key={`own-${run[0]}`} className="flex flex-col gap-4">
-            {first && drawingsOf(null)}
             {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
           </div>
         );
       })}
+      </CollapsibleSection>
+      {(visualizations ?? []).length > 0 && (
+        <CollapsibleSection defaultOpen title="Drawings and charts" count={(visualizations ?? []).length}>
+          <div className="flex flex-col gap-6">
+            {(visualizations ?? []).map((viz, i) => (
+              <VisualizationView key={i} viz={viz} values={vizValues} />
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
       {broken.length > 0 && (
         <ul className="sketch-box px-4 py-3 text-danger">
           {broken.map((f) => (

@@ -8,13 +8,15 @@ export const metadata: Metadata = { title: "Boards · Chalkwork" };
 // Every board by every user, or just your own, searchable. Only signed-in users can browse, so a board's link stays
 // something you have to be given unless you have an account.
 export default async function BoardsPage({ searchParams }: PageProps<"/boards">) {
-  const { q, mine, sort } = await searchParams;
+  const { q, mine, sort, tags } = await searchParams;
   const wantsMine = mine === "1";
   const query = typeof q === "string" ? q : "";
   const params = new URLSearchParams();
   if (wantsMine) params.set("mine", "1");
   if (query) params.set("q", query);
   if (typeof sort === "string") params.set("sort", sort);
+  const tagList = typeof tags === "string" ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+  if (tagList.length) params.set("tags", tagList.join(","));
   const user = await requireUser(params.size ? `/boards?${params}` : "/boards");
   const boards = listAllBoards(1000, user.id).map((b) => ({
     id: b.id,
@@ -32,7 +34,7 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold sm:text-4xl">Boards</h1>
-      <BoardList boards={boards} initialQuery={query} initialMine={wantsMine} initialSort={typeof sort === "string" ? sort : undefined} />
+      <BoardList boards={boards} initialQuery={query} initialMine={wantsMine} initialSort={typeof sort === "string" ? sort : undefined} initialTags={tagList} />
     </div>
   );
 }

@@ -74,26 +74,39 @@ export function BoardList({
   initialQuery = "",
   initialMine = false,
   initialSort,
+  initialTags = [],
 }: {
   boards: BoardItem[];
   initialQuery?: string;
   initialMine?: boolean;
   initialSort?: string;
+  initialTags?: string[];
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [mine, setMine] = useState(initialMine);
   const [sort, setSort] = useState<SortId>(sortOf(initialSort));
+  const [picked, setPicked] = useState<string[]>(initialTags);
+  const [allTags, setAllTags] = useState(false);
   const words = useMemo(() => wordsOf(query), [query]);
   // "My boards" narrows the list to the signed-in user's own; the search then works within it.
   const pool = useMemo(() => (mine ? boards.filter((b) => b.isMine) : boards), [boards, mine]);
-  const shown = useMemo(() => [...(words.length ? pool.filter((b) => matches(b, words)) : pool)].sort(compare[sort]), [pool, words, sort]);
+  // The tags of the boards in the pool, the most used first, each with how many boards have it.
+  const tagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const b of pool) for (const t of b.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+    return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [pool]);
+  // A board has to carry every tag that is picked.
+  const tagged = useMemo(() => (picked.length ? pool.filter((b) => picked.every((t) => b.tags.includes(t))) : pool), [pool, picked]);
+  const shown = useMemo(() => [...(words.length ? tagged.filter((b) => matches(b, words)) : tagged)].sort(compare[sort]), [tagged, words, sort]);
 
   // Keep the filter and the search in the address, so a refresh or a shared link shows the same list.
-  function remember(nextQuery: string, nextMine: boolean, nextSort: SortId) {
+  function remember(nextQuery: string, nextMine: boolean, nextSort: SortId, nextTags: string[] = picked) {
     const params = new URLSearchParams();
     if (nextMine) params.set("mine", "1");
     if (nextQuery.trim()) params.set("q", nextQuery);
     if (nextSort !== "created") params.set("sort", nextSort);
+    if (nextTags.length) params.set("tags", nextTags.join(","));
     const text = params.toString();
     window.history.replaceState(null, "", text ? `?${text}` : window.location.pathname);
   }
@@ -106,6 +119,12 @@ export function BoardList({
   function choose(nextMine: boolean) {
     setMine(nextMine);
     remember(query, nextMine, sort);
+  }
+
+  function toggleTag(tag: string) {
+    const next = picked.includes(tag) ? picked.filter((t) => t !== tag) : [...picked, tag];
+    setPicked(next);
+    remember(query, mine, sort, next);
   }
 
   function order(next: SortId) {
@@ -144,6 +163,40 @@ export function BoardList({
       </label>
       </div>
 
+      {tagCounts.length > 0 && (
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-2" role="group" aria-label="Filter by tag">
+          <span className="text-lg text-ink-muted">Tags</span>
+          {(allTags ? tagCounts : tagCounts.filter(([t], i) => i < 12 || picked.includes(t))).map(([tag, count]) => (
+            <button
+              key={tag}
+              type="button"
+              aria-pressed={picked.includes(tag)}
+              onClick={() => toggleTag(tag)}
+              className={`rounded-full border-2 px-3 py-0.5 text-base ${picked.includes(tag) ? "border-[var(--accent)] text-accent" : "border-[var(--ink-faint)] text-ink-muted hover:text-ink"}`}
+            >
+              #{tag} <span className="text-sm text-ink-faint">{count}</span>
+            </button>
+          ))}
+          {tagCounts.length > 12 && (
+            <button type="button" className="link text-base" onClick={() => setAllTags((a) => !a)}>
+              {allTags ? "Fewer tags" : `All ${tagCounts.length} tags`}
+            </button>
+          )}
+          {picked.length > 0 && (
+            <button
+              type="button"
+              className="link text-base"
+              onClick={() => {
+                setPicked([]);
+                remember(query, mine, sort, []);
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-1">
         <input
           type="search"
@@ -159,7 +212,7 @@ export function BoardList({
           spellCheck={false}
         />
         <span className="text-sm text-ink-muted" aria-live="polite">
-          {words.length
+          {shown.length !== pool.length
             ? `${shown.length} of ${pool.length} ${pool.length === 1 ? "board" : "boards"}`
             : `${pool.length} ${pool.length === 1 ? "board" : "boards"}`}
         </span>
@@ -178,7 +231,11 @@ export function BoardList({
         )
       ) : shown.length === 0 ? (
         <p className="text-ink-muted">
-          No board has all of {words.map((w) => `“${w}”`).join(" and ")} in its title, description, tags or formulas.
+          {words.length > 0 ? (
+            <>No board has all of {words.map((w) => `“${w}”`).join(" and ")} in its title, description, tags or formulas.</>
+          ) : (
+            <>No board has all of those tags.</>
+          )}
         </p>
       ) : (
         <ul className="flex flex-col gap-5">
