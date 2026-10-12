@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { presetsOf } from "@/app/actions/boards";
 import { SearchSelect } from "./ui/SearchSelect";
 
 // In the editor's "Try it" section: boards added to a collection to see how it works out. They are only for trying
@@ -18,10 +19,24 @@ export function TryItems({
   boards: { id: string; title: string }[];
   items: { alias: string; title: string }[];
   busy: boolean;
-  onAdd: (boardId: string) => void;
+  onAdd: (boardId: string, preset?: string) => void;
   onRemove: (alias: string) => void;
 }) {
   const [pick, setPick] = useState("");
+  // The presets of the chosen board, so it can be tried as one of them.
+  const [presets, setPresets] = useState<{ board: string; names: string[] } | null>(null);
+  const [preset, setPreset] = useState("");
+  useEffect(() => {
+    if (!pick) return;
+    let cancelled = false;
+    presetsOf(pick).then((names) => {
+      if (!cancelled) setPresets({ board: pick, names });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pick]);
+  const names = presets?.board === pick ? presets.names : [];
   return (
     <div className="flex flex-col gap-2">
       <p className="text-base text-ink-muted">
@@ -41,14 +56,25 @@ export function TryItems({
       )}
       {boards.length > 0 ? (
         <div className="flex flex-wrap items-baseline gap-3">
-          <SearchSelect value={pick} onChange={setPick} placeholder="Choose a board…" ariaLabel={`Board to try in ${collection}`} options={boards.map((b) => ({ value: b.id, label: b.title }))} />
+          <SearchSelect value={pick} onChange={(id) => { setPick(id); setPreset(""); }} placeholder="Choose a board…" ariaLabel={`Board to try in ${collection}`} options={boards.map((b) => ({ value: b.id, label: b.title }))} />
+          {names.length > 0 && (
+            <select value={preset} onChange={(e) => setPreset(e.target.value)} className="cursor-pointer bg-transparent text-lg" aria-label="Preset to start from">
+              <option value="">as it is</option>
+              {names.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
             className="btn"
             disabled={!pick || busy}
             onClick={() => {
-              onAdd(pick);
+              onAdd(pick, preset || undefined);
               setPick("");
+              setPreset("");
             }}
           >
             Add

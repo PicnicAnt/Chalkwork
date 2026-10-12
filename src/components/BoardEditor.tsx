@@ -292,7 +292,7 @@ function BoardEditorInner({
     });
   }
 
-  function addTryItem(group: string, boardId: string) {
+  function addTryItem(group: string, boardId: string, preset?: string) {
     setBoardError(null);
     startLoadingBoard(async () => {
       const result = await loadBoardToUse(boardId, editing?.id ?? suggesting?.boardId);
@@ -304,7 +304,7 @@ function BoardEditorInner({
         const taken = new Set([...included.map((i) => i.alias), ...list.map((t) => t.alias)]);
         let n = 1;
         while (taken.has(`item${n}`)) n++;
-        return [...list, { alias: `item${n}`, board: result.board, title: result.title, latest: result.latest, bundle: result.bundle, presetValues: result.presetValues, group }];
+        return [...list, { alias: `item${n}`, board: result.board, title: result.title, latest: result.latest, bundle: result.bundle, presetValues: result.presetValues, group, ...(preset ? { preset } : {}) }];
       });
     });
   }
@@ -660,9 +660,9 @@ function BoardEditorInner({
                     ? availableBoards.filter((b) => c.boards!.includes(b.id))
                     : availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))
                 }
-                items={liveTryItems.filter((t) => t.group === c.name).map((t) => ({ alias: t.alias, title: t.title }))}
+                items={liveTryItems.filter((t) => t.group === c.name).map((t) => ({ alias: t.alias, title: t.preset ? `${t.title} (${t.preset})` : t.title }))}
                 busy={loadingBoard}
-                onAdd={(id) => addTryItem(c.name, id)}
+                onAdd={(id, preset) => addTryItem(c.name, id, preset)}
                 onRemove={(alias) => setTryItems((list) => list.filter((t) => t.alias !== alias))}
               />,
             ]),

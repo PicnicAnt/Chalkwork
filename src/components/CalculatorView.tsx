@@ -3,7 +3,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { sectionsByBoard, type Range } from "@/lib/boards";
 import { compute, initialLocks, shownValues, type Computed } from "@/lib/calculator";
-import { decidedBy, displayName, formatDecimals, formatNumber, parseValue, type Analysis } from "@/lib/formulas";
+import { PATH_SEPARATOR, decidedBy, displayName, formatDecimals, formatNumber, parseValue, type Analysis } from "@/lib/formulas";
 import { alternatives, ratio as unitRatio } from "@/lib/units";
 import type { BundleVisualization } from "@/lib/visualizations";
 import { Chevron } from "./ui/Chevron";
@@ -257,7 +257,7 @@ export function CalculatorPanel({
     return body.replace(/^(-?\d+)/, (int) => int.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
   };
 
-  function row(v: { name: string }, group: string | null) {
+  function row(v: { name: string }, group: string | null, total = false) {
     const isHidden = hidden?.[v.name] === true;
     if (isHidden && !revealHidden) return null;
     const problem = rejected?.name === v.name ? rejected : null;
@@ -271,7 +271,11 @@ export function CalculatorPanel({
         ratio={ratioOf(v.name)}
         onUnit={changeUnit}
         // A variable from a board in use is shown without the board''s alias, under that board''s heading.
-        label={labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined)}
+        label={(() => {
+          const own = labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined);
+          // A collection's totals are named as totals, so they aren't taken for a board's own variable.
+          return total && own ? `Total ${own.charAt(0).toLowerCase()}${own.slice(1)}` : own;
+        })()}
         hidden={isHidden}
         value={formatted(v.name, valueOf(v.name, problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]))}
         grouped={formats?.[v.name] === "grouped" || formats?.[v.name] === "currency"}
@@ -306,8 +310,12 @@ export function CalculatorPanel({
   // A section: a used board, or a collection, with the boards in it nested inside.
   function renderSection(section: (typeof sections)[number], nested = false): React.ReactNode {
     const key = section.key;
-    const rows = section.variables.map((v) => row(v, key)).filter(Boolean);
     const members = key ? sections.filter((m) => m.key && groups?.[m.key]?.collection === key) : [];
+    const isCollection = key !== null && groups?.[key]?.board === "";
+    // A board in a collection has its Included switch in the title, not among its variables.
+    const includedName = key && groups?.[key]?.collection ? `${key}${PATH_SEPARATOR}equipped` : undefined;
+    // With fewer than two boards a collection's totals just repeat the board's own numbers, so they are left out.
+    const rows = isCollection && members.length < 2 ? [] : section.variables.filter((v) => v.name !== includedName).map((v) => row(v, key, isCollection)).filter(Boolean);
     const extra = key ? sectionExtras?.[key] : undefined;
     if (rows.length === 0 && members.length === 0 && !extra) return null;
     const group = key ? groups?.[key] : undefined;
@@ -321,6 +329,18 @@ export function CalculatorPanel({
                 {group.title}
                 {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
               </h3>
+              {includedName && section.variables.some((v) => v.name === includedName) && (
+                <label className="flex cursor-pointer items-center gap-2 text-base text-ink-muted" onClick={(e) => e.stopPropagation()} title="Counts this board in the collection's totals. Untick it to leave it out.">
+                  <input
+                    type="checkbox"
+                    className="h-5 w-5 cursor-pointer accent-[var(--accent)]"
+                    checked={(parseValue(display[includedName]) ?? 0) !== 0}
+                    onChange={(e) => edit(includedName, e.target.checked ? "1" : "0")}
+                    aria-label={`Include ${group.title} in the totals`}
+                  />
+                  Included
+                </label>
+              )}
               {group.board && (
                 <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link text-base" onClick={(e) => e.stopPropagation()} title={`Open ${group.title}`}>
                   Open board
