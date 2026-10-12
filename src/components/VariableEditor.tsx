@@ -190,15 +190,7 @@ export function VariableEditor({
     <CollapsibleSection
       title="Variables"
       count={analysis.variables.length + extraCount}
-      description={
-        <>
-          A variable is a number, a yes/no, a table, a collection or a board; &ldquo;Add variable&rdquo; at the end adds one of any type. A table is looked up like a function (tax_rate(income)), a collection totals the boards people add to it (parts.weight), and a board brings another board&apos;s variables in as name.variable. Rename a number and every formula that uses it is updated. A display name is shown instead of it on the
-          rows (the formulas still use the real name). Hide a variable to keep it off the board while it still takes
-          part in the maths. A unit (like % or m²) is shown next to the value, decimals set how many digits a
-          calculated value shows, and a note is shown under the variable. Units and decimals only change what is
-          displayed, never the maths.
-        </>
-      }
+      description="Open a row to set its name, unit and note. Add variables, boards and collections with the buttons below, and drag the handles to change the order."
     >
       <datalist id="unit-suggestions">
         {COMMON_UNITS.map((u) => (
