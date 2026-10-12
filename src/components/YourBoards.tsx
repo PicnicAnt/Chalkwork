@@ -13,8 +13,9 @@ export function YourBoards({ user }: { user: User }) {
       <ul className="flex flex-col gap-1">
         {calculations.map((calc) => (
           <li key={calc.id}>
-            <Link href={`/c/${calc.id}`} className="group flex items-baseline gap-3 py-1 text-xl">
-              <span className="text-accent">→</span>
+            <Link href={`/c/${calc.id}`} className="group flex items-center gap-3 py-1 text-xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/c/${calc.id}/image`} alt="" loading="lazy" className="h-10 w-14 shrink-0 rounded object-cover" />
               <span className="group-hover:underline group-hover:decoration-wavy">{calc.title}</span>
               <span className="ml-auto text-base text-ink-faint">{new Date(calc.createdAt).toLocaleDateString()}</span>
             </Link>

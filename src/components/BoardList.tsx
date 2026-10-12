@@ -184,24 +184,27 @@ export function BoardList({
         <ul className="flex flex-col gap-5">
           {shown.map((board) => (
             <li key={board.id}>
-              <Link href={`/c/${board.id}`} className="group flex flex-col gap-0.5">
+              <Link href={`/c/${board.id}`} className="group flex items-start gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/c/${board.id}/image?v=${encodeURIComponent(board.updatedAt)}`} alt="" loading="lazy" className="h-16 w-20 shrink-0 rounded object-cover" />
+                <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="flex items-baseline gap-3 text-xl">
-                  <span className="text-accent">→</span>
                   <span className="group-hover:underline group-hover:decoration-wavy">
                     <Highlighted text={board.title} words={words} />
                   </span>
                 </span>
                 {board.description && (
-                  <span className="line-clamp-2 pl-7 text-base text-ink-muted">
+                  <span className="line-clamp-2 text-base text-ink-muted">
                     <Highlighted text={around(board.description, words)} words={words} />
                   </span>
                 )}
-                <span className="pl-7 text-sm text-ink-faint">
+                <span className="text-sm text-ink-faint">
                   {board.tags.length > 0 && <span className="mr-2 text-accent-2">{board.tags.map((t) => `#${t}`).join(" ")}</span>}
                   by {board.ownerName}{board.isMine ? " (you)" : ""}
                   {" · "}
                   {sort === "changed" ? `changed ${new Date(board.updatedAt).toLocaleDateString()}` : new Date(board.createdAt).toLocaleDateString()}
                   {sort === "popular" && ` · ${board.views} ${board.views === 1 ? "view" : "views"}`}
+                </span>
                 </span>
               </Link>
             </li>

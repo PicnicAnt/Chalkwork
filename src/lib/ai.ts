@@ -198,3 +198,32 @@ export function explainWith(ask: Ask, board: { title: string; description: strin
   ].filter(Boolean);
   return ask(EXPLAIN_SYSTEM, lines.join("\n").slice(0, 6000));
 }
+
+const IMAGE_SYSTEM = `You draw a small picture for a calculation board, to be shown in a list next to its title. Reply with ONLY one SVG document and nothing else: it starts with <svg and ends with </svg>.
+
+Rules:
+- viewBox="0 0 160 120", with an xmlns attribute, no width or height.
+- Flat, simple shapes, a clear subject that suggests what the board calculates (a box for a volume, a coin for a price, a gauge for a rate, and so on), and a plain background rectangle that fills the box.
+- A few colours that sit well together. No text at all, no letters or numbers.
+- Only basic elements: rect, circle, ellipse, line, polyline, polygon, path, g, defs, linearGradient, radialGradient, stop. No script, no style element, no image or use, no links, no external addresses, no event handlers.
+- Under 4000 characters.`;
+
+// A picture for a board, drawn by the helper as SVG and checked before it is kept. Returns the SVG, or why not.
+export async function imageWith(
+  ask: Ask,
+  board: { title: string; description: string; formulas: string[]; drawings: string[] },
+  clean: (svg: string) => string | null,
+): Promise<{ ok: true; svg: string } | { ok: false; error: string }> {
+  const lines = [
+    `Title: ${board.title}`,
+    board.description ? `Description: ${board.description}` : "",
+    board.formulas.length ? `Formulas:\n${board.formulas.slice(0, 12).join("\n")}` : "",
+    board.drawings.length ? `Drawings on the board: ${board.drawings.join(", ")}` : "",
+  ].filter(Boolean);
+  const text = await ask(IMAGE_SYSTEM, lines.join("\n").slice(0, 3000));
+  const start = text.indexOf("<svg");
+  const end = text.lastIndexOf("</svg>");
+  const svg = start >= 0 && end > start ? text.slice(start, end + "</svg>".length) : "";
+  const checked = svg ? clean(svg) : null;
+  return checked ? { ok: true, svg: checked } : { ok: false, error: "The helper's picture didn't pass the checks. Try again." };
+}

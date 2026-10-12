@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
+import { getBoardImage } from "@/lib/db";
 
 import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveIncludes } from "@/lib/resolve-boards";
@@ -74,6 +75,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
         heading={`Edit ${draft.title}`}
         availableBoards={availableBoards}
         initialIncluded={resolved.included}
+        currentImageSrc={`/c/${id}/image`}
       />
     );
   }
@@ -87,6 +89,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
       <BoardEditor
         aiEnabled={"key" in aiConfig()}
         initial={{ ...draft, title: `${draft.title} (copy)` }}
+        initialImage={getBoardImage(id) ?? ""}
         heading={`Copy ${draft.title}`}
         availableBoards={availableBoards}
         initialIncluded={resolved.included}

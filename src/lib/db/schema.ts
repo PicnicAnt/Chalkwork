@@ -63,6 +63,12 @@ export function createSchema(db: Database.Database) {
       PRIMARY KEY (board_id, version)
     );
 
+    -- The picture a board shows in lists, as a data URL. A board without a row gets a plain picture made from its title.
+    CREATE TABLE IF NOT EXISTS board_images (
+      board_id TEXT PRIMARY KEY REFERENCES boards(id) ON DELETE CASCADE,
+      image TEXT NOT NULL
+    );
+
     -- How many times each board has been opened by someone other than its owner: the board's popularity.
     CREATE TABLE IF NOT EXISTS board_views (
       board_id TEXT PRIMARY KEY REFERENCES boards(id) ON DELETE CASCADE,

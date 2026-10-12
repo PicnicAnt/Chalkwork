@@ -2,7 +2,8 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import type { Bundle } from "@/lib/boards";
-import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard } from "@/lib/db";
+import { boardsUsing, removeBoard, getBoard, insertBoard, saveBoard, setBoardImage } from "@/lib/db";
+import { parseImage } from "@/lib/board-image";
 import { resolveBoard } from "@/lib/resolve-boards";
 import { notifyBoardChanged } from "./notify";
 import { presetValues } from "@/lib/scenarios";
@@ -22,18 +23,26 @@ function hiddenUse(draft: { includes: { board: string }[] }, userId: string): st
   return null;
 }
 
-export async function createBoard(payload: unknown): Promise<SaveResult> {
+// The picture sent with a save: nothing (leave it), an empty text (remove it) or a data URL that passes the checks.
+const imageOf = (image: unknown): { ok: true; value: string | null } | { ok: false } =>
+  image === undefined || image === null ? { ok: true, value: null } : image === "" ? { ok: true, value: "" } : parseImage(image) ? { ok: true, value: image as string } : { ok: false };
+
+export async function createBoard(payload: unknown, image?: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to save a board."] };
   const prepared = prepare(payload);
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
   const hidden = hiddenUse(prepared.draft, user.id);
   if (hidden) return { ok: false, errors: [hidden] };
-  return { ok: true, id: insertBoard(prepared.draft, user.id) };
+  const picture = imageOf(image);
+  if (!picture.ok) return { ok: false, errors: ["That picture can't be used."] };
+  const id = insertBoard(prepared.draft, user.id);
+  if (picture.value) setBoardImage(id, picture.value);
+  return { ok: true, id };
 }
 
 // Only the owner can change a calculation.
-export async function updateBoard(id: string, payload: unknown): Promise<SaveResult> {
+export async function updateBoard(id: string, payload: unknown, image?: unknown): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: ["Sign in to save changes."] };
   if (typeof id !== "string" || getBoard(id)?.ownerId !== user.id) {
@@ -43,9 +52,12 @@ export async function updateBoard(id: string, payload: unknown): Promise<SaveRes
   if ("errors" in prepared) return { ok: false, errors: prepared.errors };
   const hidden = hiddenUse(prepared.draft, user.id);
   if (hidden) return { ok: false, errors: [hidden] };
+  const picture = imageOf(image);
+  if (!picture.ok) return { ok: false, errors: ["That picture can't be used."] };
   if (!saveBoard(id, user.id, prepared.draft)) {
     return { ok: false, errors: ["Only the owner can change this board."] };
   }
+  if (picture.value !== null) setBoardImage(id, picture.value);
   notifyBoardChanged(id, user.id);
   return { ok: true, id };
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { getCurrentUser } from "@/lib/auth";
-import { AI_LIMITS, aiConfig, catalogText, draftFrom, explainWith, makeLimiter, messagesAsk, relevantBoards, reviseFrom, type CatalogBoard } from "@/lib/ai";
+import { AI_LIMITS, aiConfig, catalogText, draftFrom, explainWith, imageWith, makeLimiter, messagesAsk, relevantBoards, reviseFrom, type CatalogBoard } from "@/lib/ai";
 import { diffDrafts } from "@/lib/change-suggestions";
 import { parseIncludes, type IncludedBundle } from "@/lib/boards";
 import { resolveIncludes } from "@/lib/resolve-boards";
@@ -10,6 +10,7 @@ import { VIZ_TYPES } from "@/lib/visualizations";
 import type { BoardDraft } from "@/lib/board-draft";
 import { getBoard, listAllBoards } from "@/lib/db";
 import { canOpen } from "@/lib/visibility";
+import { cleanSvg, svgDataUrl } from "@/lib/board-image";
 import { prepare } from "./prepare";
 
 // The writing helper. Every use is paid for in tokens, so each action checks who is asking and how often.
@@ -113,4 +114,27 @@ export async function reviseBoard(selfId: unknown, current: unknown, instruction
   const changes = diffDrafts(now.draft, prepared.draft);
   if (changes.length === 0) return { ok: false, error: "The helper didn't change anything. Try saying it differently." };
   return { ok: true, draft: prepared.draft, included: included.included, changes };
+}
+
+export type ImageOutcome = { ok: true; image: string } | { ok: false; error: string };
+
+// A picture for a board, drawn by the helper from its title, description and formulas. Nothing is saved here: the
+// editor shows it and the person keeps it by saving.
+export async function drawBoardImage(info: unknown): Promise<ImageOutcome> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Sign in to use the writing helper." };
+  const config = aiConfig();
+  if ("error" in config) return { ok: false, error: config.error };
+  const raw = typeof info === "object" && info !== null ? (info as Record<string, unknown>) : {};
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+  const list = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").map((x) => x.slice(0, 200)).slice(0, max) : []);
+  const board = { title: text(raw.title, 200), description: text(raw.description, 500), formulas: list(raw.formulas, 12), drawings: list(raw.drawings, 10) };
+  if (!board.title.trim() && board.formulas.length === 0) return { ok: false, error: "Give the board a name or a formula first." };
+  if (!allowed(user.id)) return { ok: false, error: `The helper can be used ${AI_LIMITS.perHour} times an hour. Try again a little later.` };
+  try {
+    const out = await imageWith(messagesAsk(config), board, cleanSvg);
+    return out.ok ? { ok: true, image: svgDataUrl(out.svg) } : out;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "The helper couldn't be reached." };
+  }
 }

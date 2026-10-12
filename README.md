@@ -144,6 +144,10 @@ A signed-in user can save what is on a board as a named **scenario** (the typed 
 
 A collection's totals are not listed as rows (formulas use them and the results strip at the top shows them). Each board a collection can take has its own **Add (board)** button with a searchable list of that board's presets beside it. The editor's "Try it" section has the same buttons so the totals can be tried; those boards are not saved.
 
+## Pictures of boards
+
+A board can have a picture that is shown next to its title in lists (**Boards** and **Your boards**). In the editor, under **About**, **Upload a picture** scales a file down (largest side 480 px, kept as JPEG) and **Draw one with the helper** has the AI model draw a small SVG from the title, formulas and drawings (it counts as one helper use). The picture is stored as a data URL in `board_images` and served at `/c/<id>/image`. SVGs are checked before they are kept: no scripts, handlers, links or loaded files, under 24 KB. A board with no picture of its own gets a plain one made from its title (a colour from the title and the outline of its first drawing), so every board has one. A copy of a board starts with the picture of the original.
+
 ## Results strip
 
 The values the formulas work out are listed in a strip that stays at the top of the board while it scrolls, so a change made far down can be seen working through. Tapping a result goes to its field; the arrow next to "Results" hides the strip.

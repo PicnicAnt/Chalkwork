@@ -35,6 +35,7 @@ import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
 import { TryItems } from "./TryItems";
+import { ImageField } from "./ImageField";
 import { readTableDrafts, tableItems, type TableDraft } from "./TablesEditor";
 import { collectionItems, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
 import { rowsToText } from "@/lib/tables";
@@ -51,6 +52,10 @@ type EditorProps = {
   availableBoards?: BoardChoice[];
   /** The boards `initial` already uses, loaded by the server. */
   initialIncluded?: IncludedBundle[];
+  /** The picture of the board being copied, as a data URL, which the copy starts with. */
+  initialImage?: string;
+  /** Where the current picture of the board being edited can be shown from. */
+  currentImageSrc?: string;
   /** Show "Ask for a change", which has the writing helper change the board as asked. */
   aiEnabled?: boolean;
 };
@@ -61,6 +66,9 @@ type Applied = { n: number; draft: BoardDraft | undefined; included: IncludedBun
 // list of what changed and a way back to what it was. Nothing is saved until the person saves.
 export function BoardEditor(props: EditorProps) {
   const [applied, setApplied] = useState<Applied | null>(null);
+  // The picture is kept here so that the helper changing the board doesn't lose it.
+  const [image, setImage] = useState(props.initialImage ?? "");
+  const [imageTouched, setImageTouched] = useState(false);
   return (
     <>
       {applied && applied.changes.length > 0 && (
@@ -93,6 +101,13 @@ export function BoardEditor(props: EditorProps) {
         {...props}
         initial={applied?.draft ?? props.initial}
         initialIncluded={applied?.included ?? props.initialIncluded}
+        image={image}
+        // A saved board keeps its picture unless it was changed here; a new board or a copy takes the one shown.
+        imageToSend={props.editing ? (imageTouched ? image : undefined) : image}
+        onImage={(next) => {
+          setImage(next);
+          setImageTouched(true);
+        }}
         onRevised={(out, before) => setApplied({ n: (applied?.n ?? 0) + 1, draft: out.draft, included: out.included, changes: out.changes, before })}
       />
     </>
@@ -107,8 +122,12 @@ function BoardEditorInner({
   availableBoards = [],
   initialIncluded = [],
   aiEnabled = false,
+  currentImageSrc,
+  image,
+  imageToSend,
+  onImage,
   onRevised,
-}: EditorProps & { onRevised: (out: Extract<ReviseOutcome, { ok: true }>, before: { draft: BoardDraft; included: IncludedBundle[] }) => void }) {
+}: EditorProps & { image: string; imageToSend: string | undefined; onImage: (image: string) => void; onRevised: (out: Extract<ReviseOutcome, { ok: true }>, before: { draft: BoardDraft; included: IncludedBundle[] }) => void }) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -391,8 +410,8 @@ function BoardEditorInner({
         return;
       }
       const result = editing
-        ? await updateBoard(editing.id, draft)
-        : await createBoard(draft);
+        ? await updateBoard(editing.id, draft, imageToSend)
+        : await createBoard(draft, imageToSend);
       if (!result.ok) {
         setErrors(result.errors);
         return;
@@ -428,6 +447,13 @@ function BoardEditorInner({
           maxLength={LIMITS.title}
           onChange={(e) => setTitle(e.target.value)}
           aria-label="Title"
+        />
+        <ImageField
+          value={image}
+          currentSrc={currentImageSrc}
+          onChange={onImage}
+          aiEnabled={aiEnabled}
+          describe={() => ({ title, description, formulas, drawings: visualizations.map((v) => v.type) })}
         />
         <textarea
           className="field resize-none"
