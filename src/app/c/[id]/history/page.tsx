@@ -33,6 +33,29 @@ export default async function HistoryPage({ params }: PageProps<"/c/[id]/history
           reach them until they update.
         </p>
       </div>
+      {versions.length > 1 && (
+        <form action={`/c/${id}/history/compare`} method="get" className="flex flex-wrap items-baseline gap-x-3 gap-y-2 text-lg">
+          <span className="text-ink-muted">Compare version</span>
+          <select name="from" defaultValue={versions[1].version} className="cursor-pointer bg-transparent text-xl" aria-label="First version">
+            {versions.map((v) => (
+              <option key={v.version} value={v.version}>
+                {v.version}
+              </option>
+            ))}
+          </select>
+          <span className="text-ink-muted">with</span>
+          <select name="to" defaultValue={versions[0].version} className="cursor-pointer bg-transparent text-xl" aria-label="Second version">
+            {versions.map((v) => (
+              <option key={v.version} value={v.version}>
+                {v.version}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="btn">
+            Compare
+          </button>
+        </form>
+      )}
       <ol className="flex flex-col gap-6">
         {versions.map((v, i) => {
           const changes = i + 1 < versions.length ? diffDrafts(versions[i + 1].draft, v.draft) : [];
