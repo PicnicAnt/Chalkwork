@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { deleteScenario, saveScenario } from "@/app/actions/scenarios";
-import { difference, outcomeOf, SCENARIO_LIMITS, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
+import { difference, outcomeOf, SCENARIO_LIMITS, type Outcome, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
 import { displayName, formatDecimals, formatNumber, type Analysis } from "@/lib/formulas";
 import { downloadCsv } from "@/lib/export";
+import { encodeItems } from "@/lib/items-param";
 import { encodeState } from "@/lib/share-state";
 import { ratio as unitRatio } from "@/lib/units";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
@@ -28,6 +29,7 @@ export function ScenarioPanel({
   hidden,
   decimals,
   shownUnits,
+  outcomes,
   onLoad,
 }: {
   boardId: string;
@@ -41,6 +43,8 @@ export function ScenarioPanel({
   decimals: Record<string, number>;
   /** The unit each variable is shown in on the board, where one was chosen. */
   shownUnits: Record<string, string>;
+  /** Worked out elsewhere for scenarios that have other boards added, by scenario id. */
+  outcomes?: Record<string, Outcome>;
   onLoad: (scenario: Scenario) => void;
 }) {
   const router = useRouter();
@@ -67,7 +71,9 @@ export function ScenarioPanel({
 
   // A link that opens the board with this scenario's numbers in place.
   async function copyLink(scenario: Scenario) {
-    const link = `${location.origin}${location.pathname}?state=${encodeState(scenario)}`;
+    const params = new URLSearchParams({ state: encodeState(scenario) });
+    if (scenario.items && scenario.items.length > 0) params.set("items", encodeItems(scenario.items));
+    const link = `${location.origin}${location.pathname}?${params}`;
     try {
       await navigator.clipboard.writeText(link);
       setCopiedId(scenario.id);
@@ -92,9 +98,9 @@ export function ScenarioPanel({
   const columns = useMemo(
     () => [
       { key: NOW, title: "Now", outcome: outcomeOf(analysis, current, decimals) },
-      ...shownScenarios.map((s) => ({ key: s.id, title: s.name, outcome: outcomeOf(analysis, s, decimals) })),
+      ...shownScenarios.map((s) => ({ key: s.id, title: s.name, outcome: outcomes?.[s.id] ?? outcomeOf(analysis, s, decimals) })),
     ],
-    [analysis, current, decimals, shownScenarios],
+    [analysis, current, decimals, shownScenarios, outcomes],
   );
   const base = columns.find((c) => c.key === baseKey) ?? columns[0];
   const rows = analysis.variables.filter((v) => hidden[v.name] !== true);

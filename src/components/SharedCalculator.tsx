@@ -6,7 +6,7 @@ import type { Bundle } from "@/lib/boards";
 import { compute, initialLocks, shownValues } from "@/lib/calculator";
 import { downloadCsv, fileNameOf } from "@/lib/export";
 import { analyzeFormulas, displayName, formatNumber, parseValue } from "@/lib/formulas";
-import type { Preset, Scenario, ScenarioSnapshot } from "@/lib/scenarios";
+import type { Outcome, Preset, Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
 import { encodeItems } from "@/lib/items-param";
 import type { ExtraItem } from "@/lib/resolve-boards";
@@ -33,6 +33,7 @@ export function SharedCalculator({
   presets = [],
   boardChoices = [],
   extras = [],
+  scenarioOutcomes,
 }: {
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
@@ -56,6 +57,8 @@ export function SharedCalculator({
   boardChoices?: { id: string; title: string }[];
   /** The items someone using the board has added. */
   extras?: ExtraItem[];
+  /** What scenarios with other added boards come to, worked out on the server (a different set of boards is a different board). */
+  scenarioOutcomes?: Record<string, Outcome>;
 }) {
   const router = useRouter();
   const analysis = useMemo(() => analyzeFormulas(flat.formulas, flat.tables), [flat.formulas, flat.tables]);
@@ -81,6 +84,13 @@ export function SharedCalculator({
 
   // Puts a set of values and locks on the board, as if they had been typed.
   const load = (snapshot: ScenarioSnapshot) => {
+    // A saved loadout with other boards added is another board to solve, so the page is opened with those boards.
+    if (snapshot.items && encodeItems(snapshot.items) !== encodeItems(extras)) {
+      const params = new URLSearchParams({ state: encodeState({ values: snapshot.values, locked: snapshot.locked }) });
+      if (snapshot.items.length > 0) params.set("items", encodeItems(snapshot.items));
+      router.replace(`${location.pathname}?${params}`);
+      return;
+    }
     setValues(snapshot.values);
     setLocks(snapshot.locked);
     setLoadedLocks(snapshot.locked);
@@ -210,7 +220,8 @@ export function SharedCalculator({
           boardId={boardId}
           analysis={analysis}
           scenarios={scenarios}
-          current={{ values, locked: locks ?? initialLocks(analysis, values) }}
+          current={{ values, locked: locks ?? initialLocks(analysis, values), items: extras.map(({ group, board, preset }) => ({ group, board, ...(preset ? { preset } : {}) })) }}
+          outcomes={scenarioOutcomes}
           labels={flat.labels}
           units={flat.units}
           hidden={flat.hidden}

@@ -3,7 +3,12 @@ import { formatNumber, parseValue, type Analysis } from "./formulas";
 
 // A scenario is a named set of values for a board: what is typed (and so locked) and the numbers that
 // went with it. It is the user's own; nobody else sees it.
-export type ScenarioSnapshot = { values: Record<string, string>; locked: string[] };
+/** A board someone added to one of the board's collections, as it was when the scenario was saved. */
+export type ScenarioItem = { group: string; board: string; preset?: string };
+
+// `items` are the boards added to collections (a loadout); a scenario saved before there were none keeps whatever is
+// added now when it is loaded.
+export type ScenarioSnapshot = { values: Record<string, string>; locked: string[]; items?: ScenarioItem[] };
 export type Scenario = { id: string; name: string } & ScenarioSnapshot;
 
 export const SCENARIO_LIMITS = { name: 40, perBoard: 20, variables: 300, text: 50 };
@@ -51,7 +56,7 @@ export function difference(value: number | undefined, baseline: number | undefin
 // Reads what was sent for saving, or says why it can't be used.
 export function parseSnapshot(raw: unknown): ScenarioSnapshot | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const r = raw as { values?: unknown; locked?: unknown };
+  const r = raw as { values?: unknown; locked?: unknown; items?: unknown };
   if (typeof r.values !== "object" || r.values === null || !Array.isArray(r.locked)) return null;
   const entries = Object.entries(r.values as Record<string, unknown>);
   if (entries.length > SCENARIO_LIMITS.variables || r.locked.length > SCENARIO_LIMITS.variables) return null;
@@ -61,7 +66,16 @@ export function parseSnapshot(raw: unknown): ScenarioSnapshot | null {
     values[name] = text;
   }
   const locked = r.locked.filter((n): n is string => typeof n === "string" && n in values);
-  return { values, locked };
+  if (!Array.isArray(r.items)) return { values, locked };
+  const items: ScenarioItem[] = [];
+  for (const item of r.items.slice(0, 20)) {
+    const group = typeof item?.group === "string" ? item.group : "";
+    const board = typeof item?.board === "string" ? item.board : "";
+    if (!/^[A-Za-z_][A-Za-z0-9_]{0,29}$/.test(group) || !/^[A-Za-z0-9_-]{6,24}$/.test(board)) continue;
+    const preset = typeof item?.preset === "string" && item.preset ? item.preset.slice(0, 40) : undefined;
+    items.push({ group, board, ...(preset ? { preset } : {}) });
+  }
+  return { values, locked, items };
 }
 
 // Reads the presets sent for saving. Names of variables that the board doesn't have are dropped.

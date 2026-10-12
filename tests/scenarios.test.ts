@@ -68,3 +68,13 @@ describe("differences between scenarios", () => {
     expect(difference(b.numbers.area, a.numbers.area, "percent")).toEqual({ text: "+100%", sign: 1 });
   });
 });
+
+describe("scenarios that keep the boards added to collections", () => {
+  it("keeps valid items, drops the rest, and tells apart none from unknown", async () => {
+    const { parseSnapshot } = await import("@/lib/scenarios");
+    const snapshot = parseSnapshot({ values: { a: "1" }, locked: ["a"], items: [{ group: "gear", board: "abcdef12", preset: "Long" }, { group: "1x", board: "abcdef12" }, { group: "gear", board: "x" }] });
+    expect(snapshot?.items).toEqual([{ group: "gear", board: "abcdef12", preset: "Long" }]);
+    expect(parseSnapshot({ values: {}, locked: [], items: [] })?.items).toEqual([]);
+    expect(parseSnapshot({ values: {}, locked: [] })?.items).toBeUndefined();
+  });
+});

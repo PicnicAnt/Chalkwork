@@ -10,8 +10,9 @@ import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
 import { acceptedExtras, groupsOf, resolveForView } from "@/lib/resolve-boards";
-import { parseItems } from "@/lib/items-param";
-import { humanize } from "@/lib/formulas";
+import { encodeItems, parseItems } from "@/lib/items-param";
+import { outcomeOf, type Outcome } from "@/lib/scenarios";
+import { analyzeFormulas, humanize } from "@/lib/formulas";
 import { decodeState } from "@/lib/share-state";
 
 async function load(id: string) {
@@ -59,6 +60,15 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
       }),
     added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
   }));
+  // Scenarios saved with other boards added are another board to solve: worked out here, for the comparison table.
+  const scenarios = user ? listScenarios(full.id, user.id) : undefined;
+  const scenarioOutcomes: Record<string, Outcome> = {};
+  for (const sc of scenarios ?? []) {
+    if (!sc.items || encodeItems(sc.items) === encodeItems(usedExtras)) continue;
+    const other = resolveForView(full, sc.items);
+    if ("error" in other) continue;
+    scenarioOutcomes[sc.id] = outcomeOf(analyzeFormulas(other.bundle.formulas, other.bundle.tables), sc, other.bundle.decimals);
+  }
   const boardChoices = user && known.some((n) => !(full.collections ?? []).find((c) => c.name === n)?.boards?.length) ? listAllBoards().filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
 
   return (
@@ -114,7 +124,8 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           title={calculation.title}
           publicId={calculation.id}
           boardId={user ? calculation.id : undefined}
-          scenarios={user ? listScenarios(calculation.id, user.id) : undefined}
+          scenarios={scenarios}
+          scenarioOutcomes={scenarioOutcomes}
           editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}
         />
       )}
