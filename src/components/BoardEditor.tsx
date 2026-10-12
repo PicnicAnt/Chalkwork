@@ -569,6 +569,7 @@ function BoardEditorInner({
         boardRows={Object.fromEntries(
           included.map((inc) => [
             inc.alias,
+            (children: React.ReactNode) => (
             <BoardRow
               key={inc.alias}
               inc={includeOf(inc)}
@@ -587,7 +588,10 @@ function BoardEditorInner({
                 // A drawing can't read a variable of a board that is no longer used.
                 setVisualizations((vs) => dropFromVisualizations(vs, (name) => name.startsWith(alias + "$")));
               }}
-            />,
+            >
+              {children}
+            </BoardRow>
+            ),
           ]),
         )}
         typedRows={

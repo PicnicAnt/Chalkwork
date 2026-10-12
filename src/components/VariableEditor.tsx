@@ -80,7 +80,7 @@ export function VariableEditor({
   /** The variables that are tables, collections and boards, shown after the others. */
   typedRows?: ReactNode;
   /** The rows of the boards that are used, by alias: each is shown at the top of the box with that board's variables. */
-  boardRows?: Record<string, ReactNode>;
+  boardRows?: Record<string, (children: ReactNode) => ReactNode>;
   /** How many of those there are (for the count in the title). */
   extraCount?: number;
   /** The "Add variable" button. */
@@ -118,33 +118,8 @@ export function VariableEditor({
       />
 
       <div className="flex flex-col gap-8">
-        {sections.map((section) => (
-          <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${section.key !== null ? "group-box" : ""}`}>
-            {section.key && groups[section.key] && (
-              <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
-                <h3 className="group-title">
-                  {groups[section.key].title}{" "}
-                  <span className="text-base text-ink-faint">
-                    (used as {section.key}; its names can&apos;t be changed here, but everything else can)
-                  </span>
-                </h3>
-                <button
-                  type="button"
-                  className="shrink-0 p-1 text-accent"
-                  aria-expanded={!closed[section.key]}
-                  aria-label={`${closed[section.key] ? "Expand" : "Collapse"} ${groups[section.key].title}`}
-                  title={closed[section.key] ? "Expand" : "Collapse"}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }));
-                  }}
-                >
-                  <Chevron open={!closed[section.key]} />
-                </button>
-              </div>
-            )}
-            <div className={section.key && closed[section.key] ? "hidden" : "flex flex-col gap-4"}>
-            {section.key && boardRows?.[section.key]}
+        {sections.map((section) => {
+          const lines = (
             <ReorderList names={section.variables.map((v) => v.name)} onOrder={onOrder}>
               {(name, handle) => {
                 const v = { name };
@@ -184,15 +159,57 @@ export function VariableEditor({
                 );
               }}
             </ReorderList>
+          );
+          // A used board is one row like a variable or a collection: folded it is a single line, opened it holds its
+          // settings and its variables.
+          const wrap = section.key ? boardRows?.[section.key] : undefined;
+          if (wrap) {
+            return (
+              <div key={section.key} className="flex flex-col gap-1">
+                {wrap(
+                  <div className="flex flex-col gap-4">
+                    <p className="text-base text-ink-muted">Its variable names can&apos;t be changed here, but everything else can.</p>
+                    {lines}
+                  </div>,
+                )}
+              </div>
+            );
+          }
+          return (
+          <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${section.key !== null ? "group-box" : ""}`}>
+            {section.key && groups[section.key] && (
+              <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
+                <h3 className="group-title">
+                  {groups[section.key].title}{" "}
+                  <span className="text-base text-ink-faint">
+                    (used as {section.key}; its names can&apos;t be changed here, but everything else can)
+                  </span>
+                </h3>
+                <button
+                  type="button"
+                  className="shrink-0 p-1 text-accent"
+                  aria-expanded={!closed[section.key]}
+                  aria-label={`${closed[section.key] ? "Expand" : "Collapse"} ${groups[section.key].title}`}
+                  title={closed[section.key] ? "Expand" : "Collapse"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }));
+                  }}
+                >
+                  <Chevron open={!closed[section.key]} />
+                </button>
+              </div>
+            )}
+            <div className={section.key && closed[section.key] ? "hidden" : "flex flex-col gap-4"}>
+            {lines}
             </div>
           </div>
-        ))}
+          );
+        })}
         {Object.entries(boardRows ?? {})
           .filter(([alias]) => !sections.some((s) => s.key === alias))
           .map(([alias, row]) => (
-            <div key={alias} className="group-box flex flex-col gap-4">
-              {row}
-            </div>
+            <div key={alias}>{row(null)}</div>
           ))}
         {typedRows && <div className="flex flex-col gap-3">{typedRows}</div>}
         {addVariable}

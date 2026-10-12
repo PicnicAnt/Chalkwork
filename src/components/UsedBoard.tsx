@@ -21,6 +21,7 @@ export function UsedBoard({
   onPreset,
   onPin,
   onRemove,
+  children,
 }: {
   inc: Include;
   /** The board's own title. */
@@ -42,6 +43,8 @@ export function UsedBoard({
   /** Pins the board to a version, or follows its latest again (undefined). */
   onPin: (version: number | undefined) => void;
   onRemove: () => void;
+  /** Shown last, under the settings: the board's variables. */
+  children?: React.ReactNode;
 }) {
   // The alias rewrites formulas, so it is applied when the field is left, not on every keystroke.
   const alias = useCommitField(inc.alias, (next) => {
@@ -145,6 +148,7 @@ export function UsedBoard({
           )}
         </p>
       )}
+      {children}
     </Foldable>
   );
 }
