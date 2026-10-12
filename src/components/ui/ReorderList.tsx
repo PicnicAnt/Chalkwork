@@ -9,6 +9,7 @@ export function ReorderList({
   onOrder,
   children,
   gap = "gap-4",
+  labelOf = (name: string) => name,
 }: {
   names: string[];
   /** The names in their new order. */
@@ -17,6 +18,8 @@ export function ReorderList({
   children: (name: string, handle: ReactNode) => ReactNode;
   /** The space between rows, as a class. */
   gap?: string;
+  /** What a row is called, for its grip's label. */
+  labelOf?: (name: string) => string;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ name: string; before: number } | null>(null);
@@ -49,7 +52,7 @@ export function ReorderList({
           <button
             type="button"
             className="shrink-0 cursor-grab touch-none select-none px-1 text-xl leading-none text-ink-faint hover:text-ink-muted active:cursor-grabbing"
-            aria-label={`Drag to move ${name}`}
+            aria-label={`Drag to move ${labelOf(name)}`}
             title="Drag to change the order"
             onPointerDown={(e) => {
               if (names.length < 2) return;

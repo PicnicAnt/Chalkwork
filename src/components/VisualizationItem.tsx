@@ -20,6 +20,7 @@ export function VisualizationItem({
   onToggle,
   onChange,
   onRemove,
+  handle,
 }: {
   viz: Visualization;
   choices: VariableChoice[];
@@ -27,6 +28,8 @@ export function VisualizationItem({
   onToggle: () => void;
   onChange: (next: Visualization) => void;
   onRemove: () => void;
+  /** The grip to drag it by, to change its place among the drawings. */
+  handle?: React.ReactNode;
 }) {
   const type = vizType(viz.type);
   if (!type) return null;
@@ -34,7 +37,7 @@ export function VisualizationItem({
   const mapped = type.params.map((p) => viz.map[p.key]).filter(Boolean).map(textOf);
 
   return (
-    <Foldable expanded={expanded} onToggle={onToggle} summary={type.label} hint={mapped.length ? ` · ${mapped.join(", ")}` : " · not set up yet"}>
+    <Foldable handle={handle} expanded={expanded} onToggle={onToggle} summary={type.label} hint={mapped.length ? ` · ${mapped.join(", ")}` : " · not set up yet"}>
       {type.params.map((param) => (
         <label key={param.key} className="flex flex-wrap items-baseline gap-x-3 text-lg">
           <span className="w-full text-ink-muted sm:w-[45%]">{param.label}</span>

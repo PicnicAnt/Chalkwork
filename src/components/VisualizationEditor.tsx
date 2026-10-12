@@ -4,6 +4,7 @@ import { displayName, type Analysis } from "@/lib/formulas";
 import { MAX_VISUALIZATIONS, VIZ_TYPES, type Visualization } from "@/lib/visualizations";
 import { VisualizationItem } from "./VisualizationItem";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
+import { ReorderList } from "./ui/ReorderList";
 import { ExpandAllBar, useFold } from "./ui/Foldable";
 
 // The drawings and charts of a board: pick a type, then say which variable plays each role. Those of
@@ -33,9 +34,24 @@ export function VisualizationEditor({
     >
       {visualizations.length > 0 && <ExpandAllBar onExpandAll={() => fold.expandAll(keys)} onCollapseAll={fold.collapseAll} />}
 
-      {visualizations.map((viz, index) => (
+      <ReorderList
+        names={keys}
+        gap="gap-2"
+        labelOf={(k) => VIZ_TYPES.find((t) => t.id === visualizations[Number(k)]?.type)?.label ?? "drawing"}
+        onOrder={(order) => {
+          // Rows keep being unfolded after they move: the open ones are found again at their new place.
+          const open = keys.filter((k) => fold.isOpen(k)).map((k) => String(order.indexOf(k)));
+          onChange(order.map((k) => visualizations[Number(k)]));
+          fold.expandAll(open);
+        }}
+      >
+        {(key, handle) => {
+          const index = Number(key);
+          const viz = visualizations[index];
+          return (
         <VisualizationItem
           key={index}
+          handle={visualizations.length > 1 ? handle : undefined}
           viz={viz}
           choices={choices}
           expanded={fold.isOpen(String(index))}
@@ -47,7 +63,9 @@ export function VisualizationEditor({
             onChange(visualizations.filter((_, i) => i !== index));
           }}
         />
-      ))}
+          );
+        }}
+      </ReorderList>
 
       {visualizations.length < MAX_VISUALIZATIONS && (
         <div className="flex flex-col gap-2">
