@@ -428,6 +428,38 @@ function BoardEditorInner({
         />
       </section>
 
+      <CollapsibleSection title="About" description="The description, the tags that make the board easy to find, and who can open it.">
+        <textarea
+          className="field resize-none"
+          placeholder="Description (optional)"
+          rows={2}
+          value={description}
+          maxLength={LIMITS.description}
+          onChange={(e) => setDescription(e.target.value)}
+          aria-label="Description"
+        />
+        <input
+          className="field text-lg"
+          placeholder="Tags, separated by commas (optional), e.g. finance, loan"
+          value={tagText}
+          onChange={(e) => setTagText(e.target.value)}
+          aria-label="Tags"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
+          Who can open it
+          <select value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label="Who can open the board">
+            {VISIBILITIES.map((v) => (
+              <option key={v.value} value={v.value}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-base">{VISIBILITIES.find((v) => v.value === visibility)?.hint}</span>
+        </label>
+      </CollapsibleSection>
+
       {aiEnabled && (
         // Not a form of its own: the editor is one form already, and forms can't be nested.
         <CollapsibleSection title="Ask for a change" description={'Say what to change in a sentence, such as “add a 20% VAT and show the price with it” or “use the Rectangle board for the base and add a Box drawing”. An AI model changes this board; you see what changed and can go back before you save.'}>
@@ -490,38 +522,6 @@ function BoardEditorInner({
             ))}
           </ul>
         )}
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Settings" description="The description, tags and who can open the board.">
-        <textarea
-          className="field resize-none"
-          placeholder="Description (optional)"
-          rows={2}
-          value={description}
-          maxLength={LIMITS.description}
-          onChange={(e) => setDescription(e.target.value)}
-          aria-label="Description"
-        />
-        <input
-          className="field text-lg"
-          placeholder="Tags, separated by commas (optional), e.g. finance, loan"
-          value={tagText}
-          onChange={(e) => setTagText(e.target.value)}
-          aria-label="Tags"
-          autoCapitalize="off"
-          spellCheck={false}
-        />
-        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
-          Who can open it
-          <select value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label="Who can open the board">
-            {VISIBILITIES.map((v) => (
-              <option key={v.value} value={v.value}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-          <span className="text-base">{VISIBILITIES.find((v) => v.value === visibility)?.hint}</span>
-        </label>
       </CollapsibleSection>
 
       <VariableEditor
