@@ -97,7 +97,10 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     <>
       {!isOwner && <ViewCounter boardId={calculation.id} />}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="flex min-w-0 items-start gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/c/${calculation.id}/image`} alt="" className="h-20 w-28 shrink-0 rounded object-cover sm:h-24 sm:w-32" />
+          <div className="min-w-0">
           <h1 className="text-3xl font-bold sm:text-4xl">{calculation.title}</h1>
           {(calculation.ownerName || isOwner) && (
             <p className="mt-1 text-ink-muted">
@@ -115,6 +118,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           {calculation.description && (
             <p className="mt-2 whitespace-pre-line text-ink-muted">{calculation.description}</p>
           )}
+          </div>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           {/* The Share menu is put here by the board below, which knows the numbers on screen. */}
