@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
@@ -29,7 +30,16 @@ async function load(id: string) {
 
 export async function generateMetadata({ params }: PageProps<"/c/[id]">): Promise<Metadata> {
   const calculation = await load((await params).id);
-  return { title: `${calculation.title} · Chalkwork`, description: calculation.description || undefined };
+  // The card's picture needs a full address, so it is built from the address the page was asked for on.
+  const asked = await headers();
+  const host = asked.get("x-forwarded-host") ?? asked.get("host");
+  const proto = asked.get("x-forwarded-proto") ?? "http";
+  return {
+    ...(host ? { metadataBase: new URL(`${proto}://${host}`) } : {}),
+    title: `${calculation.title} · Chalkwork`,
+    description: calculation.description || undefined,
+    openGraph: { title: calculation.title, description: calculation.description || undefined, siteName: "Chalkwork", type: "website" },
+  };
 }
 
 export default async function BoardPage({ params, searchParams }: PageProps<"/c/[id]">) {
