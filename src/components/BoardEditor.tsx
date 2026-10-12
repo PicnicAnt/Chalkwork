@@ -236,7 +236,7 @@ function BoardEditorInner({
   // "Add variable": a number or yes/no is a new variable of the formulas (a line that is only its name), and a table,
   // collection or board is a variable of that type.
   const typedFold = useFold();
-  function addVariable(kind: VariableKind, rawName: string, boardId?: string): string | null {
+  function addVariable(kind: VariableKind, rawName: string, boardId?: string, allowed?: string[]): string | null {
     const name = rawName.trim();
     if (kind === "board") {
       if (boardId) addBoard(boardId);
@@ -257,7 +257,7 @@ function BoardEditorInner({
       setTableDrafts((list) => [...list, { name, mode: "step", text: "" }]);
       typedFold.open(`table:${tableDrafts.length}`);
     } else if (kind === "collection") {
-      setCollectionDrafts((list) => [...list, { name, boards: [] }]);
+      setCollectionDrafts((list) => [...list, { name, boards: allowed ?? [] }]);
       typedFold.open(`collection:${collectionDrafts.length}`);
     } else if (boardId) {
       addBoard(boardId);
