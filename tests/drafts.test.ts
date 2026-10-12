@@ -20,6 +20,12 @@ const base: BoardDraft = {
 };
 
 describe("checking a board before it is saved", () => {
+  it("keeps tables and collections in the order, next to the variables", () => {
+    const out = validateDraft({ ...base, formulas: ["a = b * 2"], tables: [{ name: "rate", mode: "step", rows: [[0, 1]] }], collections: [{ name: "parts", stats: [] }], order: ["parts", "b", "rate", "gone", "a"] });
+    expect(out.errors).toEqual([]);
+    expect(out.draft?.order).toEqual(["parts", "b", "rate", "a"]);
+  });
+
   it("turns the links of an older board into formulas", () => {
     const out = validateDraft({ ...base, formulas: ["a = b * 2", "c = 1"], links: { c: "b" } });
     expect(out.errors).toEqual([]);

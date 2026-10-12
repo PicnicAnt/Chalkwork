@@ -23,7 +23,7 @@ export function readTableDrafts(drafts: readonly TableDraft[]): { tables: Table[
 
 // The variables of the type table: a list of x and y values that a formula calls like a function, so with a table
 // named tax_rate, tax_rate(income) looks income up in it. Shown as rows of the variable list.
-export function TableRows({
+export function tableItems({
   drafts,
   problems,
   onChange,
@@ -37,11 +37,12 @@ export function TableRows({
   onToggle: (key: string) => void;
 }) {
   const update = (i: number, patch: Partial<TableDraft>) => onChange(drafts.map((d, j) => (j === i ? { ...d, ...patch } : d)));
-  return (
-    <>
-      {drafts.map((d, i) => (
+  return drafts.map((d, i) => ({
+    id: d.name.trim() || `new:table:${i}`,
+    render: (handle?: React.ReactNode) => (
         <Foldable
           key={i}
+          handle={handle}
           expanded={isOpen(`table:${i}`)}
           onToggle={() => onToggle(`table:${i}`)}
           summary={d.name || "New table"}
@@ -78,7 +79,6 @@ export function TableRows({
           />
           {problems[i] && <p className="text-base text-danger">{problems[i]}</p>}
         </Foldable>
-      ))}
-    </>
-  );
+    ),
+  }));
 }

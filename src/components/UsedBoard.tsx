@@ -22,6 +22,7 @@ export function UsedBoard({
   onPin,
   onRemove,
   children,
+  handle,
 }: {
   inc: Include;
   /** The board's own title. */
@@ -45,6 +46,8 @@ export function UsedBoard({
   onRemove: () => void;
   /** Shown last, under the settings: the board's variables. */
   children?: React.ReactNode;
+  /** The grip to drag the board by, to change its place in the list. */
+  handle?: React.ReactNode;
 }) {
   // The alias rewrites formulas, so it is applied when the field is left, not on every keystroke.
   const alias = useCommitField(inc.alias, (next) => {
@@ -56,7 +59,7 @@ export function UsedBoard({
   });
 
   return (
-    <Foldable expanded={expanded} onToggle={onToggle} summary={inc.name || inc.preset || title} hint={` · used as ${inc.alias}${inc.version ? ` · version ${inc.version}` : ""}`}>
+    <Foldable handle={handle} expanded={expanded} onToggle={onToggle} summary={inc.name || inc.preset || title} hint={` · used as ${inc.alias}${inc.version ? ` · version ${inc.version}` : ""}`}>
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <span className="flex min-w-0 flex-1 basis-40 items-baseline gap-3">
           <span className="min-w-0 truncate text-lg">{title}</span>

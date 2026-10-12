@@ -15,7 +15,7 @@ export const collectionsOf = (drafts: readonly CollectionDraft[]): Collection[] 
 // The variables of the type collection: a name such as parts, and which boards can be added to it. People using the
 // board add existing boards, and formulas use what they add up to: parts.weight, avg(parts.weight), count(parts).
 // Shown as rows of the variable list.
-export function CollectionRows({
+export function collectionItems({
   drafts,
   usedNames,
   available,
@@ -33,14 +33,15 @@ export function CollectionRows({
   onToggle: (key: string) => void;
 }) {
   const update = (i: number, patch: Partial<CollectionDraft>) => onChange(drafts.map((d, j) => (j === i ? { ...d, ...patch } : d)));
-  return (
-    <>
-      {drafts.map((d, i) => {
+  return drafts.map((d, i) => {
         const name = d.name.trim();
         const problem = name === "" ? null : checkAlias(name) ?? (usedNames.includes(name) ? "A used board already has this name" : drafts.some((o, j) => j < i && o.name.trim() === name) ? "Another collection has this name" : null);
-        return (
+        return {
+          id: name || `new:collection:${i}`,
+          render: (handle?: React.ReactNode) => (
           <Foldable
             key={i}
+            handle={handle}
             expanded={isOpen(`collection:${i}`)}
             onToggle={() => onToggle(`collection:${i}`)}
             summary={d.name || "New collection"}
@@ -87,8 +88,7 @@ export function CollectionRows({
             </div>
             {problem && <span className="text-sm text-danger">{problem}</span>}
           </Foldable>
-        );
-      })}
-    </>
-  );
+          ),
+        };
+  });
 }

@@ -149,6 +149,8 @@ export function validateDraft(
   }
 
   const known = new Set(analysis.variables.map((v) => v.name));
+  // The order also places used boards, tables and collections among the variables.
+  const rowNames = new Set([...included.map((i) => i.alias), ...tables.map((t) => t.name), ...collections.map((c) => c.name)]);
 
   // Boards saved when variables could be linked still carry their links: each becomes the formula "a = b".
   const rawLinks = typeof r.links === "object" && r.links !== null ? (r.links as Record<string, unknown>) : {};
@@ -294,7 +296,7 @@ export function validateDraft(
           choices,
           formats,
           presets: parsedPresets.presets,
-          order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),
+          order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && (known.has(n) || rowNames.has(n))).filter((n, i, all) => all.indexOf(n) === i),
           tags: parseTags(r.tags),
           includes: included.map(includeOf),
           visualizations: parsedViz.visualizations,

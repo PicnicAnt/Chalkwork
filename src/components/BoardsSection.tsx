@@ -23,6 +23,7 @@ export function BoardRow({
   onPin,
   onRemove,
   children,
+  handle,
 }: {
   inc: Include;
   includes: Include[];
@@ -39,6 +40,7 @@ export function BoardRow({
   onRemove: (alias: string) => void;
   /** What is shown under the board's settings when it is opened: its variables. */
   children?: React.ReactNode;
+  handle?: React.ReactNode;
 }) {
   const found = included.find((i) => i.alias === inc.alias);
   return (
@@ -57,6 +59,7 @@ export function BoardRow({
       groups={[...new Set([...collectionNames, ...includes.flatMap((i) => (i.group ? [i.group] : []))])]}
       onPin={(version) => onPin(inc.alias, version)}
       onRemove={() => onRemove(inc.alias)}
+      handle={handle}
     >
       {children}
     </UsedBoard>

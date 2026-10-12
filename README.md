@@ -99,7 +99,7 @@ A variable is a number, or a **yes/no**. In the variable editor each variable ha
 
 ## Order of variables
 
-In the variable editor each variable has a grip (⠿) at its left: drag it with a finger or the mouse to move the variable, and a line shows where it will land. With the grip focused, the up and down arrow keys move it one place. The order is saved with the board and used on the board page too; variables that were never moved keep the order they first appear in. Variables of a used board are ordered within their own group.
+In the variable editor each variable has a grip (⠿) at its left: drag it with a finger or the mouse to move the variable, and a line shows where it will land. With the grip focused, the up and down arrow keys move it one place. The order is saved with the board and used on the board page too; variables that were never moved keep the order they first appear in. Variables of a used board are ordered within their own group. Used boards, tables and collections are rows of the same list, so they can be dragged among the variables too; on the board page the board's own variables, used boards and collections follow that order.
 
 ## Writing helper
 

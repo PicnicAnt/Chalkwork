@@ -379,18 +379,50 @@ export function CalculatorPanel({
     }),
   );
 
+  // The top level, in the order the creator set: each variable of the board itself, and each used board or
+  // collection. Whatever isn't in the saved order keeps its place after the rest.
+  type Top = { kind: "own"; name: string } | { kind: "section"; section: (typeof sections)[number] };
+  const defaultTops: Top[] = [
+    ...(sections.find((s) => s.key === null)?.variables ?? []).map((v): Top => ({ kind: "own", name: v.name })),
+    ...[
+      ...sections.filter((s) => s.key !== null),
+      // A collection with no variables yet still has its box, for adding boards to.
+      ...Object.keys(sectionExtras ?? {})
+        .filter((name) => !sections.some((s) => s.key === name))
+        .map((name) => ({ key: name as string | null, variables: [] as (typeof sections)[number]["variables"] })),
+    ]
+      .filter((section) => !section.key || !groups?.[section.key]?.collection)
+      .map((section): Top => ({ kind: "section", section })),
+  ];
+  const idOf = (t: Top) => (t.kind === "own" ? t.name : (t.section.key as string));
+  const placeOf = (t: Top) => {
+    const i = (order ?? []).indexOf(idOf(t));
+    return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  const tops = defaultTops.map((t, i) => ({ t, i })).sort((x, y) => placeOf(x.t) - placeOf(y.t) || x.i - y.i).map((x) => x.t);
+
   return (
     <div className="flex flex-col gap-6">
       <ResultsBar items={results} onGo={focusField} />
-      {[
-        ...sections,
-        // A collection with no variables yet still has its box, for adding boards to.
-        ...Object.keys(sectionExtras ?? {})
-          .filter((name) => !sections.some((s) => s.key === name))
-          .map((name) => ({ key: name as string | null, variables: [] as (typeof sections)[number]["variables"] })),
-      ]
-        .filter((section) => !section.key || !groups?.[section.key]?.collection)
-        .map((section) => renderSection(section))}
+      {tops.map((unit, n) => {
+        if (unit.kind === "section") return renderSection(unit.section);
+        // Consecutive variables of the board itself are one block; drawings of the board come first.
+        if (n > 0 && tops[n - 1].kind === "own") return null;
+        const run: string[] = [];
+        for (let k = n; k < tops.length; k++) {
+          const t = tops[k];
+          if (t.kind !== "own") break;
+          run.push(t.name);
+        }
+        const rows = run.map((name) => row({ name }, null)).filter(Boolean);
+        const first = !tops.slice(0, n).some((t) => t.kind === "own");
+        return (
+          <div key={`own-${run[0]}`} className="flex flex-col gap-4">
+            {first && drawingsOf(null)}
+            {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
+          </div>
+        );
+      })}
       {broken.length > 0 && (
         <ul className="sketch-box px-4 py-3 text-danger">
           {broken.map((f) => (

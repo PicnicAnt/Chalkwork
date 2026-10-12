@@ -34,8 +34,8 @@ import { CalculatorPanel } from "./CalculatorView";
 import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
 import { TryItems } from "./TryItems";
-import { readTableDrafts, TableRows, type TableDraft } from "./TablesEditor";
-import { CollectionRows, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
+import { readTableDrafts, tableItems, type TableDraft } from "./TablesEditor";
+import { collectionItems, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
 import { rowsToText } from "@/lib/tables";
 
 // Without `initial` this creates a new calculation. With `editing`, it saves changes to an
@@ -569,9 +569,10 @@ function BoardEditorInner({
         boardRows={Object.fromEntries(
           included.map((inc) => [
             inc.alias,
-            (children: React.ReactNode) => (
+            (children: React.ReactNode, handle?: React.ReactNode) => (
             <BoardRow
               key={inc.alias}
+              handle={handle}
               inc={includeOf(inc)}
               includes={included.map(includeOf)}
               collectionNames={collections.map((c) => c.name)}
@@ -594,20 +595,18 @@ function BoardEditorInner({
             ),
           ]),
         )}
-        typedRows={
-          <>
-            {boardError && <p className="text-danger">{boardError}</p>}
-            <TableRows drafts={tableDrafts} problems={tableProblems} onChange={setTableDrafts} isOpen={typedFold.isOpen} onToggle={typedFold.toggle} />
-            <CollectionRows
-              drafts={collectionDrafts}
-              usedNames={included.map((i) => i.alias)}
-              available={availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId))}
-              onChange={setCollectionDrafts}
-              isOpen={typedFold.isOpen}
-              onToggle={typedFold.toggle}
-            />
-          </>
-        }
+        notice={boardError ? <p className="text-danger">{boardError}</p> : undefined}
+        typedItems={[
+          ...tableItems({ drafts: tableDrafts, problems: tableProblems, onChange: setTableDrafts, isOpen: typedFold.isOpen, onToggle: typedFold.toggle }),
+          ...collectionItems({
+            drafts: collectionDrafts,
+            usedNames: included.map((i) => i.alias),
+            available: availableBoards.filter((b) => b.id !== (editing?.id ?? suggesting?.boardId)),
+            onChange: setCollectionDrafts,
+            isOpen: typedFold.isOpen,
+            onToggle: typedFold.toggle,
+          }),
+        ]}
         onOrder={(names) => setOrder((o) => [...o.filter((n) => !names.includes(n)), ...names])}
         ranges={Object.fromEntries(Object.entries(flat.bundle.ranges).map(([k, r]) => [k, { min: r.min === undefined ? "" : toLocaleText(String(r.min), numLocale), max: r.max === undefined ? "" : toLocaleText(String(r.max), numLocale) }]))}
         onRange={(name, end, text) =>

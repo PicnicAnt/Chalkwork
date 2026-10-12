@@ -8,12 +8,15 @@ export function ReorderList({
   names,
   onOrder,
   children,
+  gap = "gap-4",
 }: {
   names: string[];
   /** The names in their new order. */
   onOrder: (names: string[]) => void;
   /** One row; `handle` is the grip to draw at its left. */
   children: (name: string, handle: ReactNode) => ReactNode;
+  /** The space between rows, as a class. */
+  gap?: string;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ name: string; before: number } | null>(null);
@@ -37,7 +40,7 @@ export function ReorderList({
 
   const others = drag ? names.filter((n) => n !== drag.name) : names;
   return (
-    <div ref={list} className="flex flex-col gap-4">
+    <div ref={list} className={`flex flex-col ${gap}`}>
       {names.map((name) => {
         const dragging = drag?.name === name;
         // The line that shows where the row would land: above the first row that would come after it.
