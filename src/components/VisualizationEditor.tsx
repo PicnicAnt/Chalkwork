@@ -3,6 +3,7 @@
 import { displayName, type Analysis } from "@/lib/formulas";
 import { MAX_VISUALIZATIONS, VIZ_TYPES, type Visualization } from "@/lib/visualizations";
 import { VisualizationItem } from "./VisualizationItem";
+import { VizPreview } from "./VizPreview";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
 import { ReorderList } from "./ui/ReorderList";
 import { ExpandAllBar, useFold } from "./ui/Foldable";
@@ -68,24 +69,28 @@ export function VisualizationEditor({
       </ReorderList>
 
       {visualizations.length < MAX_VISUALIZATIONS && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {(["shape", "chart"] as const).map((kind) => (
-            <div key={kind} className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-              <span className="text-lg text-ink-muted">{kind === "shape" ? "Add a shape:" : "Add a chart:"}</span>
-              {VIZ_TYPES.filter((t) => t.kind === kind).map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => {
-                    // The new one opens, ready to be set up.
-                    fold.open(String(visualizations.length));
-                    onChange([...visualizations, { type: type.id, map: {} }]);
-                  }}
-                  className="link text-lg"
-                >
-                  + {type.label}
-                </button>
-              ))}
+            <div key={kind} className="flex flex-col gap-1">
+              <span className="text-lg text-ink-muted">{kind === "shape" ? "Add a shape" : "Add a chart"}</span>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                {VIZ_TYPES.filter((t) => t.kind === kind).map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => {
+                      // The new one opens, ready to be set up.
+                      fold.open(String(visualizations.length));
+                      onChange([...visualizations, { type: type.id, map: {} }]);
+                    }}
+                    className="fold-box flex flex-col items-center gap-1 !px-1 !py-2 text-base hover:text-accent"
+                    title={`Add a ${type.label.toLowerCase()}`}
+                  >
+                    <VizPreview type={type.id} className="h-10 w-14" />
+                    <span className="text-center leading-tight">{type.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           ))}
         </div>
