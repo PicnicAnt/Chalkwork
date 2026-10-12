@@ -257,7 +257,7 @@ export function CalculatorPanel({
     return body.replace(/^(-?\d+)/, (int) => int.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
   };
 
-  function row(v: { name: string }, group: string | null, total = false) {
+  function row(v: { name: string }, group: string | null) {
     const isHidden = hidden?.[v.name] === true;
     if (isHidden && !revealHidden) return null;
     const problem = rejected?.name === v.name ? rejected : null;
@@ -271,11 +271,7 @@ export function CalculatorPanel({
         ratio={ratioOf(v.name)}
         onUnit={changeUnit}
         // A variable from a board in use is shown without the board''s alias, under that board''s heading.
-        label={(() => {
-          const own = labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined);
-          // A collection's totals are named as totals, so they aren't taken for a board's own variable.
-          return total && own ? `Total ${own.charAt(0).toLowerCase()}${own.slice(1)}` : own;
-        })()}
+        label={labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined)}
         hidden={isHidden}
         value={formatted(v.name, valueOf(v.name, problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]))}
         grouped={formats?.[v.name] === "grouped" || formats?.[v.name] === "currency"}
@@ -314,8 +310,8 @@ export function CalculatorPanel({
     const isCollection = key !== null && groups?.[key]?.board === "";
     // A board in a collection has its Included switch in the title, not among its variables.
     const includedName = key && groups?.[key]?.collection ? `${key}${PATH_SEPARATOR}equipped` : undefined;
-    // With fewer than two boards a collection's totals just repeat the board's own numbers, so they are left out.
-    const rows = isCollection && members.length < 2 ? [] : section.variables.filter((v) => v.name !== includedName).map((v) => row(v, key, isCollection)).filter(Boolean);
+    // A collection's totals aren't listed as rows: the formulas use them, and the results strip shows them.
+    const rows = isCollection ? [] : section.variables.filter((v) => v.name !== includedName).map((v) => row(v, key)).filter(Boolean);
     const extra = key ? sectionExtras?.[key] : undefined;
     if (rows.length === 0 && members.length === 0 && !extra) return null;
     const group = key ? groups?.[key] : undefined;
