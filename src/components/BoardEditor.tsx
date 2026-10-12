@@ -418,6 +418,10 @@ function BoardEditorInner({
             </Link>
           )}
         </div>
+      </section>
+
+      {/* A new board has no name yet, so it opens with the name to fill in. */}
+      <CollapsibleSection defaultOpen={!initial?.title} title="About" description="The name, the description, the tags that make the board easy to find, and who can open it.">
         <input
           className="field sketch text-2xl"
           placeholder="Title, e.g. Loan payment"
@@ -426,9 +430,6 @@ function BoardEditorInner({
           onChange={(e) => setTitle(e.target.value)}
           aria-label="Title"
         />
-      </section>
-
-      <CollapsibleSection title="About" description="The description, the tags that make the board easy to find, and who can open it.">
         <textarea
           className="field resize-none"
           placeholder="Description (optional)"
