@@ -140,6 +140,9 @@ export type BoardSummary = {
   title: string;
   description: string;
   createdAt: string;
+  updatedAt: string;
+  /** How many times it has been opened by someone other than its owner. */
+  views: number;
   ownerId: string;
   ownerName: string;
   tags: string[];
@@ -153,8 +156,8 @@ export function listAllBoards(limit = 1000, viewerId?: string | null): BoardSumm
   return (
     db
       .prepare(
-        `SELECT c.id, c.title, c.description, c.created_at, c.owner_id, u.name AS owner_name, c.board_tags, c.formulas, c.variable_labels
-         FROM boards c JOIN users u ON u.id = c.owner_id
+        `SELECT c.id, c.title, c.description, c.created_at, c.updated_at, COALESCE(v.views, 0) AS views, c.owner_id, u.name AS owner_name, c.board_tags, c.formulas, c.variable_labels
+         FROM boards c JOIN users u ON u.id = c.owner_id LEFT JOIN board_views v ON v.board_id = c.id
          WHERE c.visibility = 'public' OR (? IS NOT NULL AND c.owner_id = ?)
          ORDER BY c.created_at DESC LIMIT ?`,
       )
@@ -163,6 +166,8 @@ export function listAllBoards(limit = 1000, viewerId?: string | null): BoardSumm
       title: string;
       description: string;
       created_at: string;
+      updated_at: string;
+      views: number;
       owner_id: string;
       owner_name: string;
       board_tags: string;
@@ -174,6 +179,8 @@ export function listAllBoards(limit = 1000, viewerId?: string | null): BoardSumm
     title: r.title,
     description: r.description,
     createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    views: r.views,
     ownerId: r.owner_id,
     ownerName: r.owner_name,
     tags: JSON.parse(r.board_tags) as string[],

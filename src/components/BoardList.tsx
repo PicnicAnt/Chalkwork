@@ -9,11 +9,29 @@ export type BoardItem = {
   title: string;
   description: string;
   createdAt: string;
+  updatedAt: string;
+  views: number;
   ownerName: string;
   isMine: boolean;
   tags: string[];
   /** Formulas and display names, searched too. */
   keywords: string;
+};
+
+// The ways the list can be put in order.
+export const SORTS = [
+  { id: "name", label: "Name" },
+  { id: "changed", label: "Recently changed" },
+  { id: "created", label: "Newest" },
+  { id: "popular", label: "Most viewed" },
+] as const;
+export type SortId = (typeof SORTS)[number]["id"];
+const sortOf = (text: string | undefined): SortId => SORTS.find((s) => s.id === text)?.id ?? "created";
+const compare: Record<SortId, (a: BoardItem, b: BoardItem) => number> = {
+  name: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true }),
+  changed: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
+  created: (a, b) => b.createdAt.localeCompare(a.createdAt),
+  popular: (a, b) => b.views - a.views || b.createdAt.localeCompare(a.createdAt),
 };
 
 const escapeForRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -55,39 +73,49 @@ export function BoardList({
   boards,
   initialQuery = "",
   initialMine = false,
+  initialSort,
 }: {
   boards: BoardItem[];
   initialQuery?: string;
   initialMine?: boolean;
+  initialSort?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [mine, setMine] = useState(initialMine);
+  const [sort, setSort] = useState<SortId>(sortOf(initialSort));
   const words = useMemo(() => wordsOf(query), [query]);
   // "My boards" narrows the list to the signed-in user's own; the search then works within it.
   const pool = useMemo(() => (mine ? boards.filter((b) => b.isMine) : boards), [boards, mine]);
-  const shown = useMemo(() => (words.length ? pool.filter((b) => matches(b, words)) : pool), [pool, words]);
+  const shown = useMemo(() => [...(words.length ? pool.filter((b) => matches(b, words)) : pool)].sort(compare[sort]), [pool, words, sort]);
 
   // Keep the filter and the search in the address, so a refresh or a shared link shows the same list.
-  function remember(nextQuery: string, nextMine: boolean) {
+  function remember(nextQuery: string, nextMine: boolean, nextSort: SortId) {
     const params = new URLSearchParams();
     if (nextMine) params.set("mine", "1");
     if (nextQuery.trim()) params.set("q", nextQuery);
+    if (nextSort !== "created") params.set("sort", nextSort);
     const text = params.toString();
     window.history.replaceState(null, "", text ? `?${text}` : window.location.pathname);
   }
 
   function update(next: string) {
     setQuery(next);
-    remember(next, mine);
+    remember(next, mine, sort);
   }
 
   function choose(nextMine: boolean) {
     setMine(nextMine);
-    remember(query, nextMine);
+    remember(query, nextMine, sort);
+  }
+
+  function order(next: SortId) {
+    setSort(next);
+    remember(query, mine, next);
   }
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3">
       <div className="flex gap-3" role="group" aria-label="Which boards">
         {[
           { label: "All boards", value: false },
@@ -103,6 +131,17 @@ export function BoardList({
             {option.label}
           </button>
         ))}
+      </div>
+      <label className="flex items-baseline gap-2 text-lg text-ink-muted">
+        Sort by
+        <select value={sort} onChange={(e) => order(e.target.value as SortId)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label="Sort the boards by">
+          {SORTS.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </label>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -161,7 +200,8 @@ export function BoardList({
                   {board.tags.length > 0 && <span className="mr-2 text-accent-2">{board.tags.map((t) => `#${t}`).join(" ")}</span>}
                   by {board.ownerName}{board.isMine ? " (you)" : ""}
                   {" · "}
-                  {new Date(board.createdAt).toLocaleDateString()}
+                  {sort === "changed" ? `changed ${new Date(board.updatedAt).toLocaleDateString()}` : new Date(board.createdAt).toLocaleDateString()}
+                  {sort === "popular" && ` · ${board.views} ${board.views === 1 ? "view" : "views"}`}
                 </span>
               </Link>
             </li>

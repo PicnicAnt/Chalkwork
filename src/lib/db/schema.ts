@@ -63,6 +63,12 @@ export function createSchema(db: Database.Database) {
       PRIMARY KEY (board_id, version)
     );
 
+    -- How many times each board has been opened by someone other than its owner: the board's popularity.
+    CREATE TABLE IF NOT EXISTS board_views (
+      board_id TEXT PRIMARY KEY REFERENCES boards(id) ON DELETE CASCADE,
+      views INTEGER NOT NULL DEFAULT 0
+    );
+
     -- Changes someone else proposes to a board, which its owner approves or rejects. base_stamp is when the board
     -- was last changed at the time, to notice that it has changed since.
     CREATE TABLE IF NOT EXISTS suggestions (

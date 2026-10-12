@@ -5,3 +5,4 @@ export * from "./suggestions";
 export * from "./scenarios";
 export * from "./versions";
 export * from "./notifications";
+export * from "./views";

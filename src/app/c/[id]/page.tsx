@@ -11,6 +11,7 @@ import { canOpen, isListed } from "@/lib/visibility";
 import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
+import { ViewCounter } from "@/components/ViewCounter";
 import { acceptedExtras, groupsOf, resolveForView, type ExtraItem } from "@/lib/resolve-boards";
 import { encodeItems, parseItems } from "@/lib/items-param";
 import { outcomeOf, type Outcome } from "@/lib/scenarios";
@@ -94,6 +95,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
 
   return (
     <>
+      {!isOwner && <ViewCounter boardId={calculation.id} />}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold sm:text-4xl">{calculation.title}</h1>

@@ -77,3 +77,16 @@ describe("listing boards for a viewer", () => {
   });
 });
 
+
+describe("popularity", () => {
+  it("counts views and lists them with when a board was changed", () => {
+    const user = api.upsertUser({ provider: "test", accountId: "views", name: "Viewer" });
+    const id = api.insertBoard(draft({ title: "Popular one" }), user.id);
+    expect(api.listAllBoards(1000, user.id).find((b) => b.id === id)).toMatchObject({ views: 0 });
+    api.addView(id);
+    api.addView(id);
+    const found = api.listAllBoards(1000, user.id).find((b) => b.id === id);
+    expect(found?.views).toBe(2);
+    expect(found?.updatedAt).toBeTruthy();
+  });
+});
