@@ -131,7 +131,6 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           boardId={user ? calculation.id : undefined}
           scenarios={scenarios}
           scenarioOutcomes={scenarioOutcomes}
-          editable={isOwner ? { boardId: calculation.id, ownLinks: calculation.links } : undefined}
         />
       )}
       {user && (

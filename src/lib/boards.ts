@@ -66,12 +66,6 @@ export type Bundle = {
   tables: Table[];
   /** The order variables are listed in, by name; those not named come after, in the order they appear. */
   order: string[];
-  /**
-   * Variables linked to another variable, by name. A link is an equation, `variable = other`, so
-   * the two follow each other whichever one is changed. Meant for joining the variables of
-   * different boards without writing the formula out.
-   */
-  links: Record<string, string>;
   /** The included boards behind the variables, by alias path (weapon, weapon$sub), for headings. */
   groups: Record<string, { title: string; board: string; /** The collection a used board is in, if any. */ collection?: string }>;
   /** The drawings of this board and of the boards it uses (those say which board they belong to). */
@@ -194,10 +188,6 @@ export function prefixBundle(bundle: Bundle, alias: string): Bundle {
     types: keys(bundle.types ?? {}),
     formats: keys(bundle.formats ?? {}),
     choices: keys(bundle.choices ?? {}),
-    // A link joins two variables of the same board, so both ends get the alias.
-    links: Object.fromEntries(
-      Object.entries(bundle.links).map(([from, to]) => [withAlias(alias, from), withAlias(alias, to)]),
-    ),
     groups: keys(bundle.groups),
     // A drawing of a used board follows that board's variables, and is shown with that board.
     visualizations: bundle.visualizations.map((v) => ({
@@ -388,17 +378,12 @@ export function flatten(
   const merge = <T>(pick: (b: Bundle) => Record<string, T>, ownMap: Record<string, T>): Record<string, T> =>
     Object.assign({}, ...parts.map((p) => pick(p.bundle)), ownMap);
 
-  // This board's own links become equations. The links of used boards are already equations in
-  // their formulas, so only their record is carried along (for showing).
-  const linkFormulas = linkEquations(own.links);
-
   return {
     ownErrors,
     bundle: {
-      // Order matters: this board's formulas, then its links, then the used boards' formulas. The
-      // editor relies on it to tell which of the three a problem belongs to.
-      formulas: [...ownFormulas, ...linkFormulas, ...parts.flatMap((p) => p.bundle.formulas), ...sums.formulas],
-      links: merge((b) => b.links, own.links),
+      // Order matters: this board's formulas, then the used boards' formulas. The editor relies on it to tell
+      // which of the two a problem belongs to.
+      formulas: [...ownFormulas, ...parts.flatMap((p) => p.bundle.formulas), ...sums.formulas],
       values: { ...sums.values, ...merge((b) => b.values, own.values) },
       descriptions: { ...sums.descriptions, ...merge((b) => b.descriptions, own.descriptions) },
       units: { ...sums.units, ...merge((b) => b.units, own.units) },
@@ -419,29 +404,6 @@ export function flatten(
       ),
     },
   };
-}
-
-// A link as the equation it stands for.
-export const linkEquations = (links: Record<string, string>) => Object.entries(links).map(([from, to]) => `${from} = ${to}`);
-
-// A variable is renamed: links from it and to it follow.
-export function renameLinks(links: Record<string, string>, from: string, to: string): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(links).map(([a, b]) => [a === from ? to : a, b === from ? to : b]),
-  );
-}
-
-// A used board's alias is renamed: links with an end in that board follow.
-export function renameAliasLinks(links: Record<string, string>, from: string, to: string): Record<string, string> {
-  const prefix = `${from}${PATH_SEPARATOR}`;
-  const move = (name: string) => (name.startsWith(prefix) ? `${to}${PATH_SEPARATOR}${name.slice(prefix.length)}` : name);
-  return Object.fromEntries(Object.entries(links).map(([a, b]) => [move(a), move(b)]));
-}
-
-// A used board is removed: links with an end in that board go with it.
-export function dropAliasLinks(links: Record<string, string>, alias: string): Record<string, string> {
-  const prefix = `${alias}${PATH_SEPARATOR}`;
-  return Object.fromEntries(Object.entries(links).filter(([a, b]) => !a.startsWith(prefix) && !b.startsWith(prefix)));
 }
 
 // The top-level alias a variable belongs to ("weapon" for weapon$sub$x), or null for the board's own.

@@ -16,7 +16,6 @@ import { ItemControls, type CollectionView } from "./ItemPicker";
 import { ShareMenu } from "./ShareMenu";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
-import { ConnectionsView } from "./ConnectionsView";
 import { FormulaText } from "./FormulaText";
 import { OptimizerPanel } from "./OptimizerPanel";
 import { ScenarioPanel } from "./ScenarioPanel";
@@ -25,7 +24,6 @@ import { ScenarioPanel } from "./ScenarioPanel";
 export function SharedCalculator({
   flat,
   formulas = [],
-  editable,
   boardId,
   scenarios,
   initialState,
@@ -40,8 +38,6 @@ export function SharedCalculator({
   flat: Bundle;
   /** The board's own formulas as written, shown read-only below the variables. */
   formulas?: string[];
-  /** Set when the signed-in user owns the board: the Connections view can then change its links. */
-  editable?: { boardId: string; ownLinks: Record<string, string> };
   /** Set for a signed-in user: the board's id and the scenarios that user has saved on it. */
   boardId?: string;
   scenarios?: Scenario[];
@@ -68,9 +64,6 @@ export function SharedCalculator({
   const [values, setValues] = useState(() => (initialState ? { ...flat.values, ...initialState.values } : flat.values));
   // Bumping the key remounts the panel, which also forgets the edit history.
   const [resets, setResets] = useState(0);
-  // The strings view only makes sense for a board that uses other boards.
-  const usesBoards = Object.keys(flat.groups).length > 0;
-  const [view, setView] = useState<"board" | "strings">("board");
   // Which variables are locked, as far as an edit has told us; until then it is what the panel starts with.
   // A loaded scenario starts the panel over with its own locks.
   const [locks, setLocks] = useState<string[] | null>(initialState?.locked ?? null);
@@ -104,30 +97,8 @@ export function SharedCalculator({
     <div className="flex flex-col gap-3">
       <BoardGuide />
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        {usesBoards ? (
-          <div className="flex gap-4 text-lg" role="tablist" aria-label="View">
-            {(
-              [
-                ["board", "Board"],
-                ["strings", "Connections"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={view === id}
-                onClick={() => setView(id)}
-                className={view === id ? "text-accent underline decoration-wavy underline-offset-4" : "link"}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <span />
-        )}
-        {view === "board" && publicId && (
+        <span />
+        {publicId && (
           <ShareMenu
             boardId={publicId}
             inputs={analysis.variables
@@ -146,7 +117,7 @@ export function SharedCalculator({
             }}
           />
         )}
-        {!sameValues(values, flat.values) && view === "board" && (
+        {!sameValues(values, flat.values) && (
           <button
             type="button"
             onClick={() => {
@@ -161,7 +132,7 @@ export function SharedCalculator({
           </button>
         )}
       </div>
-      {view === "board" && presets.length > 0 && (
+      {presets.length > 0 && (
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2" role="group" aria-label="Presets">
           <span className="text-lg text-ink-muted">Presets</span>
           {presets.map((p) => (
@@ -176,10 +147,7 @@ export function SharedCalculator({
           ))}
         </div>
       )}
-      {view === "strings" && usesBoards ? (
-        <ConnectionsView analysis={analysis} flat={flat} editable={editable} />
-      ) : (
-        <CalculatorPanel
+      <CalculatorPanel
           key={resets}
           analysis={analysis}
           values={values}
@@ -194,7 +162,6 @@ export function SharedCalculator({
           types={flat.types}
           formats={flat.formats}
           choices={flat.choices}
-          links={flat.links}
           groups={flat.groups}
           sectionExtras={Object.fromEntries(
             collections.map((c) => [
@@ -217,8 +184,7 @@ export function SharedCalculator({
           shownUnits={shownUnits}
           onShownUnits={setShownUnits}
         />
-      )}
-      {view === "board" && boardId && scenarios && (
+      {boardId && scenarios && (
         <ScenarioPanel
           boardId={boardId}
           analysis={analysis}
@@ -233,7 +199,7 @@ export function SharedCalculator({
           onLoad={load}
         />
       )}
-      {view === "board" && (
+      {(
         <OptimizerPanel
           analysis={analysis}
           flat={flat}
@@ -243,7 +209,7 @@ export function SharedCalculator({
           onApply={load}
         />
       )}
-      {view === "board" && flat.tables.length > 0 && (
+      {flat.tables.length > 0 && (
         <section className="mt-4 flex flex-col gap-2">
           <h2 className="text-2xl font-bold">Tables</h2>
           <div className="flex flex-wrap gap-4">
@@ -267,7 +233,7 @@ export function SharedCalculator({
           </div>
         </section>
       )}
-      {view === "board" && formulas.length > 0 && (
+      {formulas.length > 0 && (
         <section className="mt-6 flex flex-col gap-2">
           <h2 className="text-2xl font-bold">Formulas</h2>
           <ul className="sketch-box flex flex-col gap-1 px-4 py-3 text-xl" aria-label="The formulas of this board, read only">
@@ -283,5 +249,4 @@ export function SharedCalculator({
   );
 }
 
-// The page is reloaded after links change, which hands over a new copy of the same values.
 const sameValues = (a: Record<string, string>, b: Record<string, string>) => JSON.stringify(a) === JSON.stringify(b);

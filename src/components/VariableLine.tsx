@@ -6,20 +6,16 @@ import { Foldable } from "./ui/Foldable";
 import { useCommitField } from "./ui/useCommitField";
 
 // One variable in the editor: its name, which can be changed (the formulas are rewritten to match), a
-// display name, a unit, decimals, a link to another variable, whether it is hidden, and a note.
+// display name, a unit, decimals, whether it is hidden, and a note.
 export function VariableLine({
   name,
   expanded,
   onToggle,
-  onMove,
-  canMoveUp,
-  canMoveDown,
+  handle,
   fixedName,
   unit,
   label,
   hidden,
-  linkedTo,
-  linkLocked,
   decimals,
   description,
   validate,
@@ -28,7 +24,6 @@ export function VariableLine({
   onUnit,
   onLabel,
   onHide,
-  onLink,
   onDecimals,
   min,
   max,
@@ -43,19 +38,13 @@ export function VariableLine({
   name: string;
   expanded: boolean;
   onToggle: () => void;
-  /** Moves the variable up (-1) or down (1) in its list. Not set when the list has one variable. */
-  onMove?: (direction: -1 | 1) => void;
-  canMoveUp?: boolean;
-  canMoveDown?: boolean;
+  /** The grip to drag the variable by, to change its place in the list. */
+  handle?: React.ReactNode;
   /** Set for a variable of a board in use: its name is shown but not editable. */
   fixedName?: string;
   unit: string;
   label: string;
   hidden: boolean;
-  /** The variable this one is linked to, written as a person would (board.variable), or empty. */
-  linkedTo: string;
-  /** True when the link comes from a used board, so it can't be changed here. */
-  linkLocked: boolean;
   decimals: string;
   description: string;
   /** Why this can't be the variable's new name, or null. */
@@ -65,8 +54,6 @@ export function VariableLine({
   onUnit: (unit: string) => void;
   onLabel: (label: string) => void;
   onHide: (hidden: boolean) => void;
-  /** Applies a link typed by the user. Returns why it can't be used, or null when it was applied. */
-  onLink: (text: string) => string | null;
   onDecimals: (decimals: string) => void;
   /** The values this variable should stay within, as typed; empty is open. */
   min: string;
@@ -91,26 +78,14 @@ export function VariableLine({
     onRename(next);
     return null;
   });
-  const link = useCommitField(linkedTo, onLink);
 
   return (
     <Foldable
       expanded={expanded}
       onToggle={onToggle}
       summary={label || fixedName || displayName(name)}
-      actions={
-        onMove && (
-          <span className="flex shrink-0 items-baseline gap-1">
-            <button type="button" className="link px-1 text-lg disabled:opacity-30" disabled={!canMoveUp} onClick={() => onMove(-1)} aria-label={`Move ${label || fixedName || displayName(name)} up`} title="Move up">
-              ↑
-            </button>
-            <button type="button" className="link px-1 text-lg disabled:opacity-30" disabled={!canMoveDown} onClick={() => onMove(1)} aria-label={`Move ${label || fixedName || displayName(name)} down`} title="Move down">
-              ↓
-            </button>
-          </span>
-        )
-      }
-      hint={`${type === "boolean" ? " · yes/no" : type === "choice" ? " · choice" : ""}${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}${linkedTo ? ` · linked to ${linkedTo}` : ""}`}
+      handle={handle}
+      hint={`${type === "boolean" ? " · yes/no" : type === "choice" ? " · choice" : ""}${unit ? ` · ${unit}` : ""}${min || max ? ` · ${min || "…"} to ${max || "…"}` : ""}${hidden ? " · hidden" : ""}`}
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:gap-3">
         {fixedName !== undefined ? (
@@ -187,22 +162,6 @@ export function VariableLine({
             title={`The ${end === "min" ? "lowest" : "highest"} value this should have. Shows a warning outside it, limits the slider and sets the spread chart. Empty means no limit.`}
           />
         ))}
-        <input
-          {...link.inputProps}
-          className={`field w-48 text-lg ${link.error ? "!border-danger" : ""}`}
-          list="link-targets"
-          placeholder="linked to…"
-          disabled={linkLocked}
-          title={
-            linkLocked
-              ? "This link comes from a board that is used"
-              : "Link this variable to another: the two follow each other"
-          }
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          aria-label={`Variable ${displayName(name)} is linked to`}
-        />
         <label
           className="flex shrink-0 items-center gap-2 pb-1 text-lg"
           title="Hidden variables still take part in the maths, but are not shown on the board."
@@ -232,7 +191,6 @@ export function VariableLine({
         </div>
       )}
       {rename.error && <span className="text-sm text-danger">{rename.error}</span>}
-      {link.error && <span className="text-sm text-danger">{link.error}</span>}
     </Foldable>
   );
 }

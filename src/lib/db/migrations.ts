@@ -270,4 +270,30 @@ export function migrate(db: Database.Database) {
     if (!has) db.exec(`ALTER TABLE calculations ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public';`);
     db.pragma("user_version = 27");
   }
+  if (version < 28) {
+    // Links between variables are gone: a link is the same as the formula "a = b", so each one becomes that formula.
+    // The column stays, empty, so older copies of the database still open.
+    const rows = db.prepare("SELECT id, formulas, variable_links FROM calculations WHERE variable_links IS NOT NULL AND variable_links != '{}'").all() as {
+      id: string;
+      formulas: string;
+      variable_links: string;
+    }[];
+    const update = db.prepare("UPDATE calculations SET formulas = ?, variable_links = '{}' WHERE id = ?");
+    for (const row of rows) {
+      let formulas: string[] = [];
+      let links: Record<string, unknown> = {};
+      try {
+        formulas = JSON.parse(row.formulas);
+        links = JSON.parse(row.variable_links);
+      } catch {
+        continue;
+      }
+      const added = Object.entries(links)
+        .filter(([from, to]) => typeof to === "string" && from !== to)
+        .map(([from, to]) => `${from} = ${to}`)
+        .filter((line) => !formulas.includes(line));
+      update.run(JSON.stringify([...formulas, ...added]), row.id);
+    }
+    db.pragma("user_version = 28");
+  }
 }

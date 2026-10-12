@@ -39,7 +39,6 @@ const draft = (over: Partial<BoardDraft> = {}): BoardDraft => ({
   formats: { area: "currency" },
   presets: [{ name: "Wide", values: { width: "9" }, locked: ["width"] }],
   includes: [],
-  links: {},
   visualizations: [],
   ...over,
 });
@@ -73,5 +72,19 @@ describe("listing boards for a viewer", () => {
     expect(titles(other.id)).not.toContain("Secret");
     expect(titles(owner.id)).toEqual(expect.arrayContaining(["Listed", "Link only", "Secret"]));
     expect(titles()).not.toContain("Secret");
+  });
+});
+
+describe("boards saved when variables could be linked", () => {
+  it("get each link as a formula when the database is upgraded", async () => {
+    const { db } = await import("@/lib/db/client");
+    const { migrate } = await import("@/lib/db/migrations");
+    const user = api.upsertUser({ provider: "test", accountId: "links", name: "Linker" });
+    const id = api.insertBoard(draft({ title: "Linked", formulas: ["a = b * 2", "c = 1"] }), user.id);
+    db.prepare("UPDATE calculations SET variable_links = ? WHERE id = ?").run(JSON.stringify({ c: "b" }), id);
+    db.pragma("user_version = 27");
+    migrate(db);
+    expect(api.getBoard(id)?.formulas).toEqual(["a = b * 2", "c = 1", "c = b"]);
+    expect(db.prepare("SELECT variable_links FROM calculations WHERE id = ?").get(id)).toEqual({ variable_links: "{}" });
   });
 });

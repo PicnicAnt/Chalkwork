@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateDraft } from "@/lib/board-draft";
 import { canOpen, isListed, visibilityOf } from "@/lib/visibility";
 
-const base = { title: "T", description: "", formulas: ["a = b * 2"], values: {}, descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, ranges: {}, tables: [], order: [], tags: [], includes: [], links: {}, visualizations: [] };
+const base = { title: "T", description: "", formulas: ["a = b * 2"], values: {}, descriptions: {}, units: {}, hidden: {}, labels: {}, decimals: {}, ranges: {}, tables: [], order: [], tags: [], includes: [], visualizations: [] };
 
 describe("who can open a board", () => {
   it("a private board is only for its owner, the others are for anyone with the link", () => {

@@ -29,7 +29,6 @@ type Row = {
   variable_labels: string;
   variable_hidden: string;
   board_includes: string;
-  variable_links: string;
   visualizations: string;
   created_at: string;
   owner_id: string | null;
@@ -41,8 +40,8 @@ export function insertBoard(draft: BoardDraft, ownerId: string): string {
   db.prepare(
     `INSERT INTO calculations (id, title, description, formulas, input_values, variable_descriptions,
        variable_units, variable_decimals, variable_ranges, board_tables, board_tags, variable_order, board_collections, board_presets, variable_types, variable_formats, variable_choices, visibility, variable_labels,
-       variable_hidden, board_includes, variable_links, visualizations, owner_id)
-     VALUES (${Array(24).fill("?").join(", ")})`,
+       variable_hidden, board_includes, visualizations, owner_id)
+     VALUES (${Array(23).fill("?").join(", ")})`,
   ).run(id, ...fieldsOf(draft), ownerId);
   recordVersion(id, draft, ownerId);
   return id;
@@ -70,7 +69,6 @@ const fieldsOf = (draft: BoardDraft) => [
   JSON.stringify(draft.labels),
   JSON.stringify(draft.hidden),
   JSON.stringify(draft.includes),
-  JSON.stringify(draft.links),
   JSON.stringify(draft.visualizations),
 ];
 
@@ -82,7 +80,7 @@ export function saveBoard(id: string, ownerId: string, draft: BoardDraft, note =
       `UPDATE calculations SET title = ?, description = ?, formulas = ?, input_values = ?,
          variable_descriptions = ?, variable_units = ?, variable_decimals = ?, variable_ranges = ?, board_tables = ?,
          board_tags = ?, variable_order = ?, board_collections = ?, board_presets = ?, variable_types = ?, variable_formats = ?, variable_choices = ?, visibility = ?, variable_labels = ?, variable_hidden = ?,
-         board_includes = ?, variable_links = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         board_includes = ?, visualizations = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ? AND owner_id = ?`,
     )
     .run(...fieldsOf(draft), id, ownerId);
@@ -113,7 +111,6 @@ const parse = (row: Row): Board => ({
   visibility: visibilityOf(row.visibility),
   hidden: JSON.parse(row.variable_hidden || "{}"),
   includes: JSON.parse(row.board_includes || "[]"),
-  links: JSON.parse(row.variable_links || "{}"),
   visualizations: JSON.parse(row.visualizations || "[]"),
   createdAt: row.created_at,
   ownerId: row.owner_id,

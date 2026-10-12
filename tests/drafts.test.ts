@@ -15,11 +15,18 @@ const base: BoardDraft = {
   labels: {},
   decimals: {}, ranges: {}, tables: [], order: [], tags: [],
   includes: [],
-  links: {},
+ 
   visualizations: [],
 };
 
 describe("checking a board before it is saved", () => {
+  it("turns the links of an older board into formulas", () => {
+    const out = validateDraft({ ...base, formulas: ["a = b * 2", "c = 1"], links: { c: "b" } });
+    expect(out.errors).toEqual([]);
+    expect(out.draft?.formulas).toEqual(["a = b * 2", "c = 1", "c = b"]);
+    expect(out.draft).not.toHaveProperty("links");
+  });
+
   it("accepts a good board and keeps what was typed", () => {
     const { draft, errors } = validateDraft(base);
     expect(errors).toEqual([]);
@@ -35,7 +42,7 @@ describe("checking a board before it is saved", () => {
   it("allows a board with no formulas when it uses a board or has a collection", () => {
     expect(validateDraft({ ...base, formulas: [] }).errors.join(" ")).toMatch(/formula/i);
     expect(validateDraft({ ...base, formulas: [], collections: [{ name: "parts", stats: ["weight"] }] }).errors).toEqual([]);
-    const used = [{ alias: "part", board: "abcdef12", title: "Part", bundle: flatten({ values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, links: {}, visualizations: [], tables: [], order: [], formulas: ["weight"] }, []).bundle }];
+    const used = [{ alias: "part", board: "abcdef12", title: "Part", bundle: flatten({ values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, visualizations: [], tables: [], order: [], formulas: ["weight"] }, []).bundle }];
     expect(validateDraft({ ...base, formulas: [], includes: [{ board: "abcdef12", alias: "part" }] }, used).errors).toEqual([]);
   });
 

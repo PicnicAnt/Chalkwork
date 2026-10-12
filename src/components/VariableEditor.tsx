@@ -5,6 +5,7 @@ import { sectionsByBoard } from "@/lib/boards";
 import { displayName, type Analysis } from "@/lib/formulas";
 import { checkVariableName } from "@/lib/rename";
 import { VariableLine } from "./VariableLine";
+import { ReorderList } from "./ui/ReorderList";
 import { Chevron } from "./ui/Chevron";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
 import { ExpandAllBar, useFold } from "./ui/Foldable";
@@ -22,8 +23,6 @@ export function VariableEditor({
   units,
   labels,
   hidden,
-  links,
-  ownLinks,
   decimals,
   ranges,
   order,
@@ -43,7 +42,6 @@ export function VariableEditor({
   onUnit,
   onLabel,
   onHide,
-  onLink,
   onDecimals,
   onRange,
 }: {
@@ -55,10 +53,6 @@ export function VariableEditor({
   labels: Record<string, string>;
   /** Variables hidden from the board. */
   hidden: Record<string, boolean>;
-  /** Every link, including those made by used boards, by variable name. */
-  links: Record<string, string>;
-  /** The links made on this board, which are the ones that can be changed here. */
-  ownLinks: Record<string, string>;
   /** Decimals to show per variable, as typed (empty means automatic). */
   decimals: Record<string, string>;
   onRename: (from: string, to: string) => void;
@@ -66,8 +60,6 @@ export function VariableEditor({
   onUnit: (name: string, unit: string) => void;
   onLabel: (name: string, label: string) => void;
   onHide: (name: string, hidden: boolean) => void;
-  /** Links a variable to another (by the other's internal name), or removes the link (null). */
-  onLink: (name: string, target: string | null) => void;
   onDecimals: (name: string, decimals: string) => void;
   /** The values a variable should stay within, as typed. */
   ranges: Record<string, { min: string; max: string }>;
@@ -100,19 +92,6 @@ export function VariableEditor({
 
   const sections = sectionsByBoard(analysis.variables, groups, order);
 
-  // The text typed in the link field is a person's way of writing a variable (board.variable).
-  function applyLink(name: string, text: string): string | null {
-    const target = text.replaceAll(".", "$");
-    if (!target) {
-      onLink(name, null);
-      return null;
-    }
-    if (!analysis.variables.some((other) => other.name === target)) return `No variable called ${text}`;
-    if (target === name) return "A variable can't be linked to itself";
-    onLink(name, target);
-    return null;
-  }
-
   return (
     <CollapsibleSection
       title="Variables"
@@ -127,11 +106,6 @@ export function VariableEditor({
         </>
       }
     >
-      <datalist id="link-targets">
-        {analysis.variables.map((v) => (
-          <option key={v.name} value={displayName(v.name)} />
-        ))}
-      </datalist>
       <datalist id="unit-suggestions">
         {COMMON_UNITS.map((u) => (
           <option key={u} value={u} />
@@ -171,31 +145,19 @@ export function VariableEditor({
             )}
             <div className={section.key && closed[section.key] ? "hidden" : "flex flex-col gap-4"}>
             {section.key && boardRows?.[section.key]}
-            {section.variables.map((v, index) => (
+            <ReorderList names={section.variables.map((v) => v.name)} onOrder={onOrder}>
+              {(name, handle) => {
+                const v = { name };
+                return (
               <VariableLine
-                key={v.name}
-                name={v.name}
-                onMove={
-                  section.variables.length < 2
-                    ? undefined
-                    : (direction) => {
-                        const names = section.variables.map((x) => x.name);
-                        const to = index + direction;
-                        if (to < 0 || to >= names.length) return;
-                        [names[index], names[to]] = [names[to], names[index]];
-                        onOrder(names);
-                      }
-                }
-                canMoveUp={index > 0}
-                canMoveDown={index < section.variables.length - 1}
+                name={name}
+                handle={section.variables.length > 1 ? handle : undefined}
                 expanded={fold.isOpen(v.name)}
                 onToggle={() => fold.toggle(v.name)}
                 fixedName={section.key ? displayName(v.name.slice(section.key.length + 1)) : undefined}
                 unit={units[v.name] ?? ""}
                 label={labels[v.name] ?? ""}
                 hidden={hidden[v.name] === true}
-                linkedTo={links[v.name] ? displayName(links[v.name]) : ""}
-                linkLocked={v.name in links && !(v.name in ownLinks)}
                 decimals={decimals[v.name] ?? ""}
                 description={descriptions[v.name] ?? ""}
                 validate={(next) => checkVariableName(next, v.name, analysis)}
@@ -208,7 +170,6 @@ export function VariableEditor({
                 onUnit={(unit) => onUnit(v.name, unit)}
                 onLabel={(text) => onLabel(v.name, text)}
                 onHide={(value) => onHide(v.name, value)}
-                onLink={(text) => applyLink(v.name, text)}
                 onDecimals={(text) => onDecimals(v.name, text)}
                 min={ranges[v.name]?.min ?? ""}
                 max={ranges[v.name]?.max ?? ""}
@@ -220,7 +181,9 @@ export function VariableEditor({
                 format={formats[v.name] ?? ""}
                 onFormat={(format) => onFormat(v.name, format)}
               />
-            ))}
+                );
+              }}
+            </ReorderList>
             </div>
           </div>
         ))}

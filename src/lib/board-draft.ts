@@ -48,8 +48,6 @@ export type BoardDraft = {
   tags: string[];
   // Existing boards this one uses. Their variables are added under the alias, as alias.name.
   includes: Include[];
-  // Variables linked to another variable, keyed by variable name: the two follow each other.
-  links: Record<string, string>;
   // Drawings that follow the board's variables, such as a rectangle with its width and height.
   visualizations: Visualization[];
 };
@@ -106,7 +104,8 @@ export function validateDraft(
   const r = raw as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
-  const formulas = (Array.isArray(r.formulas) ? r.formulas : []).map(str).filter(Boolean);
+  const baseFormulas = (Array.isArray(r.formulas) ? r.formulas : []).map(str).filter(Boolean);
+  const formulas = baseFormulas;
   const title = str(r.title);
   const description = str(r.description);
 
@@ -140,7 +139,7 @@ export function validateDraft(
   const parsedTables = parseTables(r.tables);
   errors.push(...parsedTables.errors);
   const tables = parsedTables.tables;
-  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], links: {}, visualizations: [] };
+  const none = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], visualizations: [] };
   const { bundle: inherited, ownErrors } = flatten({ formulas, ...none, tables, collections }, included);
   for (const e of ownErrors) errors.push(`Line ${e.index + 1}: ${e.message}`);
   const analysis = analyzeFormulas(inherited.formulas, inherited.tables);
@@ -149,29 +148,23 @@ export function validateDraft(
     else if (analysis.variables.some((v) => v.name === t.name)) errors.push(`${t.name} is used both as a variable and as a table.`);
   }
 
-  // A link joins two different variables that exist.
-  const rawLinks = typeof r.links === "object" && r.links !== null ? (r.links as Record<string, unknown>) : {};
   const known = new Set(analysis.variables.map((v) => v.name));
-  const links: Record<string, string> = {};
-  for (const [from, to] of Object.entries(rawLinks)) {
-    if (typeof to !== "string" || !known.has(from) || !known.has(to)) continue; // left over from a removed board
-    if (from === to) errors.push(`${displayName(from)} can't be linked to itself.`);
-    else links[from] = to;
-  }
 
-  // Problems with the formulas, the links and the used boards together. They are numbered formulas
-  // first, then links, then the formulas of the used boards.
-  const linkList = Object.entries(links);
-  const flatSystem = flatten({ formulas, ...none, links, tables, collections }, included).bundle;
+  // Boards saved when variables could be linked still carry their links: each becomes the formula "a = b".
+  const rawLinks = typeof r.links === "object" && r.links !== null ? (r.links as Record<string, unknown>) : {};
+  const linkFormulas = Object.entries(rawLinks)
+    .filter(([from, to]) => typeof to === "string" && from !== to && known.has(from) && known.has(to))
+    .map(([from, to]) => `${from} = ${to}`);
+  const allFormulas = [...baseFormulas, ...linkFormulas];
+
+  // Problems with the formulas and the used boards together: the formulas first, then the used boards' formulas.
+  const flatSystem = flatten({ formulas: allFormulas, ...none, tables, collections }, included).bundle;
   const system = analyzeFormulas(flatSystem.formulas, flatSystem.tables);
   for (const problem of formulaProblems(system)) {
-    const link = linkList[problem.line - formulas.length - 1];
     errors.push(
-      problem.line <= formulas.length
+      problem.line <= allFormulas.length
         ? `Line ${problem.line}: ${problem.message}`
-        : link
-          ? `The link between ${displayName(link[0])} and ${displayName(link[1])}: ${problem.message}`
-          : `A formula from a board that is used: ${problem.message}`,
+        : `A formula from a board that is used: ${problem.message}`,
     );
   }
 
@@ -286,7 +279,7 @@ export function validateDraft(
         draft: {
           title,
           description,
-          formulas,
+          formulas: allFormulas,
           values,
           descriptions,
           units,
@@ -304,7 +297,6 @@ export function validateDraft(
           order: (Array.isArray(r.order) ? (r.order as unknown[]) : []).filter((n): n is string => typeof n === "string" && known.has(n)).filter((n, i, all) => all.indexOf(n) === i),
           tags: parseTags(r.tags),
           includes: included.map(includeOf),
-          links,
           visualizations: parsedViz.visualizations,
         },
         errors,

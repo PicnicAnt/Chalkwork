@@ -15,7 +15,6 @@ export const VariableRow = memo(function VariableRow({
   ratio = 1,
   label,
   hidden,
-  linkedTo,
   value,
   problem,
   readOnly,
@@ -45,8 +44,6 @@ export const VariableRow = memo(function VariableRow({
   ratio?: number;
   label?: string;
   hidden?: boolean;
-  /** The variable this one is linked to, shown under it. */
-  linkedTo?: string;
   value: string;
   problem: string | null;
   readOnly: boolean;
@@ -225,7 +222,6 @@ export const VariableRow = memo(function VariableRow({
       {problem && <span className="text-sm text-danger">{problem}</span>}
       {outside && !problem && <span className="text-sm text-op">{outside}</span>}
       {description && !problem && <span className="pt-0.5 text-base leading-snug text-note">{description}</span>}
-      {linkedTo && !problem && <span className="text-sm text-ink-faint">linked to {linkedTo}</span>}
       {how}
     </div>
   );

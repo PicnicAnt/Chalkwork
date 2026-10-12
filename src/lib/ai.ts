@@ -163,7 +163,7 @@ ${catalog}` : DRAFT_SYSTEM;
 }
 
 const REVISE_SYSTEM = `You change an existing "board" for Chalkwork, a tool where formulas work in every direction, as the person asks.
-You are given the current board as one JSON object and a request. Reply with ONE JSON object and nothing else: the complete updated board, with every key of the current board kept (title, description, formulas, values, units, labels, descriptions, hidden, decimals, ranges, tables, order, tags, includes, links, visualizations), changed only where the request needs it.
+You are given the current board as one JSON object and a request. Reply with ONE JSON object and nothing else: the complete updated board, with every key of the current board kept (title, description, formulas, values, units, labels, descriptions, hidden, decimals, ranges, tables, order, tags, includes, visualizations), changed only where the request needs it.
 Rules:
 - Keep the names of existing variables, and everything the request doesn't touch, exactly as it is.
 - "formulas" are strings "name = expression" (lower snake_case names; + - * / ^, parentheses, functions such as sqrt, min, max, round, abs, if(condition, a, b)). A line that is only a name declares a variable.

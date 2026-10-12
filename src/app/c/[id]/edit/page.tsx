@@ -48,7 +48,6 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
     choices: calculation.choices,
     visibility: calculation.visibility,
     includes: calculation.includes,
-    links: calculation.links,
     visualizations: calculation.visualizations,
   };
   const isOwner = calculation.ownerId === user.id;

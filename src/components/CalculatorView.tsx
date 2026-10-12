@@ -27,7 +27,6 @@ export function CalculatorPanel({
   labels,
   hidden,
   revealHidden = false,
-  links,
   groups,
   sectionExtras,
   decimals,
@@ -55,8 +54,6 @@ export function CalculatorPanel({
   hidden?: Record<string, boolean>;
   /** Show hidden variables anyway, marked as hidden. The editor does this so its creator can see them. */
   revealHidden?: boolean;
-  /** Variables linked to another variable, by name, shown under the variable. */
-  links?: Record<string, string>;
   /** Controls to show inside a used board's or collection's box, by its name (adding boards to a collection). */
   sectionExtras?: Record<string, React.ReactNode>;
   /** The boards behind variables that come from boards in use, by alias, for the headings. */
@@ -276,7 +273,6 @@ export function CalculatorPanel({
         // A variable from a board in use is shown without the board''s alias, under that board''s heading.
         label={labels?.[v.name] || (group ? displayName(v.name.slice(group.length + 1)) : undefined)}
         hidden={isHidden}
-        linkedTo={links?.[v.name] ? displayName(links[v.name]) : undefined}
         value={formatted(v.name, valueOf(v.name, problem ? problem.text : draft?.name === v.name ? draft.text : shown[v.name]))}
         grouped={formats?.[v.name] === "grouped" || formats?.[v.name] === "currency"}
         problem={problem?.reason ?? null}

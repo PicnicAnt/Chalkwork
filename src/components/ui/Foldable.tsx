@@ -8,6 +8,7 @@ import { Chevron } from "./Chevron";
 export function Foldable({
   summary,
   hint,
+  handle,
   actions,
   expanded,
   onToggle,
@@ -16,6 +17,8 @@ export function Foldable({
   summary: ReactNode;
   /** Quiet words after the summary, such as the unit or "hidden". */
   hint?: ReactNode;
+  /** A grip to drag the row by, at the left of the header line. */
+  handle?: ReactNode;
   /** Small controls at the end of the header line, outside the button that folds the row. */
   actions?: ReactNode;
   expanded: boolean;
@@ -25,6 +28,7 @@ export function Foldable({
   return (
     <div className="fold-box flex flex-col gap-1">
       <div className="flex items-baseline gap-2">
+      {handle}
       <button
         type="button"
         onClick={onToggle}

@@ -3,18 +3,16 @@ import { includeOf } from "@/lib/board-draft";
 import {
   checkAlias,
   defaultAlias,
-  dropAliasLinks,
   flatten,
   groupOf,
   parseIncludes,
   renameAliasInText,
-  renameAliasLinks,
   sectionsByBoard,
   type Bundle,
   type IncludedBundle,
 } from "@/lib/boards";
 
-const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], links: {}, visualizations: [] };
+const empty = { values: {}, descriptions: {}, units: {}, labels: {}, hidden: {}, decimals: {}, ranges: {}, tables: [], order: [], visualizations: [] };
 
 const rectangle: Bundle = {
   ...empty,
@@ -43,11 +41,6 @@ describe("boards that use boards", () => {
     const { bundle } = flatten({ ...empty, formulas: ["x = room.area"], values: { room$width: "10" }, units: { room$width: "cm" } }, [used("room")]);
     expect(bundle.values.room$width).toBe("10");
     expect(bundle.units.room$width).toBe("cm");
-  });
-
-  it("turns links into equations that follow each other", () => {
-    const { bundle } = flatten({ ...empty, formulas: ["x = 1"], links: { a$width: "b$height" } }, [used("a"), used("b")]);
-    expect(bundle.formulas).toContain("a$width = b$height");
   });
 
   it("says which formulas name a board that isn't used", () => {
@@ -86,13 +79,8 @@ describe("aliases and links", () => {
     expect(errors).toHaveLength(1);
   });
 
-  it("renames an alias in formulas and in links", () => {
+  it("renames an alias in formulas", () => {
     expect(renameAliasInText("a.x + a.y", "a", "b")).toBe("b.x + b.y");
-    expect(renameAliasLinks({ a$x: "own", own2: "a$y" }, "a", "b")).toEqual({ b$x: "own", own2: "b$y" });
-  });
-
-  it("drops the links that reach into a removed board", () => {
-    expect(dropAliasLinks({ a$x: "own", keep: "other" }, "a")).toEqual({ keep: "other" });
   });
 
   it("finds which board a variable belongs to", () => {
