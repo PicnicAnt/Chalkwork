@@ -32,10 +32,26 @@ export function AddVariable({
 
   if (!open) {
     return (
-      <div>
-        <button type="button" className="btn" onClick={() => setOpen(true)}>
-          Add variable
-        </button>
+      <div className="flex flex-wrap gap-3">
+        {(
+          [
+            ["Add variable", "number"],
+            ["Add board", "board"],
+            ["Add collection", "collection"],
+          ] as const
+        ).map(([label, first]) => (
+          <button
+            key={label}
+            type="button"
+            className="btn"
+            onClick={() => {
+              setKind(first);
+              setOpen(true);
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
     );
   }
@@ -57,13 +73,17 @@ export function AddVariable({
             aria-label="Name of the new variable"
           />
         )}
+        {/* Add board and Add collection each do one thing; Add variable offers the kinds of value. */}
+        {kind !== "board" && kind !== "collection" && (
         <select value={kind} onChange={(e) => setKind(e.target.value as VariableKind)} className="cursor-pointer bg-transparent text-xl" aria-label="Type of the new variable">
-          {KINDS.map((k) => (
+          {KINDS.filter((k) => k.kind !== "board" && k.kind !== "collection").map((k) => (
             <option key={k.kind} value={k.kind}>
               {k.label}
             </option>
           ))}
         </select>
+        )}
+        {kind === "collection" && <span className="text-xl text-ink-muted">collection</span>}
       </div>
       {kind === "board" && (
         <BoardPicker
