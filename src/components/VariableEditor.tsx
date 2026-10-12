@@ -135,7 +135,7 @@ export function VariableEditor({
 
       <div className="flex flex-col gap-8">
         {sections.map((section) => (
-          <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${sections.length > 1 ? "group-box" : ""}`}>
+          <div key={section.key ?? "own"} className={`flex flex-col gap-4 ${section.key !== null || sections.length > 1 || Object.keys(boardRows ?? {}).length > 0 ? "group-box" : ""}`}>
             {section.key && groups[section.key] && (
               <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setClosed((c) => ({ ...c, [section.key!]: !c[section.key!] }))}>
                 <h3 className="group-title">
