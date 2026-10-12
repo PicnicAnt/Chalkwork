@@ -62,6 +62,11 @@ Each variable can have a lowest and a highest value (in the variable editor). A 
 
 A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
 
+## Board files and pasted tables
+
+- **Download board file** (Share menu) saves a board as a `.chalkwork.json` file. **Import a board file** on the New page opens such a file in the editor (nothing is saved until you save). Boards the file used that don't exist on the server are left out, and the editor says so.
+- A lookup table can be pasted straight from a spreadsheet: two columns separated by tabs, with or without thousands separators and with a heading row.
+
 ## Contribution chart
 
 The drawing type **Contribution of each board** takes a total of a collection (such as `parts.weight`) and shows what each board in the collection adds to it, as one bar with the share of each. Boards that are switched off (Included 0) add nothing.

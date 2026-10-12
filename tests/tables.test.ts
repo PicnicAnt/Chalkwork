@@ -253,3 +253,17 @@ describe("a collection needs no list of variables", () => {
     expect(compute(a, all, Object.keys(all)).display.power).toBe("7");
   });
 });
+
+describe("tables pasted from a spreadsheet", () => {
+  it("reads tab separated columns, thousands separators and a heading row", () => {
+    const out = parseTableRows("Income\tRate\n0\t10\n20,000\t20\n50,000\t30\n");
+    expect(out.problem).toBeUndefined();
+    expect(out.rows).toEqual([[0, 10], [20000, 20], [50000, 30]]);
+  });
+
+  it("still reads comma and space separated rows, and still reports a bad line", () => {
+    expect(parseTableRows("0, 1\n10 2").rows).toEqual([[0, 1], [10, 2]]);
+    expect(parseTableRows("0 1\nx y").problem).toMatch(/Line 2/);
+    expect(parseTableRows("0\t1\t2").problem).toMatch(/Line 1/);
+  });
+});

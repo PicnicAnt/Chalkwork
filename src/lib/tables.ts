@@ -32,16 +32,24 @@ export function lookup(table: Table, x: number): number {
 export const tableFunctions = (tables: readonly Table[]): Record<string, (x: number) => number> =>
   Object.fromEntries(tables.map((t) => [t.name, (x: number) => lookup(t, Number(x))]));
 
-// Rows written as lines of "x y" (or "x, y", or "x; y", or a tab). Lines that aren't two numbers are reported.
+// Rows written as lines of "x y" (or "x, y", or "x; y"), or pasted from a spreadsheet (two columns separated by a tab,
+// with or without thousands separators). A first line that is a heading rather than numbers is skipped.
 export function parseTableRows(text: string): { rows: [number, number][]; problem?: string } {
   const rows: [number, number][] = [];
   for (const [i, raw] of text.split(/\r?\n/).entries()) {
     const line = raw.trim();
     if (!line) continue;
-    const parts = line.split(/[\s,;]+/).filter(Boolean);
+    const parts = line.includes("\t")
+      ? line.split("\t").map((c) => c.trim().replace(/,(?=\d{3}(\D|$))/g, "")).filter((c, k, all) => c !== "" || k < all.length - 1)
+      : line.split(/[\s,;]+/).filter(Boolean);
     const [x, y] = parts.map((p) => Number(p));
-    if (parts.length !== 2 || !Number.isFinite(x) || !Number.isFinite(y)) return { rows, problem: `Line ${i + 1} ("${line.slice(0, 30)}") should be two numbers: x and y.` };
-    rows.push([x, y]);
+    if (parts.length === 2 && Number.isFinite(x) && Number.isFinite(y)) {
+      rows.push([x, y]);
+      continue;
+    }
+    // A heading above the numbers (two words, as spreadsheets have).
+    if (rows.length === 0 && parts.length === 2 && parts.every((p) => !Number.isFinite(Number(p)))) continue;
+    return { rows, problem: `Line ${i + 1} ("${line.slice(0, 30)}") should be two numbers: x and y.` };
   }
   rows.sort((a, b) => a[0] - b[0]);
   return { rows };

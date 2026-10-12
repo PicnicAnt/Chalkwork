@@ -97,6 +97,9 @@ export function ShareMenu({
           >
             Download as CSV
           </button>
+          <a role="menuitem" className={item} href={`/c/${boardId}/file`} download title="The whole board as a file, to keep or to import on another Chalkwork" onClick={() => setOpen(false)}>
+            Download board file
+          </a>
           <button type="button" role="menuitem" className={item} aria-expanded={showCode} onClick={() => setShowCode((s) => !s)}>
             Embed or use from code {showCode ? "▴" : "▾"}
           </button>

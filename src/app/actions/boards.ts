@@ -90,3 +90,40 @@ export async function presetsOf(boardId: unknown): Promise<string[]> {
   if (!(await getCurrentUser()) || typeof boardId !== "string") return [];
   return (getBoard(boardId)?.presets ?? []).map((p) => p.name);
 }
+
+export type ImportResult = { ok: true; draft: import("@/lib/board-draft").BoardDraft; note: string } | { ok: false; error: string };
+
+// A board file (from "Download board file") read back into a draft for the editor. Nothing is saved. Boards the file
+// used that don't exist here are left out, and the note says so.
+export async function importBoardFile(text: unknown): Promise<ImportResult> {
+  if (!(await getCurrentUser())) return { ok: false, error: "Sign in to import a board." };
+  if (typeof text !== "string" || text.length > 500_000) return { ok: false, error: "That file is too big or isn't a board file." };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "That isn't a board file (it isn't JSON)." };
+  }
+  const file = parsed as { format?: unknown; board?: unknown } | null;
+  if (!file || file.format !== "chalkwork-board" || typeof file.board !== "object" || file.board === null) {
+    return { ok: false, error: "That isn't a Chalkwork board file." };
+  }
+  const board = { ...(file.board as Record<string, unknown>) };
+  // Boards that aren't on this server can't be used here.
+  const includes = Array.isArray(board.includes) ? (board.includes as { board?: unknown; alias?: unknown }[]) : [];
+  const present = includes.filter((i) => typeof i?.board === "string" && getBoard(i.board));
+  const missing = includes.length - present.length;
+  board.includes = present;
+  const collections = Array.isArray(board.collections) ? (board.collections as { boards?: unknown }[]) : [];
+  board.collections = collections.map((c) => (Array.isArray(c?.boards) ? { ...c, boards: (c.boards as unknown[]).filter((id) => typeof id === "string" && getBoard(id)) } : c));
+  // A used board that is gone takes its variables with it: formulas that use them can't be kept.
+  const prepared = prepare(board);
+  if ("errors" in prepared) {
+    return { ok: false, error: `The board in the file can't be used here: ${prepared.errors[0]}${missing > 0 ? ` (${missing} board${missing === 1 ? "" : "s"} it used ${missing === 1 ? "isn't" : "aren't"} on this server)` : ""}` };
+  }
+  return {
+    ok: true,
+    draft: prepared.draft,
+    note: missing > 0 ? `${missing} board${missing === 1 ? "" : "s"} the file used ${missing === 1 ? "isn't" : "aren't"} on this server and ${missing === 1 ? "was" : "were"} left out.` : "",
+  };
+}
