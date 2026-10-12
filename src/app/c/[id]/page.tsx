@@ -97,7 +97,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     <>
       {!isOwner && <ViewCounter boardId={calculation.id} />}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+        <div className="w-full min-w-0 sm:w-auto sm:flex-1">
           <div className="min-w-0">
           {/* The picture sits at the right and the text runs beside it and then under it, like a newspaper. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
