@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cabin_Sketch, Patrick_Hand } from "next/font/google";
 import Link from "next/link";
 import { MainNav } from "@/components/MainNav";
+import { RegisterServiceWorker } from "@/components/RegisterServiceWorker";
 import { SiteFrame } from "@/components/SiteFrame";
 import { UserMenu } from "@/components/UserMenu";
 import "./globals.css";
@@ -21,6 +22,8 @@ const sketch = Cabin_Sketch({
 export const metadata: Metadata = {
   title: "Chalkwork",
   description: "Write formulas, build boards and share them with a link.",
+  icons: { apple: "/pwa-icon/180" },
+  appleWebApp: { capable: true, title: "Chalkwork", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
@@ -45,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full flex flex-col">
+        <RegisterServiceWorker />
         <SiteFrame
           header={
             <>
