@@ -399,7 +399,7 @@ export function flatten(
       visualizations: [...own.visualizations, ...parts.flatMap((p) => p.bundle.visualizations)],
       groups: Object.assign(
         {},
-        ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.name || p.i.title, board: p.i.board, ...(p.i.group ? { collection: p.i.group } : {}) } })),
+        ...parts.map((p) => ({ ...p.bundle.groups, [p.i.alias]: { title: p.i.name || p.i.preset || p.i.title, board: p.i.board, ...(p.i.group ? { collection: p.i.group } : {}) } })),
         sums.groups,
       ),
     },

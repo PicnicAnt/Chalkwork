@@ -53,7 +53,7 @@ export function UsedBoard({
   });
 
   return (
-    <Foldable expanded={expanded} onToggle={onToggle} summary={inc.name || title} hint={` · used as ${inc.alias}${inc.version ? ` · version ${inc.version}` : ""}`}>
+    <Foldable expanded={expanded} onToggle={onToggle} summary={inc.name || inc.preset || title} hint={` · used as ${inc.alias}${inc.version ? ` · version ${inc.version}` : ""}`}>
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <span className="flex min-w-0 flex-1 basis-40 items-baseline gap-3">
           <span className="min-w-0 truncate text-lg">{title}</span>

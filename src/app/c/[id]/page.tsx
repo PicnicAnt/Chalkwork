@@ -73,7 +73,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     name,
     title: humanize(name),
     stats: (full.collections ?? []).find((c) => c.name === name)?.stats ?? [],
-    fixed: full.includes.filter((i) => i.group === name).map((i) => ({ title: i.name || getBoard(i.board)?.title || "A board" })),
+    fixed: full.includes.filter((i) => i.group === name).map((i) => ({ title: i.name || i.preset || getBoard(i.board)?.title || "A board" })),
     // The boards that can be added, each followed by its presets: the ones the collection lists, or any board.
     choices: (full.collections ?? []).find((c) => c.name === name)?.boards?.length
       ? (full.collections ?? []).find((c) => c.name === name)!.boards!.flatMap(choicesOf)
