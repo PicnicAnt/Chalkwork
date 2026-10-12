@@ -8,6 +8,8 @@ import { alternatives, ratio as unitRatio } from "@/lib/units";
 import type { BundleVisualization } from "@/lib/visualizations";
 import { Chevron } from "./ui/Chevron";
 import { VariableRow } from "./VariableRow";
+import { WorkingPanel } from "./WorkingPanel";
+import { explain } from "@/lib/working";
 import { VisualizationView } from "./Visualization";
 import { makeVizValues, type VizValues } from "./viz-values";
 
@@ -85,6 +87,9 @@ export function CalculatorPanel({
   const [draft, setDraft] = useState<{ name: string; text: string } | null>(null);
   // Used boards (and collections) that are folded away. They stay mounted, so nothing typed is lost.
   const [folded, setFolded] = useState<Record<string, boolean>>({});
+  // The variable whose working is shown ("how was this worked out").
+  const [workingOf, setWorkingOf] = useState<string | null>(null);
+  const toggleWorking = useCallback((name: string) => setWorkingOf((w) => (w === name ? null : name)), []);
 
   // An edit already computes its result to decide whether to accept it. Remember that, so the
   // render that follows doesn't solve the same thing a second time.
@@ -267,6 +272,17 @@ export function CalculatorPanel({
         register={register}
         range={ranges?.[v.name]}
         isBoolean={types?.[v.name] === "boolean"}
+        onHow={toggleWorking}
+        how={
+          workingOf === v.name ? (
+            <WorkingPanel
+              working={explain(analysis, plan, shown, v.name)}
+              labels={labels}
+              unitOf={(n) => shownUnits[n] && unitOptions[n] ? shownUnits[n] : (units?.[n] ?? "")}
+              onClose={() => setWorkingOf(null)}
+            />
+          ) : null
+        }
         places={decimals?.[v.name]}
         current={parseValue(display[v.name])}
       />

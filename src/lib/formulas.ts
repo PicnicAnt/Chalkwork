@@ -248,7 +248,7 @@ export function analyzeFormulas(lines: string[], tables: readonly Table[] = []):
 // A tear step: a group of equations that only fit together (e.g. a payment that depends on the
 // loan, while the loan depends on the interest that depends on the payment). One variable in the
 // group is guessed, the rest follow from it, and the guess is refined until a leftover equation holds.
-type Step =
+export type Step =
   | { kind: "direct"; formula: Formula; unknown: string }
   | { kind: "tear"; tear: string; steps: Step[]; check: Formula };
 export type Plan = { held: string[]; steps: Step[] };

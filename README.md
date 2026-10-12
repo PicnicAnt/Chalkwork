@@ -62,6 +62,10 @@ Each variable can have a lowest and a highest value (in the variable editor). A 
 
 A formula line that is only a name (for example `speed`) declares that variable: it is listed on the board and can be used, with no result variable made for it. A board can therefore be just a list of variables for other boards to use.
 
+## Show working
+
+The small **?** next to a value on the board shows how it was worked out: the equation it came from with the numbers put in, and under it how each of those numbers was worked out in turn (down to the values that were typed). A value worked backwards or found by trying values says so. It reads the plan the solver used, so it always matches the numbers on screen.
+
 ## Variable types
 
 In the editor everything a board is made of is a variable, and **Add variable** under the Variables list adds one of any type: a number, a yes/no, a **table**, a **collection** or a **board**. A table, a collection or a board shows in the list like the other variables (with its type next to the name) and is edited there, so there are no separate sections for them any more. A board added this way is used under the variable's name (`base.width`).

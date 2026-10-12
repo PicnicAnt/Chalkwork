@@ -28,6 +28,8 @@ export const VariableRow = memo(function VariableRow({
   current,
   places,
   isBoolean = false,
+  onHow,
+  how,
 }: {
   name: string;
   description?: string;
@@ -60,6 +62,10 @@ export const VariableRow = memo(function VariableRow({
   places?: number;
   /** A yes/no variable: shown as a tick box (1 is yes, 0 is no). */
   isBoolean?: boolean;
+  /** Asks to show (or hide) how the value was worked out; absent when there is nothing to show. */
+  onHow?: (name: string) => void;
+  /** The working, shown under the row while it is open. */
+  how?: React.ReactNode;
 }) {
   const id = `var-${name}`;
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
@@ -152,6 +158,11 @@ export const VariableRow = memo(function VariableRow({
           ))}
         </span>
         {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
+        {onHow && (
+          <button type="button" className="shrink-0 px-1 text-base text-ink-faint hover:text-accent" aria-label={`How ${label || name} was worked out`} title="How was this worked out?" onClick={() => onHow(name)}>
+            ?
+          </button>
+        )}
         {readOnly ? (
           <span className="w-[30px] shrink-0" aria-hidden />
         ) : (
@@ -178,6 +189,7 @@ export const VariableRow = memo(function VariableRow({
       {outside && !problem && <span className="text-sm text-op">{outside}</span>}
       {description && !problem && <span className="pt-0.5 text-base leading-snug text-note">{description}</span>}
       {linkedTo && !problem && <span className="text-sm text-ink-faint">linked to {linkedTo}</span>}
+      {how}
     </div>
   );
 });
