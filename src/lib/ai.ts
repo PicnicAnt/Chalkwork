@@ -199,20 +199,20 @@ export function explainWith(ask: Ask, board: { title: string; description: strin
   return ask(EXPLAIN_SYSTEM, lines.join("\n").slice(0, 6000));
 }
 
-const IMAGE_SYSTEM = `You draw a small, stylish picture for a calculation board, shown in a list next to its title. Reply with ONLY one SVG document and nothing else: it starts with <svg and ends with </svg>.
+const IMAGE_SYSTEM = `You draw a small line-art picture for a calculation board, shown in a list next to its title. Reply with ONLY one SVG document and nothing else: it starts with <svg and ends with </svg>.
 
 Format:
 - viewBox="0 0 160 120", with an xmlns attribute, no width or height.
-- Only basic elements: rect, circle, ellipse, line, polyline, polygon, path, g, defs, linearGradient, radialGradient, stop. No script, no style element, no image or use, no links, no external addresses, no event handlers.
-- No text at all, no letters or numbers. Under 4000 characters.
+- Only basic elements: rect, circle, ellipse, line, polyline, polygon, path, g, defs. No script, no style element, no image or use, no links, no external addresses, no event handlers.
+- No text at all, no letters or numbers. Under 3000 characters.
 
-Subject: something that suggests what the board calculates (a box for a volume, a coin for a price, a gauge for a rate, a sword for damage), drawn as one clear subject, centred, with plenty of space around it.
+Subject: something that suggests what the board calculates (a box for a volume, a coin for a price, a gauge for a rate, a sword for damage), drawn as one clear subject, centred, with generous space around it.
 
-Style: the picture is shown on both a dark chalkboard and a light whiteboard, so it must look good on either.
-- Fill the whole box with a background of its own: a deep, rich colour (indigo, teal, plum, forest or slate) with a soft gradient, never pure white or pure black, so it stands on any page.
-- Draw the subject with flat geometric shapes in two or three bright, harmonious colours (one warm accent such as amber or coral against cool tones), with light edges that separate it from the background.
-- Keep it modern and minimal: clean shapes, rounded corners, a subtle shadow or highlight shape for depth, no clutter, no thin hairlines, no photo realism.
-- Use consistent contrast: light shapes on the dark background, nothing that disappears into it.`;
+Style: elegant line art, shown on both a dark chalkboard and a light whiteboard, so it must read on either.
+- No background rectangle: the drawing sits on a transparent background.
+- Draw with outlines only: fill="none" and stroke on every shape, stroke-width 3 to 4, stroke-linecap="round", stroke-linejoin="round".
+- Use one medium-tone stroke colour that has good contrast on both black and white, such as amber #E0A030, teal #2FA8A0 or coral #E8715A, and at most one second colour from that kind of palette for a detail or two. Never white, black or pale grey.
+- Keep it minimal and confident: few strokes, simple geometry, a clean silhouette, perhaps one or two small detail lines for depth. No shading, no gradients, no filled areas, no clutter.`;
 
 // A picture for a board, drawn by the helper as SVG and checked before it is kept. Returns the SVG, or why not.
 export async function imageWith(
