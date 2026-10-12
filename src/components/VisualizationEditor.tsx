@@ -3,10 +3,10 @@
 import { displayName, type Analysis } from "@/lib/formulas";
 import { MAX_VISUALIZATIONS, VIZ_TYPES, type Visualization } from "@/lib/visualizations";
 import { VisualizationItem } from "./VisualizationItem";
-import { VizPreview } from "./VizPreview";
+import { AddVisualization } from "./AddVisualization";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
 import { ReorderList } from "./ui/ReorderList";
-import { ExpandAllBar, useFold } from "./ui/Foldable";
+import { useFold } from "./ui/Foldable";
 
 // The drawings and charts of a board: pick a type, then say which variable plays each role. Those of
 // boards that are used come with those boards and are not edited here.
@@ -33,8 +33,6 @@ export function VisualizationEditor({
       count={visualizations.length}
       description="Shapes follow the board's numbers as they change. Charts solve the board again with other values: a sweep shows how one variable moves another, sensitivity bars show which inputs matter most, and a breakdown shows how a total divides. Pick a type and choose which variable plays each role. Any board can use any type, and boards that use this one show its drawings with it."
     >
-      {visualizations.length > 0 && <ExpandAllBar onExpandAll={() => fold.expandAll(keys)} onCollapseAll={fold.collapseAll} />}
-
       <ReorderList
         names={keys}
         gap="gap-2"
@@ -69,29 +67,17 @@ export function VisualizationEditor({
       </ReorderList>
 
       {visualizations.length < MAX_VISUALIZATIONS && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start gap-3">
           {(["shape", "chart"] as const).map((kind) => (
-            <div key={kind} className="flex flex-col gap-1">
-              <span className="text-lg text-ink-muted">{kind === "shape" ? "Add a shape" : "Add a chart"}</span>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                {VIZ_TYPES.filter((t) => t.kind === kind).map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => {
-                      // The new one opens, ready to be set up.
-                      fold.open(String(visualizations.length));
-                      onChange([...visualizations, { type: type.id, map: {} }]);
-                    }}
-                    className="fold-box flex flex-col items-center gap-1 !px-1 !py-2 text-base hover:text-accent"
-                    title={`Add a ${type.label.toLowerCase()}`}
-                  >
-                    <VizPreview type={type.id} className="h-10 w-14" />
-                    <span className="text-center leading-tight">{type.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AddVisualization
+              key={kind}
+              kind={kind}
+              onAdd={(type) => {
+                // The new one opens, ready to be set up.
+                fold.open(String(visualizations.length));
+                onChange([...visualizations, { type, map: {} }]);
+              }}
+            />
           ))}
         </div>
       )}
