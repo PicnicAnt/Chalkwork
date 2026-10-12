@@ -82,7 +82,7 @@ export function SharedCalculator({
     if (snapshot.items && encodeItems(snapshot.items) !== encodeItems(extras)) {
       const params = new URLSearchParams({ state: encodeState({ values: snapshot.values, locked: snapshot.locked }) });
       if (snapshot.items.length > 0) params.set("items", encodeItems(snapshot.items));
-      router.replace(`${location.pathname}?${params}`);
+      router.replace(`${location.pathname}?${params}`, { scroll: false });
       return;
     }
     setValues(snapshot.values);
@@ -170,7 +170,7 @@ export function SharedCalculator({
                 extras={extras}
                 onChange={(next) => {
                   const url = new URL(linkWith(next));
-                  router.replace(`${url.pathname}${url.search}`);
+                  router.replace(`${url.pathname}${url.search}`, { scroll: false });
                 }}
               />,
             ]),
@@ -186,7 +186,7 @@ export function SharedCalculator({
                   aria-label={`Take ${a.title} out of ${c.title}`}
                   onClick={() => {
                     const url = new URL(linkWith(extras.filter((_, i) => i !== a.index)));
-                    router.replace(`${url.pathname}${url.search}`);
+                    router.replace(`${url.pathname}${url.search}`, { scroll: false });
                   }}
                 >
                   Remove
