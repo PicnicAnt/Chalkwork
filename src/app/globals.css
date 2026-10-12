@@ -205,7 +205,7 @@ h3,
   .fold-box {
     border: 1.5px solid var(--ink-faint);
     border-radius: 18px 6px 16px 6px / 6px 16px 6px 18px;
-    padding: 0.75rem 1rem;
+    padding: 0.4rem 0.9rem;
   }
 
   /* Values are written on a line rather than in a box. */

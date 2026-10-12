@@ -129,7 +129,7 @@ export function VariableEditor({
   );
   // The variables of one used board, which can be put in order among themselves.
   const lines = (section: (typeof sections)[number]) => (
-    <ReorderList names={section.variables.map((v) => v.name)} onOrder={onOrder}>
+    <ReorderList names={section.variables.map((v) => v.name)} onOrder={onOrder} gap="gap-2">
       {(name, handle) => line(name, section.key, section.variables.length > 1 ? handle : undefined)}
     </ReorderList>
   );
@@ -153,7 +153,7 @@ export function VariableEditor({
     items[key] = (handle) =>
       wrap ? (
         wrap(
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <p className="text-base text-ink-muted">Its variable names can&apos;t be changed here, but everything else can.</p>
             {lines(section)}
           </div>,
@@ -212,8 +212,8 @@ export function VariableEditor({
       />
 
       {notice}
-      <div className="flex flex-col gap-8">
-        <ReorderList names={ids} onOrder={onOrder} gap="gap-8">
+      <div className="flex flex-col gap-3">
+        <ReorderList names={ids} onOrder={onOrder} gap="gap-2">
           {(id, handle) => items[id]?.(handle)}
         </ReorderList>
         {addVariable}

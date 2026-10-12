@@ -81,12 +81,12 @@ export function ReorderList({
         );
         return (
           <div key={name} data-reorder={name} className={`relative ${dragging ? "opacity-50" : ""}`}>
-            {above && <div className="absolute -top-2.5 left-0 right-0 h-0.5 rounded bg-accent" aria-hidden />}
+            {above && <div className="absolute -top-1 left-0 right-0 h-0.5 rounded bg-accent" aria-hidden />}
             {children(name, handle)}
           </div>
         );
       })}
-      {drag && drag.before >= others.length && others.length > 0 && <div className="-mt-2.5 h-0.5 rounded bg-accent" aria-hidden />}
+      {drag && drag.before >= others.length && others.length > 0 && <div className="-mt-1.5 h-0.5 rounded bg-accent" aria-hidden />}
     </div>
   );
 }
