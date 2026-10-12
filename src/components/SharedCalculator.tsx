@@ -16,6 +16,7 @@ import { ItemControls, type CollectionView } from "./ItemPicker";
 import { ShareMenu } from "./ShareMenu";
 import { BoardGuide } from "./BoardGuide";
 import { CalculatorPanel } from "./CalculatorView";
+import { CollapsibleSection } from "./ui/CollapsibleSection";
 import { FormulaText } from "./FormulaText";
 import { OptimizerPanel } from "./OptimizerPanel";
 import { ScenarioPanel } from "./ScenarioPanel";
@@ -230,8 +231,7 @@ export function SharedCalculator({
         </section>
       )}
       {formulas.length > 0 && (
-        <section className="mt-6 flex flex-col gap-2">
-          <h2 className="text-2xl font-bold">Formulas</h2>
+        <CollapsibleSection title="Formulas" count={formulas.length}>
           <ul className="sketch-box flex flex-col gap-1 px-4 py-3 text-xl" aria-label="The formulas of this board, read only">
             {formulas.map((text, i) => (
               <li key={i} className="break-words">
@@ -239,7 +239,7 @@ export function SharedCalculator({
               </li>
             ))}
           </ul>
-        </section>
+        </CollapsibleSection>
       )}
     </div>
   );
