@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { presetsOf } from "@/app/actions/boards";
-import { SearchSelect } from "./ui/SearchSelect";
+import { useMemo, useState } from "react";
+import { matchesWords, wordsOf } from "@/lib/board-search";
 import type { ExtraItem } from "@/lib/resolve-boards";
 
 export type CollectionView = {
@@ -14,29 +13,27 @@ export type CollectionView = {
   fixed: { title: string }[];
   /** Items added by whoever is using the board. */
   added: { index: number; title: string }[];
-  /** When the creator listed the boards that can be added: each one, and each of its presets, as a choice. */
+  /** The boards that can be added, each followed by its presets; absent when adding needs a sign-in. */
   choices?: { board: string; preset?: string; title: string; boardTitle?: string }[];
 };
 
 // Where people using a board add existing boards to one of its collections. It sits inside the collection's own box.
-// Each board's variables are added up into the collection's totals, which the board's formulas use. The boards are
-// kept in the address.
-export function ItemControls({ collection: c, boards, extras, onChange }: { collection: CollectionView; boards: { id: string; title: string }[]; extras: ExtraItem[]; onChange: (extras: ExtraItem[]) => void }) {
-  const [pick, setPick] = useState("");
-  // The presets of the chosen board (a Shortsword, a Bow), so an item can be added as one of them.
-  const [presets, setPresets] = useState<{ board: string; names: string[] } | null>(null);
-  const [preset, setPreset] = useState("");
-  useEffect(() => {
-    if (!pick || (c.choices && c.choices.length > 0)) return;
-    let cancelled = false;
-    presetsOf(pick).then((names) => {
-      if (!cancelled) setPresets({ board: pick, names });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [pick, c.choices]);
-  const names = presets?.board === pick ? presets.names : [];
+// Boards are ticked from a searchable list, as many as wanted, and added together. Each board's variables are added up
+// into the collection's totals, which the board's formulas use. The boards are kept in the address.
+export function ItemControls({ collection: c, extras, onChange }: { collection: CollectionView; extras: ExtraItem[]; onChange: (extras: ExtraItem[]) => void }) {
+  const [query, setQuery] = useState("");
+  // The ticked choices, by their place in the list.
+  const [ticked, setTicked] = useState<Set<number>>(new Set());
+  const choices = useMemo(() => c.choices ?? [], [c.choices]);
+  const words = useMemo(() => wordsOf(query), [query]);
+  const shown = useMemo(
+    () =>
+      choices
+        .map((ch, i) => ({ ch, i }))
+        .filter(({ ch }) => matchesWords(ch.preset ? `${ch.boardTitle ?? ""} ${ch.preset}` : ch.title, words))
+        .slice(0, 100),
+    [choices, words],
+  );
   const count = c.fixed.length + c.added.length;
   return (
     <div className="flex flex-col gap-2" aria-label={`Boards in ${c.title}`}>
@@ -60,65 +57,72 @@ export function ItemControls({ collection: c, boards, extras, onChange }: { coll
           ))}
         </ul>
       )}
-      {c.choices && c.choices.length > 0 ? (
-        <div className="flex flex-wrap items-baseline gap-3">
-          <SearchSelect
-            value={pick}
-            onChange={setPick}
-            placeholder="Choose a board…"
-            ariaLabel={`Board to add to ${c.title}`}
-            options={(c.choices ?? []).map((ch, i) => (ch.preset ? { value: String(i), label: ch.preset, group: ch.boardTitle ?? ch.title } : { value: String(i), label: ch.title }))}
-          />
-          <button
-            type="button"
-            className="btn"
-            disabled={pick === ""}
-            onClick={() => {
-              const ch = c.choices![Number(pick)];
-              if (ch) onChange([...extras, { group: c.name, board: ch.board, ...(ch.preset ? { preset: ch.preset } : {}) }]);
-              setPick("");
-            }}
-          >
-            Add
-          </button>
-        </div>
-      ) : boards.length > 0 ? (
-        <div className="flex flex-wrap items-baseline gap-3">
-          <SearchSelect
-            value={pick}
-            onChange={(id) => {
-              setPick(id);
-              setPreset("");
-            }}
-            placeholder="Choose a board…"
-            ariaLabel={`Board to add to ${c.title}`}
-            options={boards.map((b) => ({ value: b.id, label: b.title }))}
-          />
-          {names.length > 0 && (
-            <select value={preset} onChange={(e) => setPreset(e.target.value)} className="cursor-pointer bg-transparent text-lg" aria-label="Preset to start from">
-              <option value="">as it is</option>
-              {names.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            type="button"
-            className="btn"
-            disabled={!pick}
-            onClick={() => {
-              onChange([...extras, { group: c.name, board: pick, ...(preset ? { preset } : {}) }]);
-              setPick("");
-              setPreset("");
-            }}
-          >
-            Add
-          </button>
-        </div>
-      ) : (
+      {c.choices === undefined ? (
         <p className="text-base text-ink-muted">Sign in to add boards.</p>
+      ) : choices.length === 0 ? (
+        <p className="text-base text-ink-muted">There are no boards to add yet.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <input
+            type="search"
+            className="field text-lg"
+            placeholder="Search boards"
+            aria-label={`Search boards to add to ${c.title}`}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <ul className="flex max-h-64 flex-col overflow-y-auto" role="group" aria-label={`Boards that can be added to ${c.title}`}>
+            {shown.length === 0 && <li className="px-2 py-1 text-base text-ink-muted">Nothing matches.</li>}
+            {shown.map(({ ch, i }, n) => {
+              const before = shown[n - 1]?.ch;
+              // A preset whose board isn't just above it is given the board's name as a heading.
+              const heading = ch.preset && !(before && (before.preset ? before.boardTitle === ch.boardTitle : before.title === ch.boardTitle));
+              return (
+                <li key={i}>
+                  {heading && <p className="px-2 pt-1 text-base text-ink-muted">{ch.boardTitle}</p>}
+                  <label className={`flex cursor-pointer items-center gap-3 py-1 pr-2 text-lg hover:bg-[var(--board-edge)] ${ch.preset ? "pl-8" : "pl-2"}`}>
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 shrink-0 cursor-pointer accent-[var(--accent)]"
+                      checked={ticked.has(i)}
+                      onChange={(e) =>
+                        setTicked((t) => {
+                          const next = new Set(t);
+                          if (e.target.checked) next.add(i);
+                          else next.delete(i);
+                          return next;
+                        })
+                      }
+                    />
+                    <span className="min-w-0 truncate">{ch.preset ?? ch.title}</span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <button
+              type="button"
+              className="btn"
+              disabled={ticked.size === 0}
+              onClick={() => {
+                const picked = [...ticked].sort((a, b) => a - b).flatMap((i) => (choices[i] ? [choices[i]] : []));
+                onChange([...extras, ...picked.map((ch) => ({ group: c.name, board: ch.board, ...(ch.preset ? { preset: ch.preset } : {}) }))]);
+                setTicked(new Set());
+                setQuery("");
+              }}
+            >
+              {ticked.size > 1 ? `Add ${ticked.size} boards` : "Add"}
+            </button>
+            {ticked.size > 0 && (
+              <button type="button" className="link text-base" onClick={() => setTicked(new Set())}>
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

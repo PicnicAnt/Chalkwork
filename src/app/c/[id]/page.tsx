@@ -51,18 +51,24 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     const b = getBoard(e.board);
     return b !== null && canOpen(b, user?.id);
   });
+  const choicesOf = (id: string) => {
+    const b = getBoard(id);
+    if (!b || b.id === full.id || !canOpen(b, user?.id)) return [];
+    return [{ board: id, title: b.title, boardTitle: b.title }, ...(b.presets ?? []).map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}`, boardTitle: b.title }))];
+  };
+  let everyBoard: ReturnType<typeof choicesOf> | undefined;
+  const anyBoard = () => (everyBoard ??= listAllBoards(300, user?.id).filter((b) => b.id !== full.id).flatMap((b) => choicesOf(b.id)));
   const collections = known.map((name) => ({
     name,
     title: humanize(name),
     stats: (full.collections ?? []).find((c) => c.name === name)?.stats ?? [],
     fixed: full.includes.filter((i) => i.group === name).map((i) => ({ title: i.name || getBoard(i.board)?.title || "A board" })),
-    choices: (full.collections ?? [])
-      .find((c) => c.name === name)
-      ?.boards?.flatMap((id) => {
-        const b = getBoard(id);
-        if (!b || b.id === full.id || !canOpen(b, user?.id)) return [];
-        return [{ board: id, title: b.title }, ...(b.presets ?? []).map((p) => ({ board: id, preset: p.name, title: `${b.title} · ${p.name}`, boardTitle: b.title }))];
-      }),
+    // The boards that can be added, each followed by its presets: the ones the collection lists, or any board.
+    choices: (full.collections ?? []).find((c) => c.name === name)?.boards?.length
+      ? (full.collections ?? []).find((c) => c.name === name)!.boards!.flatMap(choicesOf)
+      : user
+        ? anyBoard()
+        : undefined,
     added: usedExtras.flatMap((e, index) => (e.group === name ? [{ index, title: `${getBoard(e.board)?.title ?? "A board"}${e.preset ? ` (${e.preset})` : ""}` }] : [])),
   }));
   // Scenarios saved with other boards added are another board to solve: worked out here, for the comparison table.
@@ -74,7 +80,6 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     if ("error" in other) continue;
     scenarioOutcomes[sc.id] = outcomeOf(analyzeFormulas(other.bundle.formulas, other.bundle.tables), sc, other.bundle.decimals);
   }
-  const boardChoices = user && known.some((n) => !(full.collections ?? []).find((c) => c.name === n)?.boards?.length) ? listAllBoards(1000, user?.id).filter((b) => b.id !== full.id).map((b) => ({ id: b.id, title: b.title })) : [];
 
   return (
     <>
@@ -121,7 +126,6 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           key={usedExtras.map((e) => `${e.group}:${e.board}:${e.preset ?? ""}`).join(",")}
           collections={collections}
           presets={full.presets ?? []}
-          boardChoices={boardChoices}
           extras={usedExtras}
           flat={resolved.bundle}
           formulas={calculation.formulas}

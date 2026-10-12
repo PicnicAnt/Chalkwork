@@ -31,7 +31,6 @@ export function SharedCalculator({
   publicId,
   collections = [],
   presets = [],
-  boardChoices = [],
   extras = [],
   scenarioOutcomes,
 }: {
@@ -51,8 +50,6 @@ export function SharedCalculator({
   collections?: CollectionView[];
   /** Scenarios the creator saved on the board. */
   presets?: Preset[];
-  /** The boards that can be added as items. */
-  boardChoices?: { id: string; title: string }[];
   /** The items someone using the board has added. */
   extras?: ExtraItem[];
   /** What scenarios with other added boards come to, worked out on the server (a different set of boards is a different board). */
@@ -169,7 +166,6 @@ export function SharedCalculator({
               <ItemControls
                 key={c.name}
                 collection={c}
-                boards={boardChoices}
                 extras={extras}
                 onChange={(next) => {
                   const url = new URL(linkWith(next));
