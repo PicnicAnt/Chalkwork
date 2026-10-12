@@ -30,7 +30,7 @@ export function VisualizationEditor({
     <CollapsibleSection
       title="Drawings and charts"
       count={visualizations.length}
-      description="Shapes follow the board's numbers as they change. Charts solve the board again with other values: a sweep shows how one variable moves another, sensitivity bars show which inputs matter most, and a breakdown shows how a total divides. Pick a type and choose which variable plays each role. Any board can use any type, and boards that use this one show its drawings with it."
+      description="Shapes follow the board's numbers; charts solve the board again with other values. Add one, then choose which variable plays each role."
     >
       <ReorderList
         names={keys}
