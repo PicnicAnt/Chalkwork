@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { vizIcon } from "./viz-icons";
 
 // The picture a board shows in lists. A person can upload one or have the helper draw one; a board with none gets a
@@ -39,6 +40,10 @@ export function parseImage(dataUrl: unknown): StoredImage | null {
 }
 
 export const svgDataUrl = (svg: string) => `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
+
+// A short stamp that changes when the picture shown for a board changes, so the browser asks for the new one.
+export const imageVersion = (stored: string | null, title: string, firstDrawing?: string) =>
+  createHash("sha1").update(stored ?? `${title}|${firstDrawing ?? ""}`).digest("hex").slice(0, 10);
 
 const hash = (text: string) => [...text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 

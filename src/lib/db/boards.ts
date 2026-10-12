@@ -127,12 +127,12 @@ export function getBoard(id: string): Board | null {
   return row ? parse(row) : null;
 }
 
-export function listBoardsByOwner(ownerId: string): { id: string; title: string; createdAt: string }[] {
+export function listBoardsByOwner(ownerId: string): { id: string; title: string; createdAt: string; updatedAt: string }[] {
   return (
     db
-      .prepare("SELECT id, title, created_at FROM boards WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100")
-      .all(ownerId) as { id: string; title: string; created_at: string }[]
-  ).map((r) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
+      .prepare("SELECT id, title, created_at, updated_at FROM boards WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100")
+      .all(ownerId) as { id: string; title: string; created_at: string; updated_at: string }[]
+  ).map((r) => ({ id: r.id, title: r.title, createdAt: r.created_at, updatedAt: r.updated_at }));
 }
 
 export type BoardSummary = {

@@ -6,6 +6,7 @@ import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import { getBoardImage } from "@/lib/db";
+import { imageVersion } from "@/lib/board-image";
 
 import { getVisibleBoard } from "@/lib/visible-board";
 import { resolveIncludes } from "@/lib/resolve-boards";
@@ -75,7 +76,7 @@ export default async function EditBoardPage({ params }: PageProps<"/c/[id]/edit"
         heading={`Edit ${draft.title}`}
         availableBoards={availableBoards}
         initialIncluded={resolved.included}
-        currentImageSrc={`/c/${id}/image`}
+        currentImageSrc={`/c/${id}/image?v=${imageVersion(getBoardImage(id), calculation.title, calculation.visualizations[0]?.type)}`}
       />
     );
   }

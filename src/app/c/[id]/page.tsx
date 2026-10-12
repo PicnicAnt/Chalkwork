@@ -5,12 +5,13 @@ import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { boardsUsing, getBoard, listAllBoards, listScenarios } from "@/lib/db";
+import { boardsUsing, getBoard, listAllBoards, listScenarios, getBoardImage } from "@/lib/db";
 import { getVisibleBoard } from "@/lib/visible-board";
 import { canOpen, isListed } from "@/lib/visibility";
 import { ExplainBoard } from "@/components/ExplainBoard";
 import { aiConfig } from "@/lib/ai";
 import { UsedByList } from "@/components/UsedByList";
+import { imageVersion } from "@/lib/board-image";
 import { ViewCounter } from "@/components/ViewCounter";
 import { acceptedExtras, groupsOf, resolveForView, type ExtraItem } from "@/lib/resolve-boards";
 import { encodeItems, parseItems } from "@/lib/items-param";
@@ -101,7 +102,7 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           <div className="min-w-0">
           {/* The picture sits at the right and the text runs beside it and then under it, like a newspaper. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/c/${calculation.id}/image`} alt="" className="float-right mb-1 ml-4 h-20 w-28 object-contain sm:h-24 sm:w-32" />
+          <img src={`/c/${calculation.id}/image?v=${imageVersion(getBoardImage(calculation.id), calculation.title, calculation.visualizations[0]?.type)}`} alt="" className="float-right mb-1 ml-4 h-20 w-28 object-contain sm:h-24 sm:w-32" />
           <h1 className="text-3xl font-bold sm:text-4xl">{calculation.title}</h1>
           {(calculation.ownerName || isOwner) && (
             <p className="mt-1 text-ink-muted">
