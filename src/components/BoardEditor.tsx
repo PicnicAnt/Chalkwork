@@ -552,6 +552,7 @@ function BoardEditorInner({
               key={inc.alias}
               inc={includeOf(inc)}
               includes={included.map(includeOf)}
+              collectionNames={collections.map((c) => c.name)}
               included={included}
               isOpen={typedFold.isOpen}
               onToggle={typedFold.toggle}

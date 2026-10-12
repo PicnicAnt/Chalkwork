@@ -85,23 +85,25 @@ export function UsedBoard({
           Remove
         </button>
       </div>
-      <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
-        in the collection
-        <input
-          className="field w-40 text-xl text-ink"
-          value={inc.group ?? ""}
-          maxLength={BOARD_LIMITS.alias}
-          list="item-groups"
-          placeholder="(none)"
-          onChange={(e) => onGroup(e.target.value.replace(/[^A-Za-z0-9_]/g, ""))}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          aria-label={`Collection ${title} is in`}
-          title="Boards in the same collection are added up: collection.variable is the total over the boards that are switched on, and each gets an Included switch."
-        />
-        {groups.length > 0 && <datalist id="item-groups">{groups.map((g) => <option key={g} value={g} />)}</datalist>}
-      </label>
+      {groups.length > 0 && (
+        <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
+          add to collection
+          <select
+            value={inc.group ?? ""}
+            onChange={(e) => onGroup(e.target.value)}
+            className="cursor-pointer bg-transparent text-xl text-ink"
+            aria-label={`Collection ${title} is in`}
+            title="A board put in a collection is counted in its totals (collection.variable) and gets an Included switch. People using the board can also add boards to a collection themselves."
+          >
+            <option value="">(none)</option>
+            {groups.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {presetNames.length > 0 && (
         <label className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-lg text-ink-muted">
           starts from

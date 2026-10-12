@@ -12,6 +12,7 @@ export type { BoardChoice };
 export function BoardRow({
   inc,
   includes,
+  collectionNames = [],
   included,
   isOpen,
   onToggle,
@@ -24,6 +25,8 @@ export function BoardRow({
 }: {
   inc: Include;
   includes: Include[];
+  /** The collections declared on this board, which a used board can be put in. */
+  collectionNames?: string[];
   included: IncludedBundle[];
   isOpen: (key: string) => boolean;
   onToggle: (key: string) => void;
@@ -48,7 +51,7 @@ export function BoardRow({
       onGroup={(group) => onGroup(inc.alias, group)}
       presetNames={Object.keys(found?.presetValues ?? {})}
       onPreset={(preset) => onPreset(inc.alias, preset)}
-      groups={[...new Set(includes.flatMap((i) => (i.group ? [i.group] : [])))]}
+      groups={[...new Set([...collectionNames, ...includes.flatMap((i) => (i.group ? [i.group] : []))])]}
       onPin={(version) => onPin(inc.alias, version)}
       onRemove={() => onRemove(inc.alias)}
     />
