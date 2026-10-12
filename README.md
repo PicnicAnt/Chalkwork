@@ -83,6 +83,10 @@ A scenario saved on a board with collections keeps the boards that were added to
 
 A variable can be a **choice from a list**: in the variable editor choose the type and write one option per line as `Easy = 1`. On the board it is a drop-down of the labels; the formulas get the number of the chosen option, so a choice can scale a result (`damage = base * difficulty`) or drive an `if` or a table lookup. A worked-out value that matches no option shows its number in the drop-down.
 
+## Numbers in your language
+
+Numbers are shown and typed the way the browser's language writes them: in Danish 1.234,5 and typing `2,5` means two and a half, in English 1,234.5. Boards, the web service, the board files and CSV downloads always use a plain dot for decimals, so nothing changes for people with another language. In a language with a decimal comma, a lone dot you type is still taken as a decimal mark (`1.5`), unless it can only be a thousands separator (`1.234`). Lookup tables are written with dots as decimals, because a comma separates their columns.
+
 ## Number formats
 
 Each number variable has a format in the variable editor: as it comes, **1,234,567** (thousands separators), **percent** (0.15 shows as 15 %, and typing 20 stores 0.2) or **money** (separators, and two decimals for worked-out values). Only the display changes, never the maths. Formats apply on the board page and in the editor's preview; the scenario table and charts still show plain numbers.

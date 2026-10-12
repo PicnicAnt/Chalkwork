@@ -1,6 +1,8 @@
 "use client";
 
+import { localizeNumbers } from "@/lib/locale";
 import { workingName, type Working } from "@/lib/working";
+import { useNumberLocale } from "./useNumberLocale";
 
 // How a value was worked out, as a small tree: the equation with the numbers put in, and under it how each of those
 // numbers came about. Shown under the variable it explains.
@@ -19,8 +21,9 @@ export function WorkingPanel({ working, labels, unitOf, onClose }: { working: Wo
 }
 
 function Node({ node, labels, unitOf, top = false }: { node: Working; labels?: Record<string, string>; unitOf: (name: string) => string; top?: boolean }) {
+  const loc = useNumberLocale();
   const unit = unitOf(node.name);
-  const value = node.value ? `${node.value}${unit ? ` ${unit}` : ""}` : "no value yet";
+  const value = node.value ? `${localizeNumbers(node.value, loc)}${unit ? ` ${unit}` : ""}` : "no value yet";
   return (
     <div className={top ? "" : "border-l-2 border-[var(--ink-faint)] pl-3"}>
       <div className="flex flex-wrap items-baseline gap-x-2">

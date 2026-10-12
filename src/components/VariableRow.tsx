@@ -3,6 +3,8 @@
 import { memo, useState } from "react";
 import type { Range } from "@/lib/boards";
 import { displayName, formatNumber, parseValue } from "@/lib/formulas";
+import { fromLocaleText, toLocaleText } from "@/lib/locale";
+import { useNumberLocale } from "./useNumberLocale";
 
 // Written like a line on the board: name = value
 export const VariableRow = memo(function VariableRow({
@@ -74,6 +76,8 @@ export const VariableRow = memo(function VariableRow({
   options?: { label: string; value: number }[];
 }) {
   const id = `var-${name}`;
+  // Numbers are shown, and read, the way the person's language writes them (1.234,5 in Danish).
+  const loc = useNumberLocale();
   // Typed in a unit other than the one the board is worked out in, the number is converted before it is used.
   // What was typed stays in the field while it is being edited, so "1." and "1.50" aren't rewritten under the cursor.
   // It is only kept for the unit it was typed in.
@@ -82,13 +86,13 @@ export const VariableRow = memo(function VariableRow({
   const outside =
     range && current !== undefined
       ? range.min !== undefined && current < range.min
-        ? `Below the lowest value, ${formatNumber(range.min * ratio)}`
+        ? `Below the lowest value, ${toLocaleText(formatNumber(range.min * ratio), loc)}`
         : range.max !== undefined && current > range.max
-          ? `Above the highest value, ${formatNumber(range.max * ratio)}`
+          ? `Above the highest value, ${toLocaleText(formatNumber(range.max * ratio), loc)}`
           : null
       : null;
   const slidable = !isBoolean && !options && !readOnly && range?.min !== undefined && range.max !== undefined && range.max > range.min;
-  const shownText = typed && typed.unit === unit ? typed.text : value;
+  const shownText = typed && typed.unit === unit ? typed.text : toLocaleText(value, loc);
   return (
     <div className={`row-focus -mx-2 -my-1 flex min-w-0 flex-col px-2 py-1 ${hidden ? "opacity-60" : ""}`}>
       <span className="flex items-center gap-2">
@@ -115,7 +119,7 @@ export const VariableRow = memo(function VariableRow({
             }}
             onBlur={() => onBlur(name)}
           >
-            {options.every((o) => Math.abs(o.value - (parseValue(value) ?? NaN)) >= 1e-9) && <option value={-1}>{value ? `(${value})` : "choose…"}</option>}
+            {options.every((o) => Math.abs(o.value - (parseValue(value) ?? NaN)) >= 1e-9) && <option value={-1}>{value ? `(${toLocaleText(value, loc)})` : "choose…"}</option>}
             {options.map((o, i) => (
               <option key={o.label} value={i}>
                 {o.label}
@@ -148,10 +152,11 @@ export const VariableRow = memo(function VariableRow({
           value={shownText}
           onChange={(e) => {
             const text = e.target.value;
-            const n = parseValue(text);
+            const plain = fromLocaleText(text, loc);
+            const n = parseValue(plain);
             if ((ratio === 1 && !grouped) || n === undefined) {
               setTyped(null);
-              onEdit(name, text);
+              onEdit(name, plain);
             } else {
               setTyped({ text, unit });
               onEdit(name, formatNumber(n / ratio));

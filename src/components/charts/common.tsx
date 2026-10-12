@@ -19,7 +19,12 @@ export function Text({ x, y, anchor = "middle", size = 14, fill = INK, children 
 }
 
 // A number written briefly: four significant digits, thousands separated.
-export const short = (n: number) => n.toLocaleString("en-US", { maximumSignificantDigits: 4 });
+// The language numbers are written in. The board sets it from the browser (see setChartLocale) before the charts draw.
+let chartLocale = "en-US";
+export const setChartLocale = (tag: string) => {
+  chartLocale = tag;
+};
+export const short = (n: number) => n.toLocaleString(chartLocale, { maximumSignificantDigits: 4 });
 export const withUnit = (v: VizValues, name: string) => (v.unit(name) ? `${v.name(name)} (${v.unit(name)})` : v.name(name));
 export const finite = (n: number | undefined): n is number => n !== undefined && Number.isFinite(n);
 

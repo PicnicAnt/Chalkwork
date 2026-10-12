@@ -6,6 +6,8 @@ import { saveScenario } from "@/app/actions/scenarios";
 import type { Bundle } from "@/lib/boards";
 import { compute, shownValues } from "@/lib/calculator";
 import { displayName, formatNumber, parseValue, type Analysis } from "@/lib/formulas";
+import { localizeNumbers } from "@/lib/locale";
+import { useNumberLocale } from "./useNumberLocale";
 import { boardEvaluator, optimize, type OptimizeResult } from "@/lib/optimize";
 import { SCENARIO_LIMITS, type ScenarioSnapshot } from "@/lib/scenarios";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
@@ -42,6 +44,7 @@ export function OptimizerPanel({
   onApply: (snapshot: ScenarioSnapshot) => void;
 }) {
   const router = useRouter();
+  const loc = useNumberLocale();
   const label = (name: string) => flat.labels[name] || displayName(name);
   const visible = analysis.variables.filter((v) => flat.hidden[v.name] !== true);
   // Only variables with both a lowest and a highest value can be varied.
@@ -125,7 +128,7 @@ export function OptimizerPanel({
   }
 
   const unit = (n: string) => (flat.units[n] ? ` ${flat.units[n]}` : "");
-  const change = (n: string, f: Found) => `${f.before[n] ?? "?"} → ${f.shown[n] ?? "?"}${unit(n)}`;
+  const change = (n: string, f: Found) => localizeNumbers(`${f.before[n] ?? "?"} → ${f.shown[n] ?? "?"}`, loc) + unit(n);
 
   return (
     <CollapsibleSection
@@ -170,7 +173,7 @@ export function OptimizerPanel({
                     />
                     <span>{label(v.name)}</span>
                     <span className="text-base text-ink-muted">
-                      {formatNumber(r.min!)} to {formatNumber(r.max!)}
+                      {localizeNumbers(formatNumber(r.min!), loc)} to {localizeNumbers(formatNumber(r.max!), loc)}
                       {unit(v.name)}
                     </span>
                   </label>
@@ -222,8 +225,8 @@ export function OptimizerPanel({
             <p className="text-op">No settings in these ranges keep {label(found.constrained ?? "")} within the limit. These come closest.</p>
           )}
           <p className="text-xl">
-            {maximize ? "Highest" : "Lowest"} {label(found.objective)} found: <strong>{found.shown[found.objective]}</strong>
-            {unit(found.objective)} <span className="text-base text-ink-muted">(now {found.before[found.objective] ?? "?"})</span>
+            {maximize ? "Highest" : "Lowest"} {label(found.objective)} found: <strong>{localizeNumbers(found.shown[found.objective] ?? "", loc)}</strong>
+            {unit(found.objective)} <span className="text-base text-ink-muted">(now {localizeNumbers(found.before[found.objective] ?? "?", loc)})</span>
           </p>
           <ul className="flex flex-col gap-0.5 text-xl">
             {found.varied.map((n) => (

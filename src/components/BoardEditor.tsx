@@ -24,6 +24,8 @@ import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib
 import type { Choice, Range, VarFormat, VarType } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
 import { parseTags } from "@/lib/tags";
+import { fromLocaleText, toLocaleText } from "@/lib/locale";
+import { useNumberLocale } from "./useNumberLocale";
 import { VISIBILITIES, type Visibility } from "@/lib/visibility";
 import { checkVariableName, renameKey, renameVariableInText } from "@/lib/rename";
 import { BoardRow, type BoardChoice } from "./BoardsSection";
@@ -137,6 +139,8 @@ function BoardEditorInner({
       ),
     [decimalText],
   );
+  // Numbers typed here are read the way the person's language writes them.
+  const numLocale = useNumberLocale();
   // Min and max per variable, held as typed so the fields can be emptied.
   const [rangeText, setRangeText] = useState<Record<string, { min: string; max: string }>>(
     Object.fromEntries(Object.entries(initial?.ranges ?? {}).map(([k, r]) => [k, { min: r.min === undefined ? "" : String(r.min), max: r.max === undefined ? "" : String(r.max) }])),
@@ -144,12 +148,12 @@ function BoardEditorInner({
   const ranges = useMemo(() => {
     const out: Record<string, Range> = {};
     for (const [name, text] of Object.entries(rangeText)) {
-      const min = parseValue(text.min);
-      const max = parseValue(text.max);
+      const min = parseValue(fromLocaleText(text.min, numLocale));
+      const max = parseValue(fromLocaleText(text.max, numLocale));
       if (min !== undefined || max !== undefined) out[name] = { ...(min !== undefined && { min }), ...(max !== undefined && { max }) };
     }
     return out;
-  }, [rangeText]);
+  }, [rangeText, numLocale]);
   // Presets: scenarios saved on the board for everyone to use. `locks` is what the panel last said was locked.
   const [presets, setPresets] = useState<Preset[]>(initial?.presets ?? []);
   const [presetName, setPresetName] = useState("");
@@ -603,7 +607,7 @@ function BoardEditorInner({
           </>
         }
         onOrder={(names) => setOrder((o) => [...o.filter((n) => !names.includes(n)), ...names])}
-        ranges={Object.fromEntries(Object.entries(flat.bundle.ranges).map(([k, r]) => [k, { min: r.min === undefined ? "" : String(r.min), max: r.max === undefined ? "" : String(r.max) }]))}
+        ranges={Object.fromEntries(Object.entries(flat.bundle.ranges).map(([k, r]) => [k, { min: r.min === undefined ? "" : toLocaleText(String(r.min), numLocale), max: r.max === undefined ? "" : toLocaleText(String(r.max), numLocale) }]))}
         onRange={(name, end, text) =>
           setRangeText((r) => {
             const inherited = flat.bundle.ranges[name];

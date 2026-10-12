@@ -7,6 +7,8 @@ import { difference, outcomeOf, SCENARIO_LIMITS, type Outcome, type Scenario, ty
 import { displayName, formatDecimals, formatNumber, type Analysis } from "@/lib/formulas";
 import { downloadCsv } from "@/lib/export";
 import { encodeItems } from "@/lib/items-param";
+import { localizeNumbers } from "@/lib/locale";
+import { useNumberLocale } from "./useNumberLocale";
 import { encodeState } from "@/lib/share-state";
 import { ratio as unitRatio } from "@/lib/units";
 import { CollapsibleSection } from "./ui/CollapsibleSection";
@@ -48,6 +50,7 @@ export function ScenarioPanel({
   onLoad: (scenario: Scenario) => void;
 }) {
   const router = useRouter();
+  const loc = useNumberLocale();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -264,8 +267,8 @@ export function ScenarioPanel({
                         const { text, className, note } = cell(v.name, c);
                         return (
                           <td key={c.key} className={`px-3 py-1 ${className}`}>
-                            {text}
-                            {note && <span className={`ml-2 text-base ${note.className}`}>{note.text}</span>}
+                            {localizeNumbers(text, loc)}
+                            {note && <span className={`ml-2 text-base ${note.className}`}>{localizeNumbers(note.text, loc)}</span>}
                           </td>
                         );
                       })}

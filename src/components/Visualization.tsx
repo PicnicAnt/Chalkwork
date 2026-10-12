@@ -1,5 +1,6 @@
 import { vizType, type Visualization } from "@/lib/visualizations";
-import { Figure } from "./charts/common";
+import { Figure, setChartLocale } from "./charts/common";
+import { useNumberLocale } from "./useNumberLocale";
 import { BarsChart, BreakdownBar, ContributionsBar, DependencyDiagram, GaugeChart, HeatMap, PieChart, SensitivityBars, SpreadChart, SweepChart } from "./charts";
 import { annulus, circle, donut, ellipse, polygon, rectangle, triangle } from "./shapes/flat";
 import { box, cone, cylinder, pyramid, sphere } from "./shapes/solid";
@@ -26,6 +27,8 @@ const DRAWINGS: Record<string, (v: Record<string, number>, t: (param: string) =>
 
 // One drawing or chart, from the values the board has right now. It follows them as they change.
 export function VisualizationView({ viz, values }: { viz: Visualization; values: VizValues }) {
+  // The charts write numbers in the person's language; the page is drawn again when it becomes known.
+  setChartLocale(useNumberLocale().tag);
   return <VisualizationBody viz={viz} values={values} />;
 }
 

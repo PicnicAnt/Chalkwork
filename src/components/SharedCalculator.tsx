@@ -9,6 +9,8 @@ import { analyzeFormulas, displayName, formatNumber, parseValue } from "@/lib/fo
 import type { Outcome, Preset, Scenario, ScenarioSnapshot } from "@/lib/scenarios";
 import { encodeState } from "@/lib/share-state";
 import { encodeItems } from "@/lib/items-param";
+import { localizeNumbers } from "@/lib/locale";
+import { useNumberLocale } from "./useNumberLocale";
 import type { ExtraItem } from "@/lib/resolve-boards";
 import { ItemControls, type CollectionView } from "./ItemPicker";
 import { ShareMenu } from "./ShareMenu";
@@ -61,6 +63,7 @@ export function SharedCalculator({
   scenarioOutcomes?: Record<string, Outcome>;
 }) {
   const router = useRouter();
+  const loc = useNumberLocale();
   const analysis = useMemo(() => analyzeFormulas(flat.formulas, flat.tables), [flat.formulas, flat.tables]);
   const [values, setValues] = useState(() => (initialState ? { ...flat.values, ...initialState.values } : flat.values));
   // Bumping the key remounts the panel, which also forgets the edit history.
@@ -253,8 +256,8 @@ export function SharedCalculator({
                   <tbody>
                     {t.rows.map(([x, y]) => (
                       <tr key={x}>
-                        <td className="pr-4 text-right">{formatNumber(x)}</td>
-                        <td className="text-accent-2">{formatNumber(y)}</td>
+                        <td className="pr-4 text-right">{localizeNumbers(formatNumber(x), loc)}</td>
+                        <td className="text-accent-2">{localizeNumbers(formatNumber(y), loc)}</td>
                       </tr>
                     ))}
                   </tbody>
