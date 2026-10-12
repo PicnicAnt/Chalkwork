@@ -403,7 +403,7 @@ function BoardEditorInner({
 
   return (
     <form
-      className="flex flex-col gap-10"
+      className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         save();
@@ -420,8 +420,7 @@ function BoardEditorInner({
         </div>
       </section>
 
-      {/* A new board has no name yet, so it opens with the name to fill in. */}
-      <CollapsibleSection defaultOpen={!initial?.title} title="About" description="The name, the description, the tags that make the board easy to find, and who can open it.">
+      <CollapsibleSection title="About" description="The name, the description, the tags that make the board easy to find, and who can open it.">
         <input
           className="field sketch text-2xl"
           placeholder="Title, e.g. Loan payment"
@@ -487,7 +486,6 @@ function BoardEditorInner({
       )}
 
       <CollapsibleSection
-        defaultOpen
         title="Formulas"
         count={formulas.length}
         description={
@@ -624,7 +622,6 @@ function BoardEditorInner({
       />
 
       <CollapsibleSection
-        defaultOpen
         title="Try it"
         description={
           <>

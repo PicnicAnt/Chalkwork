@@ -10,18 +10,15 @@ export function CollapsibleSection({
   title,
   count,
   description,
-  defaultOpen = false,
   children,
 }: {
   title: string;
   /** Shown after the title, for sections that are lists. */
   count?: number;
   description?: ReactNode;
-  /** Starts unfolded. */
-  defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
   const bodyId = useId();
   return (
     <section className="flex flex-col gap-3">
