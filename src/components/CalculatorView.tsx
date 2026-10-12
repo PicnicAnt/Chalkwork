@@ -9,6 +9,7 @@ import type { BundleVisualization } from "@/lib/visualizations";
 import { Chevron } from "./ui/Chevron";
 import { VariableRow } from "./VariableRow";
 import { WorkingPanel } from "./WorkingPanel";
+import { ResultsBar, type ResultItem } from "./ResultsBar";
 import { explain } from "@/lib/working";
 import { VisualizationView } from "./Visualization";
 import { makeVizValues, type VizValues } from "./viz-values";
@@ -355,8 +356,28 @@ export function CalculatorPanel({
     );
   }
 
+  // What the formulas worked out: the values nothing typed or locked holds, that people can see.
+  const results: ResultItem[] = sections.flatMap((section) =>
+    section.variables.flatMap((v) => {
+      const n = parseValue(display[v.name]);
+      if (hidden?.[v.name] === true || !decided.has(v.name) || n === undefined) return [];
+      const type = types?.[v.name];
+      const text = formatted(v.name, valueOf(v.name, shown[v.name]));
+      const value =
+        type === "boolean"
+          ? n !== 0 ? "yes" : "no"
+          : type === "choice"
+            ? (choices?.[v.name]?.find((o) => Math.abs(o.value - n) < 1e-9)?.label ?? text)
+            : text;
+      const unit = type ? undefined : formats?.[v.name] === "percent" ? "%" : shownUnits[v.name] && unitOptions[v.name] ? shownUnits[v.name] : units?.[v.name];
+      const own = labels?.[v.name] || displayName(section.key ? v.name.slice(section.key.length + 1) : v.name);
+      return [{ name: v.name, label: section.key ? `${groups?.[section.key]?.title ?? section.key} ${own}` : own, value, unit }];
+    }),
+  );
+
   return (
     <div className="flex flex-col gap-6">
+      <ResultsBar items={results} onGo={focusField} />
       {[
         ...sections,
         // A collection with no variables yet still has its box, for adding boards to.

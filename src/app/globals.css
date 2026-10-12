@@ -263,6 +263,11 @@ h3,
   .field-bare:focus {
     border-bottom-color: transparent;
   }
+  /* The results strip stays at the top while the board scrolls. */
+  .results-bar {
+    background: var(--board);
+    border-bottom: 2px solid var(--ink-faint);
+  }
   .row-focus:focus-within {
     outline: 2px solid var(--accent);
     outline-offset: 2px;

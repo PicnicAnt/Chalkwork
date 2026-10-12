@@ -145,6 +145,10 @@ Everything for getting a board out is in the **Share** menu on the board page: c
 
 A signed-in user can save what is on a board as a named **scenario** (the typed values and which are locked; table `scenarios`, private to that user, at most 20 per board), load one back, and tick several to see them side by side with what the board shows now; numbers that differ are coloured. The comparison starts as each value with its **change in percent** beside it (+50%), and can also show only the values or the **difference** (+5, −2.5) or the difference **in percent** (+50%) from a chosen baseline (what the board shows now, or any ticked scenario), and writes each number in the unit chosen for that variable on the board. The board is solved again for each, so a scenario follows later changes to the board. The pure part is `src/lib/scenarios.ts`.
 
+## Results strip
+
+The values the formulas work out are listed in a strip that stays at the top of the board while it scrolls, so a change made far down can be seen working through. Tapping a result goes to its field; the arrow next to "Results" hides the strip.
+
 ## Tests and backups
 
 `npm test` runs the automated tests (`tests/`, with [Vitest](https://vitest.dev)): the formula parser and solver (forwards, backwards, locks, numeric solving, nonsense formulas), boards that use boards, board validation, drawings and charts, the list of what a suggestion changes, the database schema steps and the backups.
