@@ -127,13 +127,15 @@ export function QuickJump() {
                 <li key={row.key} role="option" aria-selected={i === at}>
                   <button
                     type="button"
-                    className={`flex w-full items-baseline gap-3 px-2 py-1 text-left text-lg hover:bg-[var(--board-edge)] ${i === at ? "bg-[var(--board-edge)]" : ""}`}
+                    className={`flex w-full flex-col gap-0 px-2 py-1.5 text-left hover:bg-[var(--board-edge)] ${i === at ? "bg-[var(--board-edge)]" : ""}`}
                     onMouseEnter={() => setAt(i)}
                     onClick={() => choose(row)}
                   >
-                    <span className="shrink-0 text-sm text-ink-faint">{row.kind === "variable" ? "variable" : "board"}</span>
-                    <span className="min-w-0 truncate">{row.label}</span>
-                    {row.note && <span className="min-w-0 truncate text-sm text-ink-muted">{row.note}</span>}
+                    <span className="flex items-baseline gap-3 text-lg">
+                      <span className="shrink-0 text-sm text-ink-faint">{row.kind === "variable" ? "variable" : "board"}</span>
+                      <span className="min-w-0 break-words">{row.label}</span>
+                    </span>
+                    {row.note && <span className="line-clamp-1 text-sm text-ink-muted">{row.note}</span>}
                   </button>
                 </li>
               ))}
