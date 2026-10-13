@@ -38,6 +38,7 @@ import { FormulaInput } from "./FormulaInput";
 import { VariableEditor } from "./VariableEditor";
 import { TryItems } from "./TryItems";
 import { ImageField } from "./ImageField";
+import { ReservedWords } from "./ReservedWords";
 import { readTableDrafts, tableItems, type TableDraft } from "./TablesEditor";
 import { collectionItems, collectionsOf, type CollectionDraft } from "./CollectionsEditor";
 import { rowsToText } from "@/lib/tables";
@@ -711,8 +712,7 @@ function BoardEditorInner({
         count={formulas.length}
         description={
           <>
-            One per line, like <span className="text-accent-2">area = width * height</span>. Every name becomes a variable, and any variable can be changed: the others adjust so all formulas still hold. Supports + − ×
-            ÷, ^, parentheses, and functions like sqrt, round, min, max. Conditions work with if(price &gt; 100, 5, 2), and tables (below) can be called like functions.
+            One per line, like <span className="text-accent-2">area = width * height</span>. Any variable can be changed and the others adjust so all formulas still hold.
           </>
         }
       >
@@ -743,6 +743,7 @@ function BoardEditorInner({
             ))}
           </ul>
         )}
+        <ReservedWords />
       </CollapsibleSection>
 
       <VariableEditor
