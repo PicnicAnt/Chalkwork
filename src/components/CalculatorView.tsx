@@ -341,6 +341,44 @@ export function CalculatorPanel({
         </div>
       );
     }
+    // A collection looks like a used board, one level up: its name, and under it the boards in it, each of which
+    // has its own title and its variables hanging from it.
+    if (isCollection && key && group && !nested) {
+      return (
+        <div key={key} className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h3 className="text-xl">{group.title}</h3>
+          </div>
+          <div className="flex flex-col gap-2">
+            {extra}
+            {members.length > 0 && (
+              <div className="tree tree-titles">
+                {members.map((m) => (
+                  <div key={m.key}>{renderSection(m, true)}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    if (nested && key && group) {
+      return (
+        <div key={key} className="flex flex-col gap-0">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h4 className="text-lg">{group.title}</h4>
+            {sectionActions?.[key] && <span>{sectionActions[key]}</span>}
+          </div>
+          {rows.length > 0 && (
+            <div className="tree">
+              {rows.map((r, i) => (
+                <div key={i}>{r}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
     return (
       <div key={key ?? "own"} className={`flex flex-col gap-4 ${nested ? "fold-box" : key !== null ? "group-box" : ""}`}>
         {key && group && (
