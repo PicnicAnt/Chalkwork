@@ -51,6 +51,7 @@ export function AddVariable({
           <button type="button" className="btn" onClick={() => { setKind("number"); setForm("variable"); }}>
             Add variable
           </button>
+          {boards.length > 0 && (
           <SearchSelect
             value=""
             onChange={(v) => {
@@ -66,6 +67,7 @@ export function AddVariable({
               ...(b.presets ?? []).map((p) => ({ value: `${b.id}@${p}`, label: p, group: b.title })),
             ])}
           />
+          )}
           <button type="button" className="btn" onClick={() => setForm("collection")}>
             Add collection
           </button>

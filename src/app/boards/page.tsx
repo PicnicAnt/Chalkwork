@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { BoardList } from "@/components/BoardList";
+import { LocalBoardsList } from "@/components/LocalBoardsList";
 import { getCurrentUser } from "@/lib/auth";
 import { listAllBoards } from "@/lib/db";
 
@@ -31,6 +32,7 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold sm:text-4xl">Boards</h1>
+      <LocalBoardsList />
       <BoardList
         boards={boards}
         signedIn={user !== null}

@@ -18,7 +18,8 @@ import {
   renameAliasKeys,
   type IncludedBundle,
 } from "@/lib/boards";
-import { includeOf, LIMITS, splitFormulas, type BoardDraft } from "@/lib/board-draft";
+import { includeOf, LIMITS, splitFormulas, validateDraft, type BoardDraft } from "@/lib/board-draft";
+import { saveLocalBoard } from "@/lib/local-boards";
 import { analyzeFormulas, displayName, formulaProblems, parseValue } from "@/lib/formulas";
 import type { Choice, Range, VarFormat, VarType } from "@/lib/boards";
 import { checkUnits } from "@/lib/unit-check";
@@ -57,6 +58,8 @@ type EditorProps = {
   initialIncluded?: IncludedBundle[];
   /** The picture of the board being copied, as a data URL, which the copy starts with. */
   initialImage?: string;
+  /** Set for a board kept on this device (made without signing in): it is saved there, not on the server. */
+  local?: { id?: string };
   /** The checks the board has, which a copy starts with. */
   initialChecks?: Check[];
   /** Where the current picture of the board being edited can be shown from. */
@@ -84,7 +87,7 @@ export function BoardEditor(props: EditorProps) {
   const [nav, setNav] = useState({ at: 0, len: 0 });
   const sync = () => setNav({ at: at.current, len: steps.current.length });
   const [kept, setKept] = useState<{ draft: BoardDraft; savedAt: string } | null>(null);
-  const draftKey = `chalkwork:draft:${props.editing?.id ?? (props.suggesting ? `suggest:${props.suggesting.boardId}` : "new")}`;
+  const draftKey = `chalkwork:draft:${props.local ? `local:${props.local.id ?? "new"}` : (props.editing?.id ?? (props.suggesting ? `suggest:${props.suggesting.boardId}` : "new"))}`;
 
   const read = (): { draft: BoardDraft; savedAt: string } | null => {
     try {
@@ -143,7 +146,8 @@ export function BoardEditor(props: EditorProps) {
 
   async function restoreKept() {
     if (!kept) return;
-    const out = await loadBoardsUsed(kept.draft.includes, props.editing?.id ?? props.suggesting?.boardId);
+    // A board kept on this device uses no other boards, so there is nothing to load for it.
+    const out = kept.draft.includes.length === 0 ? { ok: true as const, included: [] } : await loadBoardsUsed(kept.draft.includes, props.editing?.id ?? props.suggesting?.boardId);
     if (!out.ok) {
       setKept(null);
       return;
@@ -190,6 +194,11 @@ export function BoardEditor(props: EditorProps) {
           Redo
         </button>
       </div>
+      {props.local && (
+        <p className="sketch-box mb-4 px-4 py-3 text-lg text-ink-muted">
+          This board is kept on this device only. Sign in to save boards to an account, share them and use other boards.
+        </p>
+      )}
       {kept && (
         <div className="sketch-box mb-6 flex flex-col gap-2 px-4 py-3">
           <p className="text-xl">There is an unsaved draft of this from {new Date(kept.savedAt).toLocaleString("en-GB")}.</p>
@@ -279,6 +288,7 @@ function BoardEditorInner({
   image,
   imageToSend,
   onImage,
+  local,
   checks,
   onChecks,
   onSnapshot,
@@ -602,6 +612,22 @@ function BoardEditorInner({
         }
         onSaved();
         router.push(`/c/${suggesting.boardId}/suggestions/${sent.id}`);
+        return;
+      }
+      if (local) {
+        // Made without signing in: checked here, and kept in this browser.
+        const checked = validateDraft(draft, []);
+        if (!checked.draft) {
+          setErrors(checked.errors);
+          return;
+        }
+        try {
+          const saved = saveLocalBoard({ id: local.id, draft: checked.draft, image: image, checks });
+          onSaved();
+          router.push(`/local/${saved.id}`);
+        } catch {
+          setErrors(["This browser has no room left to keep the board. Delete a board or a picture and try again."]);
+        }
         return;
       }
       const result = editing

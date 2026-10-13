@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LocalBoardsList } from "@/components/LocalBoardsList";
 import { YourBoards } from "@/components/YourBoards";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -21,10 +22,13 @@ export default async function Home() {
           dps = avg_hit * aps * crit_factor * hit_chance / 100
         </p>
         <Link href="/new" className="btn btn-primary mt-8">
-          {user ? "Start a new board" : "Sign in to start"}
+          Start a new board
         </Link>
       </section>
       {user && <YourBoards user={user} />}
+      <div className="mt-8">
+        <LocalBoardsList />
+      </div>
     </>
   );
 }

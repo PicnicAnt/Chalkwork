@@ -167,6 +167,10 @@ Ctrl+K (or **Jump to…** in the top row, signed in) opens a search over every b
 
 The site has a web app manifest, icons and a small service worker, so a phone or computer can install it (on a secure address, which the public tunnel is; the home Wi-Fi address is plain HTTP and browsers won't offer it there). Nothing is kept for offline use. A board's link (public or link-only) shows its picture, title and description when pasted in a chat (`/c/<id>/opengraph-image`).
 
+## Boards without signing in
+
+Signed out, **New** works and the board is kept in the browser (`localStorage`, `src/lib/local-boards.ts`), not on the server. It shows under **On this device** on the home and Boards pages, opens at `/local/<id>` (and `/local/<id>/edit`), and is checked and shown by the same code as a saved board. It can't be shared or used by others, can't use other boards or the writing helper, and is lost when the browser's data is cleared. Signed in, **Save to my account** on such a board puts it on the server (and takes it off the device). Everything that writes to the database still needs a signed-in user.
+
 ## Results strip
 
 The values the formulas work out are listed in a strip that stays at the top of the board while it scrolls, so a change made far down can be seen working through. Tapping a result goes to its field; the arrow next to "Results" hides the strip.

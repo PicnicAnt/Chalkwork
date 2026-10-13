@@ -5,7 +5,7 @@ import { AiStarter } from "@/components/AiStarter";
 import { ImportStarter } from "@/components/ImportStarter";
 import { BoardEditor } from "@/components/BoardEditor";
 import { aiConfig } from "@/lib/ai";
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 
 import { BLANK_ID, TEMPLATES, templateById } from "@/lib/templates";
 
@@ -14,11 +14,12 @@ export const metadata: Metadata = { title: "New board · Chalkwork" };
 // Pick where to start (a template or a blank board), then write the board in the editor.
 export default async function NewBoardPage({ searchParams }: PageProps<"/new">) {
   const { template } = await searchParams;
-  const user = await requireUser(typeof template === "string" ? `/new?template=${encodeURIComponent(template)}` : "/new");
+  // Signed in, a board is saved to the account; signed out, it is kept in this browser (see lib/local-boards.ts).
+  const user = await getCurrentUser();
 
   if (typeof template !== "string") {
-    const helper = "key" in aiConfig();
-    const choices = boardChoices(user.id);
+    const helper = user !== null && "key" in aiConfig();
+    const choices = user ? boardChoices(user.id) : [];
     return (
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
@@ -27,8 +28,14 @@ export default async function NewBoardPage({ searchParams }: PageProps<"/new">) 
             A board is a few formulas that you can use in any direction. Start from one that is made, or from nothing.
           </p>
         </div>
+        {!user && (
+          <p className="sketch-box px-4 py-3 text-lg text-ink-muted">
+            You are not signed in, so a board you make is kept in this browser only. Sign in to save boards to an account, share them, use other boards and
+            ask the helper.
+          </p>
+        )}
         {helper && <AiStarter availableBoards={choices} />}
-        <ImportStarter availableBoards={choices} />
+        {user && <ImportStarter availableBoards={choices} />}
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {TEMPLATES.map((t) => (
             <li key={t.id}>
@@ -49,6 +56,7 @@ export default async function NewBoardPage({ searchParams }: PageProps<"/new">) 
     );
   }
 
+  if (!user) return <BoardEditor local={{}} initial={templateById(template)?.draft} />;
   // Every existing board can be added to the new one.
   const availableBoards = boardChoices(user.id);
   return <BoardEditor availableBoards={availableBoards} initial={templateById(template)?.draft} aiEnabled={"key" in aiConfig()} />;
