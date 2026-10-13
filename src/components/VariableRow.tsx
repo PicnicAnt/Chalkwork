@@ -114,7 +114,7 @@ export const VariableRow = memo(function VariableRow({
         {options ? (
           <select
             id={id}
-            className="field-bare min-w-0 cursor-pointer bg-transparent text-2xl"
+            className="field-bare min-w-0 cursor-pointer bg-transparent text-xl"
             value={options.findIndex((o) => Math.abs(o.value - (parseValue(value) ?? NaN)) < 1e-9)}
             disabled={readOnly}
             onChange={(e) => {
@@ -146,7 +146,7 @@ export const VariableRow = memo(function VariableRow({
           id={id}
           ref={(el) => register(name, el)}
           style={{ width: `${Math.max(shownText.length, readOnly ? 1 : 4) + 1}ch`, maxWidth: "calc(100% - 3rem)" }}
-          className={`field min-w-0 flex-none rounded-sm text-2xl ${problem ? "!border-danger" : ""} ${
+          className={`field min-w-0 flex-none rounded-sm text-xl ${problem ? "!border-danger" : ""} ${
             readOnly ? "field-decided" : locked ? "field-bare field-locked" : "field-bare"
           }`}
           inputMode="decimal"

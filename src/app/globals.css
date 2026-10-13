@@ -246,7 +246,7 @@ h3,
   }
   .tree > * {
     position: relative;
-    padding: 0.4rem 0 0.4rem 1.6rem;
+    padding: 0.2rem 0 0.2rem 1.6rem;
   }
   .tree > *::before {
     content: "";
@@ -258,25 +258,25 @@ h3,
   }
   .tree > *:last-child::before {
     bottom: auto;
-    height: 1.74rem;
+    height: 1.4rem;
   }
   .tree > *::after {
     content: "";
     position: absolute;
     left: 0;
-    top: 1.74rem;
+    top: 1.4rem;
     width: 1.1rem;
     border-top: 2px solid color-mix(in srgb, var(--ink) 45%, transparent);
   }
   /* A tree whose branches lead to titles rather than to variables: the branch meets the middle of the title line. */
   .tree-titles > * {
-    padding-top: 0.45rem;
+    padding-top: 0.3rem;
   }
   .tree-titles > *::after {
-    top: 1.3rem;
+    top: 1.2rem;
   }
   .tree-titles > *:last-child::before {
-    height: 1.3rem;
+    height: 1.2rem;
   }
   .row-focus:focus-within {
     outline: 2px solid var(--accent);

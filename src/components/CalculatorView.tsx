@@ -408,7 +408,7 @@ export function CalculatorPanel({
         )}
         <div className={closed ? "hidden" : "flex flex-col gap-4"}>
           {extra}
-          {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
+          {rows.length > 0 && <div className="grid grid-cols-1 gap-x-10 gap-y-1.5 md:grid-cols-2">{rows}</div>}
           {members.map((m) => renderSection(m, true))}
         </div>
       </div>
@@ -478,7 +478,7 @@ export function CalculatorPanel({
         const rows = run.map((name) => row({ name }, null)).filter(Boolean);
         return (
           <div key={`own-${run[0]}`} className="flex flex-col gap-4">
-            {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
+            {rows.length > 0 && <div className="grid grid-cols-1 gap-x-10 gap-y-1.5 md:grid-cols-2">{rows}</div>}
           </div>
         );
       })}
