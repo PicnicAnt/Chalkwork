@@ -315,50 +315,22 @@ export function CalculatorPanel({
     const extra = key ? sectionExtras?.[key] : undefined;
     if (rows.length === 0 && members.length === 0 && !extra) return null;
     const group = key ? groups?.[key] : undefined;
-    // A board that is used (not a collection, and not one inside a collection) is one slim row when it is folded,
-    // which it is to begin with on the board page; in the editor's preview it starts open.
+    // A board that is used (not a collection, and not one inside a collection) is always open: its title, and its
+    // variables hanging from it as a tree.
     const slim = key !== null && !isCollection && !nested && group !== undefined && !group.collection;
-    const closed = key !== null && (folded[key] ?? (slim && !revealHidden));
-    const toggle = () => key && setFolded((f) => ({ ...f, [key]: !(f[key] ?? (slim && !revealHidden)) }));
-    // What a folded row shows of the board: its first two worked-out results, or its first two variables.
-    const summary = slim
-      ? (() => {
-          const shownVars = section.variables.filter((v) => (revealHidden || hidden?.[v.name] !== true) && parseValue(display[v.name]) !== undefined);
-          const picked = [...shownVars.filter((v) => decided.has(v.name)), ...shownVars.filter((v) => !decided.has(v.name))].slice(0, 2);
-          return picked.map((v) => {
-            const unit = formats?.[v.name] === "percent" ? "%" : shownUnits[v.name] && unitOptions[v.name] ? shownUnits[v.name] : units?.[v.name];
-            const label = labels?.[v.name] || displayName(key ? v.name.slice(key.length + 1) : v.name);
-            return `${label} ${formatted(v.name, valueOf(v.name, shown[v.name]))}${unit ? ` ${unit}` : ""}`;
-          });
-        })()
-      : [];
+    const closed = key !== null && !slim && folded[key] === true;
+    const toggle = () => key && setFolded((f) => ({ ...f, [key]: !f[key] }));
     if (slim && key && group) {
       return (
         <div key={key} className="flex flex-col gap-1">
-          <div className="flex cursor-pointer flex-wrap items-baseline gap-x-3 gap-y-1" onClick={toggle}>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-xl">{group.title}</h3>
             <span className="text-base text-ink-faint">
               {rows.length} {rows.length === 1 ? "variable" : "variables"}
             </span>
-            {closed && summary.length > 0 && <span className="min-w-0 break-words text-base text-ink-muted">{summary.join(" · ")}</span>}
-            <span className="ml-auto flex shrink-0 items-baseline gap-3">
-              <button
-                type="button"
-                className="shrink-0 self-center p-1 text-accent"
-                aria-expanded={!closed}
-                aria-label={`${closed ? "Expand" : "Collapse"} ${group.title}`}
-                title={closed ? "Expand" : "Collapse"}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggle();
-                }}
-              >
-                <Chevron open={!closed} />
-              </button>
-            </span>
           </div>
           {/* The board's variables hang from its title on a line, one under the other, each with a short branch. */}
-          <div className={closed ? "hidden" : "flex flex-col gap-2"}>
+          <div className="flex flex-col gap-2">
             {extra}
             {rows.length > 0 && (
               <div className="tree">
