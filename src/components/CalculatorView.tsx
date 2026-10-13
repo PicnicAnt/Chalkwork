@@ -334,7 +334,7 @@ export function CalculatorPanel({
       : [];
     if (slim && key && group) {
       return (
-        <div key={key} className="flex flex-col gap-3 border-l-2 border-[var(--ink-faint)] pl-4">
+        <div key={key} className="flex flex-col gap-1">
           <div className="flex cursor-pointer flex-wrap items-baseline gap-x-3 gap-y-1" onClick={toggle}>
             <h3 className="text-xl">{group.title}</h3>
             <span className="text-base text-ink-faint">
@@ -362,9 +362,16 @@ export function CalculatorPanel({
               </button>
             </span>
           </div>
-          <div className={closed ? "hidden" : "flex flex-col gap-4"}>
+          {/* The board's variables hang from its title on a line, one under the other, each with a short branch. */}
+          <div className={closed ? "hidden" : "flex flex-col gap-2"}>
             {extra}
-            {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
+            {rows.length > 0 && (
+              <div className="tree">
+                {rows.map((r, i) => (
+                  <div key={i}>{r}</div>
+                ))}
+              </div>
+            )}
             {members.map((m) => renderSection(m, true))}
           </div>
         </div>
