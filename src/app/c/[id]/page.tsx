@@ -6,7 +6,7 @@ import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { boardsUsing, getBoard, listAllBoards, listScenarios, getBoardImage, getChecks } from "@/lib/db";
+import { boardsUsing, boardStamp, getBoard, latestVersion, listAllBoards, listScenarios, getBoardImage, getChecks } from "@/lib/db";
 import { getVisibleBoard } from "@/lib/visible-board";
 import { canOpen, isListed } from "@/lib/visibility";
 import { ExplainBoard } from "@/components/ExplainBoard";
@@ -54,6 +54,22 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
   const resolved = resolveForView(full, extras);
   const user = await getCurrentUser();
   const isOwner = user !== null && user.id === ownerId;
+  // What the owner should know about the boards this one uses: a pinned version that has a newer one, and a board that
+  // was changed after this board was last saved (which a board that follows the latest shows without being asked).
+  const changedNotes: { board: string; title: string; text: string }[] = [];
+  if (isOwner) {
+    const mine = boardStamp(full.id) ?? "";
+    for (const inc of full.includes) {
+      const used = getBoard(inc.board);
+      if (!used) continue;
+      const latest = latestVersion(inc.board);
+      if (inc.version && latest > inc.version) {
+        changedNotes.push({ board: inc.board, title: used.title, text: `is pinned to version ${inc.version}; version ${latest} is newer` });
+      } else if (!inc.version && (boardStamp(inc.board) ?? "") > mine) {
+        changedNotes.push({ board: inc.board, title: used.title, text: "was changed after this board was last saved, and this board shows its latest version" });
+      }
+    }
+  }
   // Anyone else signed in can suggest a change. The owner finds suggestions under Suggestions.
   const canSuggest = user !== null && !isOwner;
 
@@ -154,6 +170,27 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           {isOwner && <DeleteBoardButton id={calculation.id} title={calculation.title} />}
         </div>
       </div>
+      {changedNotes.length > 0 && (
+        <div className="sketch-box mb-4 flex flex-col gap-1 px-4 py-3" role="note">
+          <p className="text-lg">A board this one uses has changed:</p>
+          <ul className="flex flex-col gap-1 text-lg text-ink-muted">
+            {changedNotes.map((n) => (
+              <li key={n.board}>
+                <Link href={`/c/${n.board}`} className="link">
+                  {n.title}
+                </Link>{" "}
+                {n.text}.
+              </li>
+            ))}
+          </ul>
+          <p className="text-base text-ink-muted">
+            <Link href={`/c/${calculation.id}/edit`} className="link">
+              Open the editor
+            </Link>{" "}
+            to look at it. Saving the board clears this note, unless it is pinned to an older version.
+          </p>
+        </div>
+      )}
       {"error" in resolved ? (
         <p className="sketch-box px-4 py-3 text-danger">
           This board uses another board that can&apos;t be loaded: {resolved.error}
