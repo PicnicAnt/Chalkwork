@@ -32,9 +32,6 @@ export function ItemControls({ collection: c, extras, onChange }: { collection: 
   }, [c.choices]);
   return (
     <div className="flex flex-col gap-2" aria-label={`Boards in ${c.title}`}>
-      <p className="text-base text-ink-muted">
-        Add boards here. Their variables are added up as {c.name}.&lt;variable&gt; (also avg(), min(), max() and count() in formulas). Take a board out with Remove.
-      </p>
       {c.choices === undefined ? (
         <p className="text-base text-ink-muted">Sign in to add boards.</p>
       ) : (

@@ -350,7 +350,6 @@ export function CalculatorPanel({
             <h3 className="text-xl">{group.title}</h3>
           </div>
           <div className="flex flex-col gap-2">
-            {extra}
             {members.length > 0 && (
               <div className="tree tree-titles">
                 {members.map((m) => (
@@ -358,6 +357,8 @@ export function CalculatorPanel({
                 ))}
               </div>
             )}
+            {/* The buttons to add boards come after the boards that are in the collection. */}
+            {extra}
           </div>
         </div>
       );

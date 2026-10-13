@@ -16,9 +16,6 @@ export function TryItems({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-base text-ink-muted">
-        Try it: add boards here to see the totals. People using the board add their own the same way; these aren&apos;t saved.
-      </p>
       <AddBoards types={boards.map((b) => ({ board: b.id, title: b.title }))} busy={busy} onAdd={onAdd} />
     </div>
   );
