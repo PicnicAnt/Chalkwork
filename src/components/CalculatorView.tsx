@@ -315,11 +315,65 @@ export function CalculatorPanel({
     const extra = key ? sectionExtras?.[key] : undefined;
     if (rows.length === 0 && members.length === 0 && !extra) return null;
     const group = key ? groups?.[key] : undefined;
-    const closed = key !== null && folded[key] === true;
+    // A board that is used (not a collection, and not one inside a collection) is one slim row when it is folded,
+    // which it is to begin with on the board page; in the editor's preview it starts open.
+    const slim = key !== null && !isCollection && !nested && group !== undefined && !group.collection;
+    const closed = key !== null && (folded[key] ?? (slim && !revealHidden));
+    const toggle = () => key && setFolded((f) => ({ ...f, [key]: !(f[key] ?? (slim && !revealHidden)) }));
+    // What a folded row shows of the board: its first two worked-out results, or its first two variables.
+    const summary = slim
+      ? (() => {
+          const shownVars = section.variables.filter((v) => (revealHidden || hidden?.[v.name] !== true) && parseValue(display[v.name]) !== undefined);
+          const picked = [...shownVars.filter((v) => decided.has(v.name)), ...shownVars.filter((v) => !decided.has(v.name))].slice(0, 2);
+          return picked.map((v) => {
+            const unit = formats?.[v.name] === "percent" ? "%" : shownUnits[v.name] && unitOptions[v.name] ? shownUnits[v.name] : units?.[v.name];
+            const label = labels?.[v.name] || displayName(key ? v.name.slice(key.length + 1) : v.name);
+            return `${label} ${formatted(v.name, valueOf(v.name, shown[v.name]))}${unit ? ` ${unit}` : ""}`;
+          });
+        })()
+      : [];
+    if (slim && key && group) {
+      return (
+        <div key={key} className="flex flex-col gap-3 border-l-2 border-[var(--ink-faint)] pl-4">
+          <div className="flex cursor-pointer flex-wrap items-baseline gap-x-3 gap-y-1" onClick={toggle}>
+            <h3 className="text-xl">{group.title}</h3>
+            <span className="text-base text-ink-faint">
+              {rows.length} {rows.length === 1 ? "variable" : "variables"}
+            </span>
+            {closed && summary.length > 0 && <span className="min-w-0 break-words text-base text-ink-muted">{summary.join(" · ")}</span>}
+            <span className="ml-auto flex shrink-0 items-baseline gap-3">
+              {group.board && (
+                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link text-base" onClick={(e) => e.stopPropagation()} title={`Open ${group.title}`}>
+                  Open board
+                </a>
+              )}
+              <button
+                type="button"
+                className="shrink-0 self-center p-1 text-accent"
+                aria-expanded={!closed}
+                aria-label={`${closed ? "Expand" : "Collapse"} ${group.title}`}
+                title={closed ? "Expand" : "Collapse"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggle();
+                }}
+              >
+                <Chevron open={!closed} />
+              </button>
+            </span>
+          </div>
+          <div className={closed ? "hidden" : "flex flex-col gap-4"}>
+            {extra}
+            {rows.length > 0 && <div className="grid grid-cols-1 gap-x-12 gap-y-5 md:grid-cols-2">{rows}</div>}
+            {members.map((m) => renderSection(m, true))}
+          </div>
+        </div>
+      );
+    }
     return (
       <div key={key ?? "own"} className={`flex flex-col gap-4 ${nested ? "fold-box" : key !== null ? "group-box" : ""}`}>
         {key && group && (
-          <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => setFolded((f) => ({ ...f, [key]: !f[key] }))}>
+          <div className="flex cursor-pointer items-center justify-between gap-3" onClick={toggle}>
             <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
               <h3 className="group-title">
                 {group.title}
@@ -340,7 +394,7 @@ export function CalculatorPanel({
               title={closed ? "Expand" : "Collapse"}
               onClick={(e) => {
                 e.stopPropagation();
-                setFolded((f) => ({ ...f, [key]: !f[key] }));
+                toggle();
               }}
             >
               <Chevron open={!closed} />
