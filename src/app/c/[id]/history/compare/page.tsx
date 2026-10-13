@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Compare versions · Chalkwork" };
 export default async function ComparePage({ params, searchParams }: PageProps<"/c/[id]/history/compare">) {
   const { id } = await params;
   const { from, to } = await searchParams;
-  const user = await requireUser(`/c/${id}/history`);
+  const user = await requireUser(`/c/${id}/history/compare?from=${encodeURIComponent(String(from ?? ""))}&to=${encodeURIComponent(String(to ?? ""))}`);
   await connection();
   const board = getBoard(id);
   if (!board) notFound();
