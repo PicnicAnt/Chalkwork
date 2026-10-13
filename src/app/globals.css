@@ -258,13 +258,13 @@ h3,
   }
   .tree > *:last-child::before {
     bottom: auto;
-    height: 1.35rem;
+    height: 1.74rem;
   }
   .tree > *::after {
     content: "";
     position: absolute;
     left: 0;
-    top: 1.35rem;
+    top: 1.74rem;
     width: 1.1rem;
     border-top: 2px solid color-mix(in srgb, var(--ink) 45%, transparent);
   }
