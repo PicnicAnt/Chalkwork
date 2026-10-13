@@ -1,6 +1,5 @@
 import { groupOf, type Range } from "@/lib/boards";
-import { compute } from "@/lib/calculator";
-import { displayName, parseValue, type Analysis } from "@/lib/formulas";
+import { displayName, parseValue, planSolve, solve, type Analysis } from "@/lib/formulas";
 
 // What a drawing or chart can ask the board it is on. Shapes only need `number` and `text`; the
 // charts also re-solve the board with other values (`evaluate`).
@@ -64,6 +63,8 @@ export function makeVizValues({
   ranges?: Record<string, Range>;
 }): Omit<VizValues, "focus" | "setValue"> {
   // A variable of a used board without the board's alias in front.
+  const plans = new Map<string, ReturnType<typeof planSolve>>();
+  const base: Record<string, number | undefined> = Object.fromEntries(Object.entries(display).map(([k, v]) => [k, parseValue(v)]));
   const local = (name: string) => labels?.[name] || displayName(groupOf(name) ? name.slice(name.indexOf("$") + 1) : name);
   return {
     number: (name) => parseValue(display[name]),
@@ -98,13 +99,18 @@ export function makeVizValues({
     evaluate: (overrides) => {
       const names = Object.keys(overrides);
       try {
-        const next = compute(
-          analysis,
-          { ...display, ...Object.fromEntries(names.map((n) => [n, String(overrides[n])])) },
-          [...names, ...locked.filter((n) => !names.includes(n))],
-        );
+        // A chart asks for the same held variables again and again with other numbers: the plan is made once per
+        // set of them, and the typed numbers are only read once.
+        const key = names.join("|");
+        let plan = plans.get(key);
+        if (!plan) {
+          plan = planSolve(analysis, [...names, ...locked.filter((n) => !names.includes(n))]);
+          plans.set(key, plan);
+        }
+        const numbers = { ...base, ...overrides };
+        const solved = solve(plan, numbers, numbers);
         const out: Record<string, number> = {};
-        for (const [name, value] of Object.entries(next.result.values)) {
+        for (const [name, value] of Object.entries(solved.values)) {
           if (value !== undefined && Number.isFinite(value)) out[name] = value;
         }
         return out;
