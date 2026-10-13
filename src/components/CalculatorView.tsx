@@ -325,9 +325,6 @@ export function CalculatorPanel({
         <div key={key} className="flex flex-col gap-1">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-xl">{group.title}</h3>
-            <span className="text-base text-ink-faint">
-              {rows.length} {rows.length === 1 ? "variable" : "variables"}
-            </span>
           </div>
           {/* The board's variables hang from its title on a line, one under the other, each with a short branch. */}
           <div className="flex flex-col gap-2">
