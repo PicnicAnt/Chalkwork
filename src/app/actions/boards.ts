@@ -7,7 +7,6 @@ import { parseChecks } from "@/lib/checks";
 import { parseImage } from "@/lib/board-image";
 import { parseIncludes, type IncludedBundle } from "@/lib/boards";
 import { resolveBoard, resolveIncludes } from "@/lib/resolve-boards";
-import { notifyBoardChanged } from "./notify";
 import { presetValues } from "@/lib/scenarios";
 import { canOpen } from "@/lib/visibility";
 import { prepare } from "./prepare";
@@ -62,7 +61,6 @@ export async function updateBoard(id: string, payload: unknown, image?: unknown,
   }
   if (picture.value !== null) setBoardImage(id, picture.value);
   if (Array.isArray(checks)) setChecks(id, parseChecks(checks));
-  notifyBoardChanged(id, user.id);
   return { ok: true, id };
 }
 

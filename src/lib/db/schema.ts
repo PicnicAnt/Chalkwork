@@ -109,16 +109,5 @@ export function createSchema(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS scenarios_board_user ON scenarios(board_id, user_id);
 
-    CREATE TABLE IF NOT EXISTS notifications (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      kind TEXT NOT NULL,
-      board_id TEXT REFERENCES boards(id) ON DELETE CASCADE,
-      text TEXT NOT NULL,
-      link TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (${now}),
-      read_at TEXT
-    );
-    CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id, read_at, created_at);
   `);
 }

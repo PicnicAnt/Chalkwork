@@ -104,11 +104,10 @@ In the variable editor each variable has a grip (⠿) at its left: drag it with 
 
 Two buttons use an AI model, and only appear when the server has a key: **Describe it** on the New page turns a sentence into a draft board (checked like any board, and opened in the editor, nothing saved until you save), and **Explain this board** on a board page writes a short explanation. Set `ANTHROPIC_API_KEY` in `.env.local` and restart. `CHALKWORK_AI_MODEL` picks the model (default `claude-haiku-5-5`) and `CHALKWORK_AI=0` turns it off. In the editor, **Ask for a change** has the helper change the board you have open as you ask (add a formula, a drawing, use another board). It shows what changed, you can go back to how it was, and nothing is saved until you save. A draft can also use existing boards (the ones whose words fit the description are offered to the model) and add drawings where they fit. Each use costs tokens, so it is for signed-in people only and limited to 10 uses an hour per person (kept in memory, so a restart resets it).
 
-## Finding boards and the inbox
+## Finding boards
 
 - **Tags:** a board can have up to eight tags (lower case, letters and digits). They show in the board list, and the search box finds boards by title, description, tags, formulas and variable names.
 - **Used by:** a board page shows which boards use it (signed-in people only).
-- **Inbox:** there is no email. `/notifications` and the count in the header list suggested changes and answers to them, and changes to boards that a user's own boards use. Several unread notifications of one kind on one board are merged into one.
 
 ## Presets
 
@@ -186,7 +185,7 @@ The database is copied with SQLite's own backup into `data/backups/` (not commit
 
 A **board** is what people write and share; the table is `boards`.
 
-- `src/app/`: the pages. `page.tsx` (home), `new/` (a new board), `c/[id]/` (a board, with `edit/`, `suggest/` and `suggestions/`), `boards/` (the list), `suggestions/` (the inbox), `login/`.
+- `src/app/`: the pages. `page.tsx` (home), `new/` (a new board), `c/[id]/` (a board, with `edit/`, `suggest/` and `suggestions/`), `boards/` (the list), `suggestions/` (suggested changes), `login/`.
 - `src/app/actions/`: server actions, which check who is asking. `boards.ts` (create, update, links, delete, load a board to use), `suggestions.ts` (suggest, approve, reject, withdraw), and `prepare.ts` (checks a draft together with the boards it uses).
 - `src/lib/`: logic with no screen in it.
   - `formulas.ts` parsing, solving and checking equations; `calculator.ts` what a board shows for typed values and locks; `rename.ts` renaming variables.

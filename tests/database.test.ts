@@ -29,7 +29,7 @@ describe("the database schema", () => {
     const db = new Database(":memory:");
     createSchema(db);
     const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((t) => t.name);
-    expect(tables).toEqual(expect.arrayContaining(["boards", "board_versions", "users", "sessions", "suggestions", "scenarios", "notifications"]));
+    expect(tables).toEqual(expect.arrayContaining(["boards", "board_versions", "users", "sessions", "suggestions", "scenarios"]));
   });
 
   it("can be run again without changing anything", () => {
