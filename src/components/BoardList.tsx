@@ -71,12 +71,15 @@ function around(text: string, words: string[]): string {
 // at once, which is fine for the numbers a test setup has.
 export function BoardList({
   boards,
+  signedIn = false,
   initialQuery = "",
   initialMine = false,
   initialSort,
   initialTags = [],
 }: {
   boards: BoardItem[];
+  /** Only a signed-in person has boards of their own to narrow the list to. */
+  signedIn?: boolean;
   initialQuery?: string;
   initialMine?: boolean;
   initialSort?: string;
@@ -135,22 +138,24 @@ export function BoardList({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3">
-      <div className="flex gap-3" role="group" aria-label="Which boards">
-        {[
-          { label: "All boards", value: false },
-          { label: "My boards", value: true },
-        ].map((option) => (
-          <button
-            key={option.label}
-            type="button"
-            onClick={() => choose(option.value)}
-            aria-pressed={mine === option.value}
-            className={`btn ${mine === option.value ? "btn-primary" : "text-ink-muted"}`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      {signedIn && (
+        <div className="flex gap-3" role="group" aria-label="Which boards">
+          {[
+            { label: "All boards", value: false },
+            { label: "My boards", value: true },
+          ].map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              onClick={() => choose(option.value)}
+              aria-pressed={mine === option.value}
+              className={`btn ${mine === option.value ? "btn-primary" : "text-ink-muted"}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
       <label className="flex items-baseline gap-2 text-lg text-ink-muted">
         Sort by
         <select value={sort} onChange={(e) => order(e.target.value as SortId)} className="cursor-pointer bg-transparent text-xl text-ink" aria-label="Sort the boards by">

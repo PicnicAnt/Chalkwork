@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { BoardList } from "@/components/BoardList";
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { listAllBoards } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Boards · Chalkwork" };
 
-// Every board by every user, or just your own, searchable. Only signed-in users can browse, so a board's link stays
-// something you have to be given unless you have an account.
+// Every board anyone can open, searchable, and your own too when you are signed in. Signed out, the public boards are
+// listed; boards that are only open by link, or private, are not.
 export default async function BoardsPage({ searchParams }: PageProps<"/boards">) {
-  const { q, mine, sort, tags } = await searchParams;
-  const wantsMine = mine === "1";
+  const { q, sort, tags, mine } = await searchParams;
+  await connection();
+  const user = await getCurrentUser();
+  const wantsMine = mine === "1" && user !== null;
   const query = typeof q === "string" ? q : "";
-  const params = new URLSearchParams();
-  if (wantsMine) params.set("mine", "1");
-  if (query) params.set("q", query);
-  if (typeof sort === "string") params.set("sort", sort);
   const tagList = typeof tags === "string" ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
-  if (tagList.length) params.set("tags", tagList.join(","));
-  const user = await requireUser(params.size ? `/boards?${params}` : "/boards");
-  const boards = listAllBoards(1000, user.id).map((b) => ({
+  const boards = listAllBoards(1000, user?.id).map((b) => ({
     id: b.id,
     title: b.title,
     description: b.description,
@@ -26,7 +23,7 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
     updatedAt: b.updatedAt,
     views: b.views,
     ownerName: b.ownerName,
-    isMine: b.ownerId === user.id,
+    isMine: user !== null && b.ownerId === user.id,
     tags: b.tags,
     keywords: b.keywords,
   }));
@@ -34,7 +31,14 @@ export default async function BoardsPage({ searchParams }: PageProps<"/boards">)
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold sm:text-4xl">Boards</h1>
-      <BoardList boards={boards} initialQuery={query} initialMine={wantsMine} initialSort={typeof sort === "string" ? sort : undefined} initialTags={tagList} />
+      <BoardList
+        boards={boards}
+        signedIn={user !== null}
+        initialQuery={query}
+        initialMine={wantsMine}
+        initialSort={typeof sort === "string" ? sort : undefined}
+        initialTags={tagList}
+      />
     </div>
   );
 }
