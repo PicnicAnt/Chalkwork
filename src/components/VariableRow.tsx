@@ -192,13 +192,16 @@ export const VariableRow = memo(function VariableRow({
           ))}
         </span>
         {hidden && <span className="shrink-0 text-sm text-ink-faint">hidden</span>}
-        {onHow && (
-          <button type="button" className="shrink-0 px-1 text-base text-ink-faint hover:text-accent" aria-label={`How ${label || name} was worked out`} title="How was this worked out?" onClick={() => onHow(name)}>
-            ?
-          </button>
-        )}
+        {/* One column at the end: a calculated value has the "?" that says how it was worked out, a value that can be
+            typed has the lock. */}
         {readOnly ? (
-          <span className="w-[30px] shrink-0" aria-hidden />
+          <span className="flex w-[30px] shrink-0 justify-center">
+            {onHow && (
+              <button type="button" className="px-1 text-base text-ink-faint hover:text-accent" aria-label={`How ${label || name} was worked out`} title="How was this worked out?" onClick={() => onHow(name)}>
+                ?
+              </button>
+            )}
+          </span>
         ) : (
           <LockButton locked={locked} disabled={!locked && !canLock} label={label || name} onClick={() => onToggleLock(name)} />
         )}
