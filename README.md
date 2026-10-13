@@ -200,3 +200,5 @@ A **board** is what people write and share; the table is `boards`.
   - `ui/`: small shared pieces: `CollapsibleSection`, `Foldable` rows with `useFold` and `ExpandAllBar`, and `useCommitField` (a field applied when it is left).
   - `BoardEditor.tsx` with its sections `BoardsSection` (`BoardPicker`, `UsedBoard`), `VariableEditor` (`VariableLine`) and `VisualizationEditor` (`VisualizationItem`); `CalculatorView.tsx` the board as people use it (`VariableRow`).
   - `Visualization.tsx` with `shapes/` (flat and solid shapes) and `charts/` (one file per chart), fed by `viz-values.ts`.
+
+`node scripts/seed-rpg.mjs` adds an RPG set for Martin: **Weapon**, **Armor piece** and **Skill** (each with presets such as Longsword, Chainmail and Fireball), a **Character build** with a collection for each of them (life, defense, evasion, damage per second and mana come from `sum()` and `max()` over what is added), and a **Knight loadout**, the same build with a Longsword, a Dagger, Chainmail, a Leather vest, Slash and Whirlwind already in. It is safe to run again.
