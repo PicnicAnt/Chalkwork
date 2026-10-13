@@ -342,11 +342,6 @@ export function CalculatorPanel({
             </span>
             {closed && summary.length > 0 && <span className="min-w-0 break-words text-base text-ink-muted">{summary.join(" · ")}</span>}
             <span className="ml-auto flex shrink-0 items-baseline gap-3">
-              {group.board && (
-                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link text-base" onClick={(e) => e.stopPropagation()} title={`Open ${group.title}`}>
-                  Open board
-                </a>
-              )}
               <button
                 type="button"
                 className="shrink-0 self-center p-1 text-accent"
@@ -387,11 +382,6 @@ export function CalculatorPanel({
                 {group.board === "" && <span className="text-lg font-normal text-ink-muted"> ({members.length})</span>}
               </h3>
               {key && sectionActions?.[key] && <span onClick={(e) => e.stopPropagation()}>{sectionActions[key]}</span>}
-              {group.board && (
-                <a href={`/c/${group.board}`} target={revealHidden ? "_blank" : undefined} rel="noopener" className="link text-base" onClick={(e) => e.stopPropagation()} title={`Open ${group.title}`}>
-                  Open board
-                </a>
-              )}
             </div>
             <button
               type="button"
