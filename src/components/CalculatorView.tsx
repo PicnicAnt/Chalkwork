@@ -403,7 +403,7 @@ export function CalculatorPanel({
   const tops = defaultTops.map((t, i) => ({ t, i })).sort((x, y) => placeOf(x.t) - placeOf(y.t) || x.i - y.i).map((x) => x.t);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3">
       <ResultsBar items={results} onGo={focusField} />
       <CollapsibleSection defaultOpen title="Variables" count={variableCount}>
       {tops.map((unit, n) => {
