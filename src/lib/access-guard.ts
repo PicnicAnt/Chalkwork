@@ -7,6 +7,10 @@ export const ACCESS_COOKIE = "chalkwork_access";
 
 export const accessCodeRequired = (): boolean => !!process.env.CHALKWORK_ACCESS_CODE;
 
+// The code is only asked for on the way in from the internet. Cloudflare puts these headers on everything its tunnel
+// carries; a request on the home network doesn't have them. (Someone adding them by hand only gets asked for the code.)
+export const viaTunnel = (headers: Headers): boolean => headers.has("cf-ray") || headers.has("cf-connecting-ip");
+
 const digest = (text: string) => createHash("sha256").update(text).digest();
 
 // What a device holds once the code was right: a keyed hash of the code, never the code itself. Changing the code

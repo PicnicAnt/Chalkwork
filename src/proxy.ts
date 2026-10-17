@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ACCESS_COOKIE, accessCodeRequired, isProofValid } from "./lib/access-guard";
+import { ACCESS_COOKIE, accessCodeRequired, isProofValid, viaTunnel } from "./lib/access-guard";
 
-// The front door of the site. With an access code set, a device that hasn't given it is sent to the page that asks
+// The front door of the site for visitors from the internet (through the Cloudflare tunnel). With an access code set, a device that hasn't given it is sent to the page that asks
 // for it, whatever it was after. What a browser needs to load that page (and the app's icons and manifest) stays open.
 const OPEN = [/^\/access(\/|$)/, /^\/_next\//, /^\/favicon\.ico$/, /^\/manifest\.webmanifest$/, /^\/pwa-icon\//, /^\/sw\.js$/];
 
 export function proxy(request: NextRequest) {
-  if (!accessCodeRequired()) return NextResponse.next();
+  if (!accessCodeRequired() || !viaTunnel(request.headers)) return NextResponse.next();
   const { pathname, search } = request.nextUrl;
   if (OPEN.some((open) => open.test(pathname))) return NextResponse.next();
   if (isProofValid(request.cookies.get(ACCESS_COOKIE)?.value)) return NextResponse.next();
