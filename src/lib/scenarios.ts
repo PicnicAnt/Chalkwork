@@ -113,6 +113,8 @@ export function parsePresets(raw: unknown, known?: ReadonlySet<string>): { prese
       name,
       values: Object.fromEntries(Object.entries(snapshot.values).filter(([n]) => keep(n))),
       locked: snapshot.locked.filter(keep),
+      // A preset can be a whole loadout: the boards that come with it.
+      ...(snapshot.items?.length ? { items: snapshot.items } : {}),
     });
   }
   return { presets, errors };

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createBoard, loadBoardsUsed, loadBoardToUse, updateBoard } from "@/app/actions/boards";
 import { reviseBoard, type ReviseOutcome } from "@/app/actions/ai";
 import { MAX_PRESETS, SCENARIO_LIMITS, type Preset } from "@/lib/scenarios";
+import { parseTable } from "@/lib/preset-import";
 import { CHECK_LIMITS, runCheck, type Check } from "@/lib/checks";
 import { ChecksList } from "./ChecksList";
 import { compute, initialLocks } from "@/lib/calculator";
@@ -340,6 +341,8 @@ function BoardEditorInner({
   // Presets: scenarios saved on the board for everyone to use. `locks` is what the panel last said was locked.
   const [presets, setPresets] = useState<Preset[]>(initial?.presets ?? []);
   const [presetName, setPresetName] = useState("");
+  const [tableText, setTableText] = useState("");
+  const [tableNote, setTableNote] = useState<string | null>(null);
   const [locks, setLocks] = useState<string[] | null>(null);
   const [loadedLocks, setLoadedLocks] = useState<string[] | undefined>(undefined);
   const [panelKey, setPanelKey] = useState(0);
@@ -951,6 +954,52 @@ function BoardEditorInner({
               Save these values as a preset
             </button>
           </div>
+          <details className="text-base">
+            <summary className="link cursor-pointer">Import presets from a table</summary>
+            <div className="flex flex-col gap-2 pt-2">
+              <p className="text-ink-muted">
+                Paste rows from a spreadsheet or a CSV file. The first row names the variables (by name or by the label they have); the first column that is not a
+                variable holds the name of each preset, and every row after it becomes a preset with those values.
+              </p>
+              <textarea
+                className="field min-h-24 text-base"
+                value={tableText}
+                placeholder={"Name\tLowest hit\tHighest hit\nDagger\t6\t11\nSword\t14\t22"}
+                onChange={(e) => setTableText(e.target.value)}
+                aria-label="Table of presets"
+              />
+              <div className="flex flex-wrap items-baseline gap-3">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!tableText.trim()}
+                  onClick={() => {
+                    const out = parseTable(tableText, analysis.variables.map((v) => v.name), flat.bundle.labels);
+                    const names = new Set(out.presets.map((p) => p.name));
+                    const merged = [...presets.filter((p) => !names.has(p.name)), ...out.presets];
+                    if (merged.length > MAX_PRESETS) {
+                      setTableNote(`A board can have ${MAX_PRESETS} presets; this would make ${merged.length}. Remove some first.`);
+                      return;
+                    }
+                    setPresets(merged);
+                    setTableNote(
+                      [
+                        out.presets.length > 0 ? `Added ${out.presets.length} ${out.presets.length === 1 ? "preset" : "presets"}.` : "Nothing was added.",
+                        out.unmatched.length > 0 ? `Not variables of this board, so left out: ${out.unmatched.join(", ")}.` : "",
+                        ...out.skipped,
+                      ]
+                        .filter(Boolean)
+                        .join(" "),
+                    );
+                    if (out.presets.length > 0) setTableText("");
+                  }}
+                >
+                  Add these presets
+                </button>
+                {tableNote && <span className="text-ink-muted">{tableNote}</span>}
+              </div>
+            </div>
+          </details>
           {presets.length > 0 && (
             <ul className="flex flex-col gap-1">
               {presets.map((p) => (
