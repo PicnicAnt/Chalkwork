@@ -38,7 +38,7 @@ export type BoardDraft = {
   visibility: Visibility;
   // The type of a variable, keyed by variable name: number (the default, not stored) or boolean (yes/no).
   types: Record<string, VarType>;
-  // How a variable's number is written (grouped, percent or currency); no entry means as it comes.
+  // How a variable's number is written (grouped, percent or currency); no entry means the default format.
   formats: Record<string, VarFormat>;
   // The options of a variable of the type choice, keyed by variable name.
   choices: Record<string, Choice[]>;

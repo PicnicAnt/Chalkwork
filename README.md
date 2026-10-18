@@ -84,7 +84,7 @@ Numbers are shown and typed the way the browser's language writes them: in Danis
 
 ## Number formats
 
-Each number variable has a format in the variable editor: as it comes, **1,234,567** (thousands separators), **percent** (0.15 shows as 15 %, and typing 20 stores 0.2) or **money** (separators, and two decimals for worked-out values). Only the display changes, never the maths. Formats apply on the board page and in the editor's preview; the scenario table and charts still show plain numbers.
+Each number variable has a format in the variable editor: the default format, **1,234,567** (thousands separators), **percent** (0.15 shows as 15 %, and typing 20 stores 0.2) or **money** (separators, and two decimals for worked-out values). Only the display changes, never the maths. Formats apply on the board page and in the editor's preview; the scenario table and charts still show plain numbers.
 
 ## Show working
 

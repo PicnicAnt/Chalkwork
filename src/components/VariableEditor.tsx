@@ -74,7 +74,7 @@ export function VariableEditor({
   /** The options of each choice variable, as typed. */
   choiceTexts: Record<string, string>;
   onChoiceText: (name: string, text: string) => void;
-  /** How each number is written (no entry: as it comes). */
+  /** How each number is written (no entry: the default format). */
   formats: Record<string, "grouped" | "percent" | "currency">;
   onFormat: (name: string, format: "" | "grouped" | "percent" | "currency") => void;
   /** The tables and collections, each a row that can be put anywhere in the list. */

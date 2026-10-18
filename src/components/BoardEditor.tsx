@@ -368,7 +368,7 @@ function BoardEditorInner({
     }
     return out;
   }, [choiceText]);
-  // How each number is written (not listed: as it comes).
+  // How each number is written (not listed: the default format).
   const [formats, setFormats] = useState<Record<string, VarFormat>>(initial?.formats ?? {});
   // What each variable holds: a number (not listed) or a yes/no.
   const [types, setTypes] = useState<Record<string, VarType>>(initial?.types ?? {});

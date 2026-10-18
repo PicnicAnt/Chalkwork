@@ -148,7 +148,7 @@ export function VariableLine({
         </select>
         {type === "number" && (
           <select value={format} onChange={(e) => onFormat(e.target.value as "" | "grouped" | "percent" | "currency")} className="cursor-pointer bg-transparent text-lg" aria-label={`Number format of ${name}`} title="How the number is written. Only the display changes, never the maths.">
-            <option value="">as it comes</option>
+            <option value="">default format</option>
             <option value="grouped">1,234,567</option>
             <option value="percent">percent (0.15 shows as 15%)</option>
             <option value="currency">money (1,234.50)</option>
