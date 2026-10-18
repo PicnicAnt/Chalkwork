@@ -75,9 +75,22 @@ function add(b) {
     includes: b.includes ?? [],
     visualizations: b.visualizations ?? [],
   };
+  if (PICTURES[b.title]) db.prepare("INSERT INTO board_images (board_id, image) VALUES (?, ?) ON CONFLICT(board_id) DO UPDATE SET image = excluded.image").run(id, picture(b.title));
   db.prepare("INSERT INTO board_versions (board_id, version, draft, saved_by, note) VALUES (?, 1, ?, ?, ?)").run(id, JSON.stringify(draft), owner.id, "Seeded");
   return id;
 }
+
+// Line-art pictures for the boards (transparent background, one medium-tone stroke), as they are drawn by the helper.
+const art = (stroke, body) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><g fill="none" stroke="${stroke}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${body}</g></svg>`;
+const PICTURES = {
+  Weapon: art("#2FA8A0", '<line x1="50" y1="98" x2="110" y2="22"/><line x1="110" y1="98" x2="50" y2="22"/><line x1="54.8" y1="72.6" x2="73.6" y2="87.4"/><line x1="105.4" y1="72.6" x2="86.6" y2="87.4"/>'),
+  "Armor piece": art("#E0A030", '<path d="M50 24 L70 18 Q80 28 90 18 L110 24 L124 44 L108 54 L108 98 H52 V54 L36 44 Z"/><line x1="80" y1="40" x2="80" y2="98"/>'),
+  Skill: art("#E8715A", '<polygon points="80,15 90,42 118,32 102,57 128,70 100,80 108,108 80,92 52,108 60,80 32,70 58,57 42,32 70,42"/>'),
+  "Character build": art("#2FA8A0", '<path d="M42 66 C42 36 60 20 80 20 C100 20 118 36 118 66 V96 H96 V76 H64 V96 H42 Z"/><line x1="64" y1="62" x2="96" y2="62"/>'),
+  "Knight loadout": art("#E0A030", '<path d="M80 18 L120 30 V62 C120 88 100 102 80 108 C60 102 40 88 40 62 V30 Z"/><line x1="80" y1="34" x2="80" y2="94"/><line x1="56" y1="56" x2="104" y2="56"/>'),
+};
+const picture = (title) => `data:image/svg+xml;base64,${Buffer.from(PICTURES[title], "utf8").toString("base64")}`;
 
 // A preset: the typed values, all of them locked.
 const preset = (name, values) => ({ name, values: Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v)])), locked: Object.keys(values) });
@@ -192,7 +205,7 @@ const buildSettings = {
     total_dps: "Total damage per second", mana_regen: "Mana regeneration", mana_use: "Mana use", mana_balance: "Mana balance",
   },
   units: { max_life: "life", total_defense: "def", effective_life: "life", move_speed: "%", resistance: "%", best_weapon_dps: "dmg/s", skill_dps: "dmg/s", total_dps: "dmg/s", mana_regen: "mana/s", mana_use: "mana/s", mana_balance: "mana/s" },
-  decimals: { damage_reduction: 3, evasion: 3, resistance: 1, effective_life: 0, max_life: 0, total_defense: 1, move_speed: 1, best_weapon_dps: 1, skill_dps: 1, total_dps: 1, damage_bonus: 2, mana_regen: 2, mana_use: 2, mana_balance: 2 },
+  decimals: { damage_reduction: 1, evasion: 1, resistance: 1, effective_life: 0, max_life: 0, total_defense: 1, move_speed: 1, best_weapon_dps: 1, skill_dps: 1, total_dps: 1, damage_bonus: 0, mana_regen: 2, mana_use: 2, mana_balance: 2 },
   formats: { damage_reduction: "percent", evasion: "percent", damage_bonus: "percent" },
   descriptions: {
     effective_life: "Life divided by what gets through: how much damage it takes to bring the build down.",
