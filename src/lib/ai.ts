@@ -206,7 +206,7 @@ Format:
 - Only basic elements: rect, circle, ellipse, line, polyline, polygon, path, g, defs. No script, no style element, no image or use, no links, no external addresses, no event handlers.
 - No text at all, no letters or numbers. Under 3000 characters.
 
-Subject: something that suggests what the board calculates (a box for a volume, a coin for a price, a gauge for a rate, a sword for damage), drawn as one clear subject, centred, with generous space around it.
+Subject (from the title, description and formulas only): something that suggests what the board calculates (a box for a volume, a coin for a price, a gauge for a rate, a sword for damage), drawn as one clear subject, centred, with generous space around it.
 
 Style: elegant line art, shown on both a dark chalkboard and a light whiteboard, so it must read on either.
 - No background rectangle: the drawing sits on a transparent background.
@@ -217,14 +217,13 @@ Style: elegant line art, shown on both a dark chalkboard and a light whiteboard,
 // A picture for a board, drawn by the helper as SVG and checked before it is kept. Returns the SVG, or why not.
 export async function imageWith(
   ask: Ask,
-  board: { title: string; description: string; formulas: string[]; drawings: string[] },
+  board: { title: string; description: string; formulas: string[] },
   clean: (svg: string) => string | null,
 ): Promise<{ ok: true; svg: string } | { ok: false; error: string }> {
   const lines = [
     `Title: ${board.title}`,
     board.description ? `Description: ${board.description}` : "",
     board.formulas.length ? `Formulas:\n${board.formulas.slice(0, 12).join("\n")}` : "",
-    board.drawings.length ? `Drawings on the board: ${board.drawings.join(", ")}` : "",
   ].filter(Boolean);
   const text = await ask(IMAGE_SYSTEM, lines.join("\n").slice(0, 3000));
   const start = text.indexOf("<svg");

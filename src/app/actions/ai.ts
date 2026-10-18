@@ -128,7 +128,7 @@ export async function drawBoardImage(info: unknown): Promise<ImageOutcome> {
   const raw = typeof info === "object" && info !== null ? (info as Record<string, unknown>) : {};
   const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
   const list = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").map((x) => x.slice(0, 200)).slice(0, max) : []);
-  const board = { title: text(raw.title, 200), description: text(raw.description, 500), formulas: list(raw.formulas, 12), drawings: list(raw.drawings, 10) };
+  const board = { title: text(raw.title, 200), description: text(raw.description, 500), formulas: list(raw.formulas, 12) };
   if (!board.title.trim() && board.formulas.length === 0) return { ok: false, error: "Give the board a name or a formula first." };
   if (!allowed(user.id)) return { ok: false, error: `The helper can be used ${AI_LIMITS.perHour} times an hour. Try again a little later.` };
   try {

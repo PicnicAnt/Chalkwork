@@ -38,7 +38,7 @@ export function ImageField({
   onChange: (image: string) => void;
   aiEnabled: boolean;
   /** What the helper draws from. */
-  describe: () => { title: string; description: string; formulas: string[]; drawings: string[] };
+  describe: () => { title: string; description: string; formulas: string[] };
 }) {
   const file = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);

@@ -32,10 +32,10 @@ describe("pictures of boards", () => {
 
   it("has the helper draw one and checks what it returns", async () => {
     let seen = "";
-    const good = await imageWith(async (_s, user) => ((seen = user), `Here it is:\n${ok}`), { title: "Box", description: "", formulas: ["v = w * h * d"], drawings: ["box"] }, cleanSvg);
+    const good = await imageWith(async (_s, user) => ((seen = user), `Here it is:\n${ok}`), { title: "Box", description: "", formulas: ["v = w * h * d"] }, cleanSvg);
     expect(good).toEqual({ ok: true, svg: ok });
     expect(seen).toMatch(/Title: Box/);
-    const bad = await imageWith(async () => "<svg><script>x</script></svg>", { title: "Box", description: "", formulas: [], drawings: [] }, cleanSvg);
+    const bad = await imageWith(async () => "<svg><script>x</script></svg>", { title: "Box", description: "", formulas: [] }, cleanSvg);
     expect(bad.ok).toBe(false);
   });
 });

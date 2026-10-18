@@ -675,7 +675,7 @@ function BoardEditorInner({
           currentSrc={currentImageSrc}
           onChange={onImage}
           aiEnabled={aiEnabled}
-          describe={() => ({ title, description, formulas, drawings: visualizations.map((v) => v.type) })}
+          describe={() => ({ title, description, formulas })}
         />
         <textarea
           className="field resize-none"
