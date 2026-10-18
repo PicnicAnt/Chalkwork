@@ -1,4 +1,4 @@
-import { compute, shownValues } from "./calculator";
+import { compute, initialLocks, shownValues } from "./calculator";
 import { formatNumber, parseValue, type Analysis } from "./formulas";
 
 // A scenario is a named set of values for a board: what is typed (and so locked) and the numbers that
@@ -29,6 +29,14 @@ export function outcomeOf(analysis: Analysis, snapshot: ScenarioSnapshot, decima
     shown: shownValues(out.display, out.plan.held, decimals),
     numbers: Object.fromEntries(Object.entries(out.display).map(([name, text]) => [name, parseValue(text)])),
   };
+}
+
+// What a preset shows when it is applied to a board that starts from `defaults`: its own values over the board's, with the
+// preset's values kept and, as far as the formulas allow, the board's own starting values too.
+export function presetOutcome(analysis: Analysis, defaults: Record<string, string>, preset: Preset, decimals?: Record<string, number>): Outcome {
+  const values = { ...defaults, ...preset.values };
+  const locked = [...preset.locked, ...initialLocks(analysis, values).filter((n) => !preset.locked.includes(n))];
+  return outcomeOf(analysis, { values, locked }, decimals);
 }
 
 export function resultsOf(analysis: Analysis, snapshot: ScenarioSnapshot, decimals?: Record<string, number>): Record<string, string> {

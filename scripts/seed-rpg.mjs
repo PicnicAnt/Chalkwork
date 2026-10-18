@@ -196,7 +196,14 @@ const buildFormulas = [
   "mana_use = sum(Skills.mana_per_second)",
   "mana_balance = mana_regen - mana_use",
 ];
+// A whole loadout as a preset of the build: the stats and the pieces that go with them.
+const loadout = (name, stats, items) => ({ ...preset(name, stats), items: items.map(([group, board, presetName]) => ({ group, board, preset: presetName })) });
 const buildSettings = {
+  presets: [
+    loadout("Knight", { level: 20, strength: 45, dexterity: 20, intelligence: 15 }, [["Weapons", weapon, "Longsword"], ["Armor", armor, "Chainmail"], ["Armor", armor, "Plate"], ["Skills", skill, "Slash"], ["Skills", skill, "Whirlwind"]]),
+    loadout("Rogue", { level: 20, strength: 20, dexterity: 70, intelligence: 20 }, [["Weapons", weapon, "Dagger"], ["Weapons", weapon, "Dagger"], ["Armor", armor, "Leather vest"], ["Skills", skill, "Backstab"], ["Skills", skill, "Slash"]]),
+    loadout("Mage", { level: 20, strength: 10, dexterity: 20, intelligence: 90 }, [["Armor", armor, "Mage robe"], ["Skills", skill, "Fireball"], ["Skills", skill, "Whirlwind"]]),
+  ],
   values: { level: "20", strength: "30", dexterity: "20", intelligence: "25" },
   labels: {
     level: "Level", strength: "Strength", dexterity: "Dexterity", intelligence: "Intelligence",

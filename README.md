@@ -202,3 +202,5 @@ A **board** is what people write and share; the table is `boards`.
   - `Visualization.tsx` with `shapes/` (flat and solid shapes) and `charts/` (one file per chart), fed by `viz-values.ts`.
 
 `node scripts/seed-rpg.mjs` adds an RPG set for Martin: **Weapon**, **Armor piece** and **Skill** (each with presets such as Longsword, Chainmail and Fireball), a **Character build** with a collection for each of them (life, defense, evasion, damage per second and mana come from `sum()` and `max()` over what is added), and a **Knight loadout**, the same build with a Longsword, a Dagger, Chainmail, a Leather vest, Slash and Whirlwind already in. It is safe to run again.
+
+**Comparing presets:** the Scenarios section on a board also lists the board's own presets (a whole loadout too, with its pieces), so builds such as Knight, Rogue and Mage can be ticked and put side by side with the values, differences and percentages, without signing in. A preset is laid over the board's starting values (`presetOutcome` in `src/lib/scenarios.ts`); presets that bring boards along are solved on the server, like scenarios with items. Saving your own scenarios still needs an account.

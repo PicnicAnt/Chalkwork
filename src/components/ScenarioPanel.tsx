@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { deleteScenario, saveScenario } from "@/app/actions/scenarios";
-import { difference, outcomeOf, SCENARIO_LIMITS, type Outcome, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
+import { difference, outcomeOf, presetOutcome, SCENARIO_LIMITS, type Outcome, type Preset, type Scenario, type ScenarioSnapshot } from "@/lib/scenarios";
 import { displayName, formatDecimals, formatNumber, type Analysis } from "@/lib/formulas";
 import { downloadCsv } from "@/lib/export";
 import { encodeItems } from "@/lib/items-param";
@@ -32,6 +32,9 @@ export function ScenarioPanel({
   decimals,
   shownUnits,
   outcomes,
+  presets = [],
+  defaults = {},
+  canSave = true,
   onLoad,
 }: {
   boardId: string;
@@ -47,6 +50,12 @@ export function ScenarioPanel({
   shownUnits: Record<string, string>;
   /** Worked out elsewhere for scenarios that have other boards added, by scenario id. */
   outcomes?: Record<string, Outcome>;
+  /** The board's own presets: they can be put side by side like scenarios (those with other boards added are left out). */
+  presets?: Preset[];
+  /** The values the board starts with, which a preset adds to. */
+  defaults?: Record<string, string>;
+  /** Saving a scenario needs an account; without one the panel only compares. */
+  canSave?: boolean;
   onLoad: (scenario: Scenario) => void;
 }) {
   const router = useRouter();
@@ -94,16 +103,23 @@ export function ScenarioPanel({
     });
   }
 
-  const shownScenarios = scenarios.filter((s) => compared.includes(s.id));
+  // The presets stand beside the scenarios as columns to compare; they are the board's, so they can't be deleted here.
+  const everyone = useMemo(() => {
+    const presetRows: (Scenario & { preset: true })[] = presets
+      .filter((p) => !p.items?.length || outcomes?.[`preset:${p.name}`])
+      .map((p) => ({ ...p, id: `preset:${p.name}`, preset: true as const }));
+    return [...presetRows, ...scenarios] as (Scenario & { preset?: true })[];
+  }, [presets, scenarios, outcomes]);
+  const shownScenarios = useMemo(() => everyone.filter((s) => compared.includes(s.id)), [everyone, compared]);
   // The baseline has to be one of the columns; if it was unticked, it is the board as it is now.
   const baseKey = baseline === NOW || shownScenarios.some((s) => s.id === baseline) ? baseline : NOW;
 
   const columns = useMemo(
     () => [
       { key: NOW, title: "Now", outcome: outcomeOf(analysis, current, decimals) },
-      ...shownScenarios.map((s) => ({ key: s.id, title: s.name, outcome: outcomes?.[s.id] ?? outcomeOf(analysis, s, decimals) })),
+      ...shownScenarios.map((s) => ({ key: s.id, title: s.name, outcome: outcomes?.[s.id] ?? ("preset" in s ? presetOutcome(analysis, defaults, s, decimals) : outcomeOf(analysis, s, decimals)) })),
     ],
-    [analysis, current, decimals, shownScenarios, outcomes],
+    [analysis, current, decimals, shownScenarios, outcomes, defaults],
   );
   const base = columns.find((c) => c.key === baseKey) ?? columns[0];
   const rows = analysis.variables.filter((v) => hidden[v.name] !== true);
@@ -160,9 +176,14 @@ export function ScenarioPanel({
   return (
     <CollapsibleSection
       title="Scenarios"
-      count={scenarios.length}
-      description="Keep the numbers you have typed as a named scenario (for example Build A and Build B), load one back whenever you like, and tick several to see them side by side. Scenarios are yours alone."
+      count={everyone.length}
+      description={
+        canSave
+          ? "Keep the numbers you have typed as a named scenario (for example Build A and Build B), load one back whenever you like, and tick several (the board's presets too) to see them side by side. Scenarios are yours alone."
+          : "Tick several of the board's presets to see them side by side. Signing in lets you keep your own scenarios too."
+      }
     >
+      {canSave && (
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
@@ -182,13 +203,14 @@ export function ScenarioPanel({
           Save these values
         </button>
       </form>
+      )}
       {error && <p className="text-danger">{error}</p>}
 
-      {scenarios.length === 0 ? (
+      {everyone.length === 0 ? (
         <p className="text-ink-muted">You haven&apos;t saved a scenario on this board yet.</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {scenarios.map((s) => (
+          {everyone.map((s) => (
             <li key={s.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xl">
               <label className="flex min-w-0 flex-1 items-baseline gap-2">
                 <input
@@ -199,6 +221,7 @@ export function ScenarioPanel({
                   aria-label={`Compare ${s.name}`}
                 />
                 <span className="truncate">{s.name}</span>
+                {s.preset && <span className="shrink-0 text-base text-ink-faint">preset</span>}
               </label>
               <button type="button" onClick={() => onLoad(s)} className="link text-base">
                 Load
@@ -206,9 +229,11 @@ export function ScenarioPanel({
               <button type="button" onClick={() => copyLink(s)} className="link text-base" aria-label={`Copy a link with ${s.name}`}>
                 {copiedId === s.id ? "Copied ✓" : "Copy link"}
               </button>
-              <button type="button" disabled={pending} onClick={() => remove(s.id)} className="link text-base text-danger" aria-label={`Delete ${s.name}`}>
-                Delete
-              </button>
+              {!s.preset && (
+                <button type="button" disabled={pending} onClick={() => remove(s.id)} className="link text-base text-danger" aria-label={`Delete ${s.name}`}>
+                  Delete
+                </button>
+              )}
             </li>
           ))}
         </ul>

@@ -206,11 +206,14 @@ export function SharedCalculator({
           shownUnits={shownUnits}
           onShownUnits={setShownUnits}
         />
-      {boardId && scenarios && (
+      {((boardId && scenarios) || presets.filter((p) => !p.items?.length || scenarioOutcomes?.[`preset:${p.name}`]).length > 1) && (
         <ScenarioPanel
-          boardId={boardId}
+          boardId={boardId ?? ""}
+          canSave={!!boardId && !!scenarios}
+          presets={presets}
+          defaults={flat.values}
           analysis={analysis}
-          scenarios={scenarios}
+          scenarios={scenarios ?? []}
           current={{ values, locked: locks ?? initialLocks(analysis, values), items: extras.map(({ group, board, preset }) => ({ group, board, ...(preset ? { preset } : {}) })) }}
           outcomes={scenarioOutcomes}
           labels={flat.labels}

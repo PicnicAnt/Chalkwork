@@ -16,7 +16,7 @@ import { imageVersion } from "@/lib/board-image";
 import { ViewCounter } from "@/components/ViewCounter";
 import { acceptedExtras, groupsOf, resolveForView, type ExtraItem } from "@/lib/resolve-boards";
 import { encodeItems, parseItems } from "@/lib/items-param";
-import { outcomeOf, type Outcome } from "@/lib/scenarios";
+import { outcomeOf, presetOutcome, type Outcome } from "@/lib/scenarios";
 import { analyzeFormulas, humanize } from "@/lib/formulas";
 import { decodeState } from "@/lib/share-state";
 
@@ -118,6 +118,13 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
     const other = resolveForView(full, sc.items);
     if ("error" in other) continue;
     scenarioOutcomes[sc.id] = outcomeOf(analyzeFormulas(other.bundle.formulas, other.bundle.tables), sc, other.bundle.decimals);
+  }
+  // Presets that bring boards along (a whole loadout) are another board to solve too, so they can be compared.
+  for (const p of full.presets) {
+    if (!p.items?.length) continue;
+    const other = resolveForView(full, p.items);
+    if ("error" in other) continue;
+    scenarioOutcomes[`preset:${p.name}`] = presetOutcome(analyzeFormulas(other.bundle.formulas, other.bundle.tables), other.bundle.values, p, other.bundle.decimals);
   }
 
   return (
