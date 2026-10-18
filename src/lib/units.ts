@@ -211,3 +211,15 @@ export function describeDim(dim: Dim): string {
     .map(([k, n]) => `${names[k] ?? k}${superscript(n)}`);
   return parts.length ? parts.join("·") : "a plain number";
 }
+
+// A number typed with a unit ("5 km", "30min", "2.5 h") written in the unit the field is in (`into`): "5 km" in a field
+// of metres is 5000. Returns the number as text, or null when the text isn't a number with a unit that converts.
+// A unit the field is already in is simply taken off.
+export function readWithUnit(text: string, into: string | undefined): string | null {
+  const m = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*([A-Za-zµ°%/][^\s]*(?:\s+\S+)*)$/i.exec(text.trim());
+  if (!m || !into) return null;
+  const r = m[2].trim() === into.trim() ? 1 : ratio(m[2].trim(), into);
+  if (r === null) return null;
+  const n = Number(m[1]) * r;
+  return Number.isFinite(n) ? String(Number(n.toPrecision(12))) : null;
+}

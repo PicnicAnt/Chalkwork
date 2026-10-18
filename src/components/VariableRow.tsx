@@ -4,6 +4,7 @@ import { memo, useState } from "react";
 import type { Range } from "@/lib/boards";
 import { displayName, formatNumber, parseValue } from "@/lib/formulas";
 import { fromLocaleText, toLocaleText } from "@/lib/locale";
+import { readWithUnit } from "@/lib/units";
 import { useNumberLocale } from "./useNumberLocale";
 
 // Written like a line on the board: name = value
@@ -157,6 +158,11 @@ export const VariableRow = memo(function VariableRow({
           onChange={(e) => {
             const text = e.target.value;
             const plain = fromLocaleText(text, loc);
+            // A number followed by a unit ("5 km") is read when the field is left, so "5 m" on the way to "5 mm" isn't converted early.
+            if (unit && /^[+-]?[\d.]+\s*[A-Za-zµ°%/]/.test(plain) && !/^[+-]?[\d.]+e[+-]?\d+$/i.test(plain)) {
+              setTyped({ text, unit });
+              return;
+            }
             const n = parseValue(plain);
             if ((ratio === 1 && !grouped) || n === undefined) {
               setTyped(null);
@@ -166,7 +172,16 @@ export const VariableRow = memo(function VariableRow({
               onEdit(name, formatNumber(n / ratio));
             }
           }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
           onBlur={() => {
+            if (typed && typed.unit === unit && /[A-Za-zµ°%/]/.test(typed.text)) {
+              const plain = fromLocaleText(typed.text, loc);
+              const converted = readWithUnit(plain, unit);
+              if (converted !== null) onEdit(name, formatNumber(Number(converted) / ratio));
+              else onEdit(name, plain);
+            }
             setTyped(null);
             onBlur(name);
           }}
