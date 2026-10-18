@@ -21,6 +21,7 @@ import { ChecksList } from "./ChecksList";
 import { runCheck, type Check } from "@/lib/checks";
 import { FormulaText } from "./FormulaText";
 import { OptimizerPanel } from "./OptimizerPanel";
+import { LoadoutFinder } from "./LoadoutFinder";
 import { ScenarioPanel } from "./ScenarioPanel";
 
 // `flat` is the board together with the boards it uses, as one set of formulas and settings.
@@ -80,6 +81,13 @@ export function SharedCalculator({
     const params = new URLSearchParams({ state: encodeState({ values, locked: locks ?? initialLocks(analysis, values) }) });
     if (items.length > 0) params.set("items", encodeItems(items));
     return `${location.origin}${location.pathname}?${params}`;
+  };
+
+  // Opens the board with these items added, keeping the numbers on screen.
+  const applyItems = (items: ExtraItem[]) => {
+    const params = new URLSearchParams({ state: encodeState({ values, locked: locks ?? initialLocks(analysis, values) }) });
+    if (items.length > 0) params.set("items", encodeItems(items));
+    router.replace(`${location.pathname}?${params}`, { scroll: false });
   };
 
   // Puts a set of values and locks on the board, as if they had been typed.
@@ -222,6 +230,17 @@ export function SharedCalculator({
           decimals={flat.decimals}
           shownUnits={shownUnits}
           onLoad={load}
+        />
+      )}
+      {publicId && collections.some((c) => c.listed) && (
+        <LoadoutFinder
+          boardId={publicId}
+          flat={flat}
+          groups={collections.filter((c) => c.listed).map((c) => ({ name: c.name, title: c.title, pieces: c.choices?.length ?? 0 }))}
+          resultNames={analysis.formulas.filter((f) => !f.error).map((f) => f.name)}
+          values={values}
+          locked={locks ?? initialLocks(analysis, values)}
+          onApply={applyItems}
         />
       )}
       {(

@@ -13,6 +13,8 @@ export type CollectionView = {
   fixed: { title: string }[];
   /** Items added by whoever is using the board. */
   added: { index: number; alias: string; title: string }[];
+  /** The collection lists the boards it takes, so a set of them can be searched for the best. */
+  listed?: boolean;
   /** The boards that can be added, each followed by its presets; absent when adding needs a sign-in. */
   choices?: { board: string; preset?: string; title: string; boardTitle?: string }[];
 };
