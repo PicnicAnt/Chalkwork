@@ -302,7 +302,7 @@ h3,
     display: inline-block;
     padding: 0.4rem 1.1rem;
     border: 2px solid currentColor;
-    border-radius: 7px 10px 8px 11px / 10px 7px 11px 8px;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
     color: var(--ink);
     transition: transform 0.1s;
   }
