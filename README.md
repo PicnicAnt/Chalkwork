@@ -165,7 +165,7 @@ Ctrl+K (or **Jump to…** in the top row, signed in) opens a search over every b
 
 ## Install and link previews
 
-The site has a web app manifest, icons and a small service worker, so a phone or computer can install it (on a secure address, which the public tunnel is; the home Wi-Fi address is plain HTTP and browsers won't offer it there). Nothing is kept for offline use. A board's link (public or link-only) shows its picture, title and description when pasted in a chat (`/c/<id>/opengraph-image`).
+The site has a web app manifest, icons and a service worker (`public/sw.js`), so a phone or computer can install it (on a secure address, which the public tunnel is; the home Wi-Fi address is plain HTTP and browsers won't offer it there). **Offline:** a board page, the Boards list, a new board and a board kept on the device are fetched from the network first and a copy is kept (up to 60 pages), so they open again without a connection; the site's scripts and styles are kept too. Editing, history, saving, sign-in and the writing helper need a connection, and signing out forgets every kept page. A page that was never opened shows an "offline" notice. A board's link (public or link-only) shows its picture, title and description when pasted in a chat (`/c/<id>/opengraph-image`).
 
 ## Boards without signing in
 

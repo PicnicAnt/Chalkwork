@@ -31,7 +31,18 @@ export function AccountMenu({ name, signOut }: { name: string; signOut: () => Pr
       {open && (
         <div role="menu" className="sketch-box absolute right-0 z-30 mt-2 flex min-w-[12rem] flex-col items-stretch gap-1 bg-[var(--board)] px-2 py-2 shadow-lg">
           <ThemeToggle />
-          <form action={signOut} className="contents">
+          <form
+            action={signOut}
+            className="contents"
+            onSubmit={() => {
+              // Pages kept for offline use may be private boards: they are forgotten when someone signs out.
+              try {
+                navigator.serviceWorker?.controller?.postMessage("forget-pages");
+              } catch {
+                // Nothing was kept, or it can't be reached.
+              }
+            }}
+          >
             <button type="submit" className="btn px-3 py-1 text-base">
               Sign out
             </button>

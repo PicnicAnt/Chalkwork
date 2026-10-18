@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-// Registers the small service worker that makes the site installable. Draws nothing.
+// Registers the service worker that makes the site installable and keeps opened boards for use offline. Draws nothing.
 export function RegisterServiceWorker() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
