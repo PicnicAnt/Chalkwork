@@ -81,17 +81,6 @@ export function createSchema(db: Database.Database) {
       views INTEGER NOT NULL DEFAULT 0
     );
 
-    -- Comments on a board, or on one of its variables: written by signed-in people, read by anyone who can open the board.
-    CREATE TABLE IF NOT EXISTS board_comments (
-      id TEXT PRIMARY KEY,
-      board_id TEXT NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
-      author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      variable TEXT NOT NULL DEFAULT '',
-      body TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (${now})
-    );
-    CREATE INDEX IF NOT EXISTS board_comments_board ON board_comments(board_id);
-
     -- Changes someone else proposes to a board, which its owner approves or rejects. base_stamp is when the board
     -- was last changed at the time, to notice that it has changed since.
     CREATE TABLE IF NOT EXISTS suggestions (
