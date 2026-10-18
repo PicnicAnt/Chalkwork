@@ -235,7 +235,7 @@ add({
   ],
   visualizations: [
     ...buildSettings.visualizations,
-    { type: "contributions", map: { total: "Skills.skill_dps" } },
+    { type: "contributions", map: { total: "Skills$skill_dps" } },
   ],
 });
 
