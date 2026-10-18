@@ -44,7 +44,7 @@ export type VarType = "number" | "boolean" | "choice";
 /** One option of a choice variable: what people see, and the number it stands for in the formulas. */
 export type Choice = { label: string; value: number };
 
-/** How a number is written on the board: as it comes, with thousands separators, as a percentage of 1, or as money. */
+/** How a number is written on the board: the default format, with thousands separators, as a percentage of 1, or as money. */
 export type VarFormat = "grouped" | "percent" | "currency";
 
 export type Bundle = {
@@ -58,7 +58,7 @@ export type Bundle = {
   ranges: Record<string, Range>;
   /** The type of a variable; a variable with no entry is a number. */
   types: Record<string, VarType>;
-  /** How a variable's number is written; no entry means as it comes. Display only. */
+  /** How a variable's number is written; no entry means the default format. Display only. */
   formats: Record<string, VarFormat>;
   /** The options of each variable that is a choice. */
   choices: Record<string, Choice[]>;
@@ -271,6 +271,7 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
     decimals: {} as Record<string, number>,
     ranges: {} as Record<string, Range>,
     types: {} as Record<string, VarType>,
+    hidden: {} as Record<string, boolean>,
     groups: {} as Record<string, { title: string; board: string }>,
   };
   const byGroup = new Map<string, IncludedBundle[]>();
@@ -289,6 +290,8 @@ function groupSums(included: readonly IncludedBundle[], collections: readonly Co
       const key = withAlias(item.alias, "equipped");
       out.values[key] = "1";
       out.labels[key] = "Included";
+      // The switch is part of how the totals work, not something to see: it stays out of lists, tables and charts.
+      out.hidden[key] = true;
       out.decimals[key] = 0;
       out.ranges[key] = { min: 0, max: 1 };
       out.types[key] = "boolean";
@@ -388,7 +391,7 @@ export function flatten(
       descriptions: { ...sums.descriptions, ...merge((b) => b.descriptions, own.descriptions) },
       units: { ...sums.units, ...merge((b) => b.units, own.units) },
       labels: { ...sums.labels, ...merge((b) => b.labels, own.labels) },
-      hidden: merge((b) => b.hidden, own.hidden),
+      hidden: { ...sums.hidden, ...merge((b) => b.hidden, own.hidden) },
       decimals: { ...sums.decimals, ...merge((b) => b.decimals, own.decimals) },
       ranges: { ...sums.ranges, ...merge((b) => b.ranges, own.ranges) },
       types: { ...sums.types, ...merge((b) => b.types, own.types) },
