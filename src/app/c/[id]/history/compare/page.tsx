@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { diffDrafts } from "@/lib/change-suggestions";
+import { diffDrafts, summarizeChanges } from "@/lib/change-suggestions";
 import { getBoard, getVersion } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Compare versions · Chalkwork" };
@@ -72,6 +72,7 @@ export default async function ComparePage({ params, searchParams }: PageProps<"/
 
       <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold">What changed</h2>
+        {summarizeChanges(left, right) && <p className="text-xl">{summarizeChanges(left, right)}</p>}
         {changes.length === 0 ? (
           <p className="text-ink-muted">Nothing that shows on the board is different.</p>
         ) : (

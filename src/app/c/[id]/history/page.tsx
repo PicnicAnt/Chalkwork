@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { RestoreButton } from "@/components/RestoreButton";
 import { requireUser } from "@/lib/auth";
-import { diffDrafts } from "@/lib/change-suggestions";
+import { diffDrafts, summarizeChanges } from "@/lib/change-suggestions";
 import { getBoard, listVersions } from "@/lib/db";
 
 export const metadata: Metadata = { title: "History · Chalkwork" };
@@ -59,6 +59,7 @@ export default async function HistoryPage({ params }: PageProps<"/c/[id]/history
       <ol className="flex flex-col gap-6">
         {versions.map((v, i) => {
           const changes = i + 1 < versions.length ? diffDrafts(versions[i + 1].draft, v.draft) : [];
+          const summary = i + 1 < versions.length ? summarizeChanges(versions[i + 1].draft, v.draft) : "";
           return (
             <li key={v.version} className="flex flex-col gap-2">
               <div className="flex flex-wrap items-baseline gap-x-3 text-xl">
@@ -75,6 +76,8 @@ export default async function HistoryPage({ params }: PageProps<"/c/[id]/history
               ) : changes.length === 0 ? (
                 <p className="text-ink-muted">Nothing that shows on the board changed.</p>
               ) : (
+                <>
+                {summary && <p className="text-xl">{summary}</p>}
                 <ul className="sketch-box flex flex-col gap-1 px-4 py-2 text-lg">
                   {changes.slice(0, 12).map((line, n) => (
                     <li key={n} className="break-words">
@@ -83,6 +86,7 @@ export default async function HistoryPage({ params }: PageProps<"/c/[id]/history
                   ))}
                   {changes.length > 12 && <li className="text-ink-muted">and {changes.length - 12} more</li>}
                 </ul>
+                </>
               )}
               {i > 0 && <RestoreButton boardId={id} version={v.version} />}
             </li>

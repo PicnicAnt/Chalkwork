@@ -103,3 +103,75 @@ export function draftOf(c: BoardDraft): BoardDraft {
     visualizations: c.visualizations,
   };
 }
+
+// One plain sentence about what a save changed, for the top of a history entry: counts and names, where the list under
+// it gives every line. Returns "" when nothing that shows changed.
+export function summarizeChanges(base: BoardDraft, next: BoardDraft): string {
+  const parts: string[] = [];
+  const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  const list = (names: string[]) => (names.length <= 3 ? names.join(", ") : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`);
+  const joined = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : (items[0] ?? ""));
+
+  if (base.title !== next.title) parts.push(`renamed the board to ${show(next.title)}`);
+  if (base.description !== next.description) parts.push("edited the description");
+
+  // A formula is known by what it works out (the text before the =): a change to one is not a removal and an addition.
+  const lhs = (f: string) => f.split("=")[0].trim();
+  const before = new Map(base.formulas.map((f) => [lhs(f), f]));
+  const after = new Map(next.formulas.map((f) => [lhs(f), f]));
+  const added = [...after.keys()].filter((k) => !before.has(k)).length;
+  const removed = [...before.keys()].filter((k) => !after.has(k)).length;
+  const changed = [...after].filter(([k, f]) => before.has(k) && before.get(k) !== f).length;
+  if (added) parts.push(`added ${plural(added, "formula")}`);
+  if (changed) parts.push(`changed ${plural(changed, "formula")}`);
+  if (removed) parts.push(`removed ${plural(removed, "formula")}`);
+
+  const usedBefore = new Set(base.includes.map((i) => i.alias));
+  const usedAfter = new Set(next.includes.map((i) => i.alias));
+  const nowUsed = [...usedAfter].filter((a) => !usedBefore.has(a));
+  const noLongerUsed = [...usedBefore].filter((a) => !usedAfter.has(a));
+  if (nowUsed.length) parts.push(`started using ${plural(nowUsed.length, "board")}`);
+  if (noLongerUsed.length) parts.push(`stopped using ${plural(noLongerUsed.length, "board")}`);
+
+  const count = <T,>(a: Record<string, T>, b: Record<string, T>) => [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((n) => !same(a[n] ?? "", b[n] ?? "")).length;
+  const values = count(base.values, next.values);
+  if (values) parts.push(`changed ${plural(values, "starting value")}`);
+  const names = count(base.labels, next.labels);
+  if (names) parts.push(`renamed ${plural(names, "variable")}`);
+  const units = count(base.units, next.units);
+  if (units) parts.push(`changed ${plural(units, "unit")}`);
+  const notes = count(base.descriptions, next.descriptions);
+  if (notes) parts.push(`changed ${plural(notes, "note")}`);
+  const ranges = count(base.ranges, next.ranges);
+  if (ranges) parts.push(`changed ${plural(ranges, "range")}`);
+
+  const presetNames = (d: BoardDraft) => d.presets.map((p) => p.name);
+  const presetsAdded = presetNames(next).filter((n) => !presetNames(base).includes(n));
+  const presetsRemoved = presetNames(base).filter((n) => !presetNames(next).includes(n));
+  if (presetsAdded.length) parts.push(`added the ${presetsAdded.length === 1 ? "preset" : "presets"} ${list(presetsAdded)}`);
+  if (presetsRemoved.length) parts.push(`removed the ${presetsRemoved.length === 1 ? "preset" : "presets"} ${list(presetsRemoved)}`);
+  else if (!presetsAdded.length && JSON.stringify(base.presets) !== JSON.stringify(next.presets)) parts.push("changed a preset");
+
+  const collectionNames = (d: BoardDraft) => d.collections.map((c) => c.name);
+  const collectionsAdded = collectionNames(next).filter((n) => !collectionNames(base).includes(n));
+  const collectionsRemoved = collectionNames(base).filter((n) => !collectionNames(next).includes(n));
+  if (collectionsAdded.length) parts.push(`added the ${collectionsAdded.length === 1 ? "collection" : "collections"} ${list(collectionsAdded)}`);
+  if (collectionsRemoved.length) parts.push(`removed the ${collectionsRemoved.length === 1 ? "collection" : "collections"} ${list(collectionsRemoved)}`);
+  else if (!collectionsAdded.length && JSON.stringify(base.collections) !== JSON.stringify(next.collections)) parts.push("changed a collection");
+
+  const drawingsBefore = base.visualizations.length;
+  const drawingsAfter = next.visualizations.length;
+  if (drawingsAfter > drawingsBefore) parts.push(`added ${plural(drawingsAfter - drawingsBefore, "drawing or chart", "drawings and charts")}`);
+  else if (drawingsAfter < drawingsBefore) parts.push(`removed ${plural(drawingsBefore - drawingsAfter, "drawing or chart", "drawings and charts")}`);
+  else if (JSON.stringify(base.visualizations) !== JSON.stringify(next.visualizations)) parts.push("changed a drawing or chart");
+
+  if (JSON.stringify(base.tables) !== JSON.stringify(next.tables)) parts.push("changed a table");
+  if (base.visibility !== next.visibility) parts.push(`made the board ${next.visibility}`);
+  if (base.tags.join(",") !== next.tags.join(",")) parts.push("changed the tags");
+  if (base.order.join(",") !== next.order.join(",")) parts.push("reordered the variables");
+
+  if (parts.length === 0) return "";
+  const shown = parts.length > 6 ? [...parts.slice(0, 6), "made other changes"] : parts;
+  const sentence = joined(shown);
+  return `${sentence[0].toUpperCase()}${sentence.slice(1)}.`;
+}
