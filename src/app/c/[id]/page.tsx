@@ -6,7 +6,8 @@ import { connection } from "next/server";
 import { SharedCalculator } from "@/components/SharedCalculator";
 import { DeleteBoardButton } from "@/components/DeleteBoardButton";
 import { getCurrentUser } from "@/lib/auth";
-import { boardsUsing, boardStamp, getBoard, latestVersion, listAllBoards, listScenarios, getBoardImage, getChecks } from "@/lib/db";
+import { boardsUsing, boardStamp, getBoard, latestVersion, listAllBoards, listScenarios, getBoardImage, getChecks, listComments } from "@/lib/db";
+import { CommentsSection } from "@/components/CommentsSection";
 import { getVisibleBoard } from "@/lib/visible-board";
 import { canOpen, isListed } from "@/lib/visibility";
 import { ExplainBoard } from "@/components/ExplainBoard";
@@ -219,6 +220,22 @@ export default async function BoardPage({ params, searchParams }: PageProps<"/c/
           scenarioOutcomes={scenarioOutcomes}
           checks={getChecks(calculation.id)}
         />
+      )}
+      {!("error" in resolved) && (
+        <div className="mt-6">
+          <CommentsSection
+            boardId={calculation.id}
+            ownerId={ownerId}
+            userId={user?.id}
+            variables={analyzeFormulas(resolved.bundle.formulas, resolved.bundle.tables)
+              .variables.filter((v) => !v.name.includes("$") && resolved.bundle.hidden[v.name] !== true)
+              .map((v) => ({ name: v.name, label: resolved.bundle.labels[v.name] || humanize(v.name) }))}
+            comments={listComments(calculation.id).map((c) => ({
+              ...c,
+              variableLabel: c.variable ? resolved.bundle.labels[c.variable] || humanize(c.variable) : "",
+            }))}
+          />
+        </div>
       )}
       {user && (
         <div className="mt-8 flex flex-col gap-3">
