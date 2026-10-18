@@ -50,6 +50,8 @@ export type Formula = {
   /** The right side jumps (a condition, a table, rounding), so it is a poor variable to guess when solving backwards. */
   discontinuous?: boolean;
   selfReferencing?: boolean; // the left-side variable also appears on the right
+  /** Written as an equation with something other than a name on the left (3*x+4 = 19): the formula is "left - right", which is held at 0. */
+  equation?: boolean;
   error?: string;
   compiled?: EvalFunction; // the right side
 };
@@ -165,6 +167,31 @@ function symbolsUsed(node: MathNode): string[] {
   return names;
 }
 
+// A line with one = and something other than a plain name on the left, such as 3*x+4 = 19, is an equation to solve. It is
+// read as "left - right", which is a variable of its own (equation_N) that is always held at 0, so the other variables
+// are worked out to make it true, in any direction like every other formula.
+export const EQUATION_PREFIX = "equation_";
+
+function splitEquation(text: string): { left: string; right: string } | null {
+  const t = removeThousandsSeparators(text);
+  const marks = [...t.matchAll(/(?<![=<>!:])=(?![=>])/g)];
+  if (marks.length !== 1) return null;
+  const at = marks[0].index!;
+  const [left, right] = [t.slice(0, at).trim(), t.slice(at + 1).trim()];
+  return left && right ? { left, right } : null;
+}
+
+/** Whether a line is an equation (3*x+4 = 19) rather than "name = expression"; its variable is then equation_<line>. */
+export function isEquationLine(text: string): boolean {
+  if (splitEquation(text) === null) return false;
+  try {
+    parse(removeThousandsSeparators(text));
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 // A formula can call the board's tables as functions, such as tax_rate(income).
 export function analyzeFormulas(lines: string[], tables: readonly Table[] = []): Analysis {
   const functions = tableFunctions(tables);
@@ -174,10 +201,19 @@ export function analyzeFormulas(lines: string[], tables: readonly Table[] = []):
   const parsed: (Formula | null)[] = lines.map((text, i) => {
     const base = { line: i + 1, text, name: `result_${i + 1}`, vars: [] as string[] };
     let node: MathNode;
+    let equation = false;
     try {
       node = parse(removeThousandsSeparators(text));
     } catch (e) {
-      return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
+      const sides = splitEquation(text);
+      if (!sides) return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
+      try {
+        node = parse(`(${sides.left}) - (${sides.right})`);
+        equation = true;
+        base.name = `${EQUATION_PREFIX}${i + 1}`;
+      } catch (e2) {
+        return { ...base, error: e2 instanceof Error ? e2.message : "Could not read formula" };
+      }
     }
 
     if (isSymbolNode(node) && isVariableName(node.name)) {
@@ -216,7 +252,7 @@ export function analyzeFormulas(lines: string[], tables: readonly Table[] = []):
     try {
       const used = symbolsUsed(expression);
       const vars = [base.name, ...used.filter((v) => v !== base.name)];
-      return { ...base, vars, selfReferencing: used.includes(base.name), discontinuous, compiled: withTables(expression.compile(), functions) };
+      return { ...base, vars, selfReferencing: used.includes(base.name), discontinuous, ...(equation ? { equation } : {}), compiled: withTables(expression.compile(), functions) };
     } catch (e) {
       return { ...base, error: e instanceof Error ? e.message : "Could not read formula" };
     }
@@ -251,7 +287,7 @@ export function analyzeFormulas(lines: string[], tables: readonly Table[] = []):
 export type Step =
   | { kind: "direct"; formula: Formula; unknown: string }
   | { kind: "tear"; tear: string; steps: Step[]; check: Formula };
-export type Plan = { held: string[]; steps: Step[] };
+export type Plan = { held: string[]; steps: Step[]; /** Held at 0: the equations written as left = right. */ zero?: string[] };
 
 function stepVariables(step: Step): string[] {
   return step.kind === "direct" ? [step.unknown] : [step.tear, ...step.steps.flatMap(stepVariables)];
@@ -323,7 +359,7 @@ function propagate(equations: Formula[], held: Set<string>): Step[] {
 // like `tax = 0.25`), so there's nothing left for the user to choose.
 export function decidedBy(analysis: Analysis, locked: string[]): Set<string> {
   const equations = analysis.formulas.filter((f) => !f.error);
-  return new Set(propagate(equations, new Set(locked)).flatMap(stepVariables));
+  return new Set(propagate(equations, new Set([...locked, ...equations.filter((f) => f.equation).map((f) => f.name)])).flatMap(stepVariables));
 }
 
 // `locked` is in the order the locks were made; if they over-determine the formulas, the
@@ -334,10 +370,13 @@ export function planSolve(analysis: Analysis, locked: string[]): Plan {
   const equations = analysis.formulas.filter((f) => !f.error);
   const names = analysis.variables.map((v) => v.name);
   const defined = new Set(equations.map((f) => f.name));
+  // An equation (3*x+4 = 19) is held at 0 after what was locked, so a typed value still wins over it.
+  const equationNames = equations.filter((f) => f.equation).map((f) => f.name);
   const order = [
     ...locked.filter((n) => names.includes(n)),
-    ...names.filter((n) => !locked.includes(n) && !defined.has(n)),
-    ...names.filter((n) => !locked.includes(n) && defined.has(n)),
+    ...equationNames.filter((n) => !locked.includes(n)),
+    ...names.filter((n) => !locked.includes(n) && !equationNames.includes(n) && !defined.has(n)),
+    ...names.filter((n) => !locked.includes(n) && !equationNames.includes(n) && defined.has(n)),
   ];
 
   // Equations that are just a constant (like `fee = 500`) are settled before anything is held.
@@ -349,7 +388,7 @@ export function planSolve(analysis: Analysis, locked: string[]): Plan {
     steps = propagate(equations, new Set(held));
     if (held.length + steps.flatMap(stepVariables).length === names.length) break;
   }
-  return { held, steps };
+  return { held, steps, ...(equationNames.some((n) => held.includes(n)) ? { zero: equationNames.filter((n) => held.includes(n)) } : {}) };
 }
 
 export type SolveResult = {
@@ -446,7 +485,7 @@ export function solve(
   previous: Record<string, number | undefined> = {},
 ): SolveResult {
   const values: Record<string, number | undefined> = {};
-  for (const name of plan.held) values[name] = given[name];
+  for (const name of plan.held) values[name] = plan.zero?.includes(name) ? 0 : given[name];
   const failure = runSteps(plan.steps, values, previous);
   return { values, failed: failure?.variable, failedFormula: failure?.formula };
 }

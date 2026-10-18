@@ -12,7 +12,7 @@ export function compute(analysis: Analysis, values: Record<string, string>, lock
   // Values being kept show their exact text; everything else shows the calculated number.
   const display: Record<string, string> = {};
   for (const v of analysis.variables) {
-    display[v.name] = plan.held.includes(v.name) ? (values[v.name] ?? "") : formatNumber(result.values[v.name]);
+    display[v.name] = plan.zero?.includes(v.name) ? "0" : plan.held.includes(v.name) ? (values[v.name] ?? "") : formatNumber(result.values[v.name]);
   }
   return { plan, result, display, broken: brokenFormulas(analysis, plan, result.values) };
 }

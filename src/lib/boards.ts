@@ -1,4 +1,4 @@
-import { PATH_SEPARATOR, analyzeFormulas, humanize, isVariableName, tokenize } from "./formulas";
+import { EQUATION_PREFIX, PATH_SEPARATOR, analyzeFormulas, humanize, isEquationLine, isVariableName, tokenize } from "./formulas";
 import type { Table } from "./tables";
 import type { BundleVisualization, Visualization } from "./visualizations";
 
@@ -381,17 +381,20 @@ export function flatten(
   const merge = <T>(pick: (b: Bundle) => Record<string, T>, ownMap: Record<string, T>): Record<string, T> =>
     Object.assign({}, ...parts.map((p) => pick(p.bundle)), ownMap);
 
+  const allFormulas = [...ownFormulas, ...parts.flatMap((p) => p.bundle.formulas), ...sums.formulas];
+  // The variable an equation (3*x+4 = 19) is held in is a working variable, not something to show.
+  const equationHidden = Object.fromEntries(allFormulas.flatMap((f, i) => (isEquationLine(f) ? [[`${EQUATION_PREFIX}${i + 1}`, true]] : [])));
   return {
     ownErrors,
     bundle: {
       // Order matters: this board's formulas, then the used boards' formulas. The editor relies on it to tell
       // which of the two a problem belongs to.
-      formulas: [...ownFormulas, ...parts.flatMap((p) => p.bundle.formulas), ...sums.formulas],
+      formulas: allFormulas,
       values: { ...sums.values, ...merge((b) => b.values, own.values) },
       descriptions: { ...sums.descriptions, ...merge((b) => b.descriptions, own.descriptions) },
       units: { ...sums.units, ...merge((b) => b.units, own.units) },
       labels: { ...sums.labels, ...merge((b) => b.labels, own.labels) },
-      hidden: { ...sums.hidden, ...merge((b) => b.hidden, own.hidden) },
+      hidden: { ...sums.hidden, ...equationHidden, ...merge((b) => b.hidden, own.hidden) },
       decimals: { ...sums.decimals, ...merge((b) => b.decimals, own.decimals) },
       ranges: { ...sums.ranges, ...merge((b) => b.ranges, own.ranges) },
       types: { ...sums.types, ...merge((b) => b.types, own.types) },
@@ -460,6 +463,8 @@ export function sectionsByBoard<T extends { name: string }>(
   order: readonly string[] = [],
 ): { key: string | null; variables: T[] }[] {
   const boards = Object.keys(groups).filter((key) => !key.includes(PATH_SEPARATOR));
+  // The variable an equation (3*x+4 = 19) is held in is a working variable: it is not listed anywhere.
+  variables = variables.filter((v) => !(v.name.startsWith(EQUATION_PREFIX) && /^\d+$/.test(v.name.slice(EQUATION_PREFIX.length))));
   // Variables named in `order` come first, in that order; the rest keep the order they appear in.
   const place = (name: string) => {
     const i = order.indexOf(name);

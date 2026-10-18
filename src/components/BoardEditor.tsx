@@ -741,7 +741,7 @@ function BoardEditorInner({
         count={formulas.length}
         description={
           <>
-            One per line, like <span className="text-accent-2">area = width * height</span>. Any variable can be changed and the others adjust so all formulas still hold.
+            One per line, like <span className="text-accent-2">area = width * height</span>. Any variable can be changed and the others adjust so all formulas still hold. An equation such as <span className="text-accent-2">3 * x + 4 = 19</span> works too: x is found.
           </>
         }
       >
